@@ -3,13 +3,22 @@
 @layer base {
   html {
     font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-feature-settings: "ss01" on, "ss02" on;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  /* Ensure Persian numbers and smooth ligatures */
+  body {
+    direction: rtl;
+    text-align: right;
   }
 }
 
 /* Custom scrollbars for clean dashboards */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
@@ -20,5 +29,10 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Mobile-friendly safe area */
+.safe-bottom-padding {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
 }
 

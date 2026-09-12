@@ -16,15 +16,26 @@ import {
   BookOpen,
   Award,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Eye,
+  FileQuestion
 } from 'lucide-react';
 import { SponsorBannerCard } from './SponsorBannerCard';
+import { toPersianDigits, formatPersianScore } from '../utils/persianUtils';
 
 interface Props {
   onOpenQuestionBank: () => void;
+  onOpenGradeEntryModal?: () => void;
+  onOpenHomeworkExamModal?: () => void;
+  onOpenStudentDossier?: (student: Student) => void;
 }
 
-export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
+export const TeacherDashboard: React.FC<Props> = ({
+  onOpenQuestionBank,
+  onOpenGradeEntryModal,
+  onOpenHomeworkExamModal,
+  onOpenStudentDossier
+}) => {
   const {
     currentSchool,
     currentUser,
@@ -32,7 +43,8 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
     schedule,
     submitAttendance,
     attendanceSessions,
-    addQuestionBankItem
+    addQuestionBankItem,
+    setSelectedStudentForDossier
   } = useApp();
 
   // Find current period schedule slot
@@ -53,7 +65,6 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
       });
       return map;
     }
-    // Default to present for everyone for maximum speed!
     const defaultMap: Record<string, AttendanceStatus> = {};
     classStudents.forEach((st) => {
       defaultMap[st.id] = 'present';
@@ -62,7 +73,7 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
   });
 
   const [notifyBale, setNotifyBale] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'attendance' | 'grades' | 'schedule'>('attendance');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'schedule'>('attendance');
 
   // Quick Add Question modal/state
   const [showAddQuestion, setShowAddQuestion] = useState<boolean>(false);
@@ -77,14 +88,6 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
   const [qOption3, setQOption3] = useState('');
   const [qOption4, setQOption4] = useState('');
   const [qCorrect, setQCorrect] = useState('');
-
-  // Grades entry demo state
-  const [scores, setScores] = useState<Record<string, string>>({
-    'std-1': '۱۹.۵',
-    'std-2': '۱۸',
-    'std-4': '۲۰',
-    'std-5': '۱۶.۵'
-  });
 
   // Cycle status on student card click
   const toggleStudentStatus = (studentId: string) => {
@@ -146,48 +149,76 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
     setQCorrect('');
   };
 
+  const handleViewDossier = (student: Student, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onOpenStudentDossier) {
+      onOpenStudentDossier(student);
+    } else {
+      setSelectedStudentForDossier(student);
+    }
+  };
+
   // Stats
   const presentsCount = Object.values(attendanceMap).filter((s) => s === 'present').length;
   const absentsCount = Object.values(attendanceMap).filter((s) => s === 'absent').length;
   const latesCount = Object.values(attendanceMap).filter((s) => s === 'late').length;
-  const excusedCount = Object.values(attendanceMap).filter((s) => s === 'excused').length;
 
   return (
     <div className="space-y-6" id="teacher-dashboard-view">
-      {/* Top Welcome Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+      {/* Top Welcome Bar & Action Toolbar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-slate-900">
               سلام، {currentUser.name} گرامی
             </h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium">
-              دبیر ریاضیات
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-bold">
+              دبیر ریاضیات و فیزیک
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            {currentSchool?.name} • زمان‌بندی زنگ اول (ساعت ۰۸:۰۰ الی ۰۹:۳۰)
+            {currentSchool?.name} • زمان‌بندی زنگ اول (ساعت {toPersianDigits('۰۸:۰۰')} الی {toPersianDigits('۰۹:۳۰')})
           </p>
         </div>
 
         {/* Action Shortcuts */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {onOpenGradeEntryModal && (
+            <button
+              onClick={onOpenGradeEntryModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition-colors shadow-xs"
+            >
+              <Award className="w-4 h-4" />
+              <span>ثبت نمرات و ارزشیابی</span>
+            </button>
+          )}
+
+          {onOpenHomeworkExamModal && (
+            <button
+              onClick={onOpenHomeworkExamModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold transition-colors shadow-2xs"
+            >
+              <FileQuestion className="w-4 h-4 text-teal-600" />
+              <span>تکالیف و آزمون آنلاین</span>
+            </button>
+          )}
+
           <button
             id="open-question-bank-btn"
             onClick={onOpenQuestionBank}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-semibold transition-colors"
           >
-            <BookOpen className="w-4 h-4" />
-            <span>بانک سوالات شهرستان</span>
+            <BookOpen className="w-4 h-4 text-amber-600" />
+            <span>بانک سوالات منطقه</span>
           </button>
 
           <button
             id="quick-add-question-btn"
             onClick={() => setShowAddQuestion(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-xs"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>افزودن سوال به بانک</span>
+            <span>افزودن سوال</span>
           </button>
         </div>
       </div>
@@ -197,35 +228,22 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
         <button
           id="teacher-tab-attendance"
           onClick={() => setActiveTab('attendance')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-2 ${
+          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-2 ${
             activeTab === 'attendance'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-teal-700 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <CheckCheck className="w-4 h-4" />
-          <span>حضور و غیاب کلاس جاری (اولویت اول)</span>
-        </button>
-
-        <button
-          id="teacher-tab-grades"
-          onClick={() => setActiveTab('grades')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-2 ${
-            activeTab === 'grades'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Award className="w-4 h-4" />
-          <span>ثبت نمرات مستمر</span>
+          <span>حضور و غیاب کلاسی (سریع با یک لمس)</span>
         </button>
 
         <button
           id="teacher-tab-schedule"
           onClick={() => setActiveTab('schedule')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-2 ${
+          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-2 ${
             activeTab === 'schedule'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-teal-700 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -238,11 +256,11 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
       {activeTab === 'attendance' && (
         <div className="space-y-5" id="attendance-section">
           {/* Main Attendance Card */}
-          <div className="bg-white rounded-2xl border-2 border-blue-500/20 shadow-md p-5 sm:p-6 relative overflow-hidden">
+          <div className="bg-white rounded-2xl border-2 border-teal-500/20 shadow-sm p-5 sm:p-6 relative overflow-hidden">
             {/* Top Bar with Live Period Badge */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
               <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <div className="w-12 h-12 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Users className="w-6 h-6" />
                 </div>
                 <div>
@@ -257,8 +275,8 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
                   </h2>
                   <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>زنگ اول • {currentSlot.startTime} تا {currentSlot.endTime}</span>
-                    <span>• {classStudents.length} دانش‌آموز</span>
+                    <span>زنگ اول • {toPersianDigits(currentSlot.startTime)} تا {toPersianDigits(currentSlot.endTime)}</span>
+                    <span>• {toPersianDigits(classStudents.length)} دانش‌آموز</span>
                   </p>
                 </div>
               </div>
@@ -278,30 +296,30 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
 
                 <div className="flex items-center gap-1 text-xs">
                   <span className="px-2 py-1 rounded-md bg-emerald-100 text-emerald-800 font-bold">
-                    حاضر: {presentsCount}
+                    حاضر: {toPersianDigits(presentsCount)}
                   </span>
                   <span className={`px-2 py-1 rounded-md font-bold ${absentsCount > 0 ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'}`}>
-                    غایب: {absentsCount}
+                    غایب: {toPersianDigits(absentsCount)}
                   </span>
                   <span className={`px-2 py-1 rounded-md font-bold ${latesCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
-                    تاخیر: {latesCount}
+                    تاخیر: {toPersianDigits(latesCount)}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Instruction Tip */}
-            <div className="py-3 px-3.5 my-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs text-slate-600">
+            <div className="py-3 px-3.5 my-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600">
               <span className="flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                <HelpCircle className="w-4 h-4 text-teal-600 shrink-0" />
                 <span>
-                  <strong>روش سریع:</strong> به طور پیش‌فرض همه حاضر هستند. کافیست روی نام هر دانش‌آموز کلیک کنید تا وضعیت او به <strong>غایب</strong>، <strong>تاخیر</strong> یا <strong>موجه</strong> تغییر کند.
+                  <strong>روش سریع:</strong> به طور پیش‌فرض همه حاضر هستند. کافیست روی هر دانش‌آموز کلیک کنید تا وضعیت او به <strong>غایب</strong>، <strong>تاخیر</strong> یا <strong>موجه</strong> تغییر کند.
                 </span>
               </span>
               <div className="flex items-center gap-3 text-[11px] shrink-0 font-medium">
-                <span className="flex items-center gap-1 text-emerald-700">● حاضر (سبز)</span>
-                <span className="flex items-center gap-1 text-rose-700">● غایب (قرمز)</span>
-                <span className="flex items-center gap-1 text-amber-700">● تاخیر (نارنجی)</span>
+                <span className="flex items-center gap-1 text-emerald-700">● حاضر</span>
+                <span className="flex items-center gap-1 text-rose-700">● غایب</span>
+                <span className="flex items-center gap-1 text-amber-700">● تاخیر</span>
               </div>
             </div>
 
@@ -328,14 +346,14 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
                 }
 
                 return (
-                  <button
+                  <div
                     key={st.id}
                     id={`student-att-card-${st.id}`}
                     onClick={() => toggleStudentStatus(st.id)}
-                    className={`p-3 rounded-xl border text-right transition-all flex flex-col justify-between h-24 select-none hover:shadow-xs active:scale-95 ${cardColor}`}
+                    className={`p-3 rounded-xl border text-right transition-all flex flex-col justify-between h-28 select-none hover:shadow-xs cursor-pointer active:scale-95 ${cardColor}`}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-[10px] font-mono text-slate-400">#{idx + 1}</span>
+                      <span className="text-[10px] font-mono text-slate-500">#{toPersianDigits(idx + 1)}</span>
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${badgeColor}`}>
                         {badgeText}
                       </span>
@@ -343,9 +361,22 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
 
                     <div>
                       <div className="font-bold text-xs truncate">{st.name}</div>
-                      <div className="text-[10px] opacity-75 truncate">ولی: {st.parentName}</div>
+                      <div className="text-[10px] opacity-80 truncate">ولی: {st.parentName}</div>
                     </div>
-                  </button>
+
+                    <div className="pt-1 border-t border-black/10 flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-slate-600">
+                        معدل: {toPersianDigits(st.reportCards?.[0]?.gpa || '۱۹.۲')}
+                      </span>
+                      <button
+                        title="مشاهده پرونده کامل"
+                        onClick={(e) => handleViewDossier(st, e)}
+                        className="p-1 rounded-md bg-white/70 hover:bg-white text-slate-700 transition-colors"
+                      >
+                        <Eye className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -370,7 +401,7 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
                 <button
                   id="submit-final-attendance-btn"
                   onClick={handleFinalSubmitAttendance}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                 >
                   <Send className="w-4 h-4" />
                   <span>تایید و ثبت نهایی حضور و غیاب زنگ اول</span>
@@ -385,12 +416,12 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                 <span>
-                  حضور و غیاب کلاس {existingSession.className} در ساعت {existingSession.submittedAt} با موفقیت در سامانه هاب ثبت و تایید شده است.
+                  حضور و غیاب کلاس {existingSession.className} در ساعت {toPersianDigits(existingSession.submittedAt)} با موفقیت در سامانه هاب ثبت و تایید شده است.
                 </span>
               </div>
               <span className="font-bold text-emerald-700">
                 {existingSession.sentNotificationsCount > 0
-                  ? `${existingSession.sentNotificationsCount} اعلان به اولیا ارسال شد`
+                  ? `${toPersianDigits(existingSession.sentNotificationsCount)} اعلان به اولیا ارسال شد`
                   : 'همه دانش‌آموزان حاضر بودند'}
               </span>
             </div>
@@ -398,69 +429,7 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
         </div>
       )}
 
-      {/* Tab 2: Gradebook */}
-      {activeTab === 'grades' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4" id="gradebook-section">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm">
-                دفترچه ثبت نمرات مستمر و پرسش کلاسی
-              </h3>
-              <p className="text-xs text-slate-500">
-                کلاس {currentSlot.className} — درس ریاضی ۱
-              </p>
-            </div>
-            <span className="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-medium">
-              حداکثر نمره: ۲۰
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-right">
-              <thead>
-                <tr className="bg-slate-50 text-slate-600 border-b border-slate-200">
-                  <th className="py-2.5 px-3 font-semibold">ردیف</th>
-                  <th className="py-2.5 px-3 font-semibold">نام و نام خانوادگی</th>
-                  <th className="py-2.5 px-3 font-semibold">کد ملی</th>
-                  <th className="py-2.5 px-3 font-semibold">نمره پرسش کلاسی (از ۲۰)</th>
-                  <th className="py-2.5 px-3 font-semibold">ارزیابی کیفی</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {classStudents.map((st, i) => (
-                  <tr key={st.id} className="hover:bg-slate-50/70">
-                    <td className="py-2.5 px-3 text-slate-400 font-mono">{i + 1}</td>
-                    <td className="py-2.5 px-3 font-bold text-slate-800">{st.name}</td>
-                    <td className="py-2.5 px-3 text-slate-500 font-mono">{st.nationalCode}</td>
-                    <td className="py-2.5 px-3">
-                      <input
-                        type="text"
-                        value={scores[st.id] || ''}
-                        placeholder="ثبت نمره..."
-                        onChange={(e) =>
-                          setScores({ ...scores, [st.id]: e.target.value })
-                        }
-                        className="w-24 px-2 py-1 border border-slate-200 rounded-md text-center font-bold text-slate-800 focus:ring-1 focus:ring-blue-500 outline-none"
-                      />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
-                        {parseFloat(scores[st.id] || '0') >= 18
-                          ? 'بسیار خوب'
-                          : parseFloat(scores[st.id] || '0') >= 14
-                          ? 'خوب'
-                          : 'در حال ارزیابی'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Tab 3: Schedule */}
+      {/* Tab 2: Schedule */}
       {activeTab === 'schedule' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4" id="schedule-section">
           <h3 className="font-bold text-slate-900 text-sm">
@@ -472,16 +441,16 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
                 key={sc.id}
                 className={`p-4 rounded-xl border transition-all ${
                   sc.isCurrentPeriod
-                    ? 'border-blue-400 bg-blue-50/50 shadow-xs'
+                    ? 'border-teal-400 bg-teal-50/50 shadow-xs'
                     : 'border-slate-200 bg-white'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-bold text-slate-700">{sc.dayOfWeek} • زنگ {sc.period}</span>
-                  <span className="text-slate-500 font-mono">{sc.startTime} - {sc.endTime}</span>
+                  <span className="font-bold text-slate-700">{sc.dayOfWeek} • زنگ {toPersianDigits(sc.period)}</span>
+                  <span className="text-slate-500 font-mono">{toPersianDigits(sc.startTime)} - {toPersianDigits(sc.endTime)}</span>
                 </div>
                 <div className="font-bold text-sm text-slate-900">{sc.className}</div>
-                <div className="text-xs text-blue-700 mt-1">{sc.subject}</div>
+                <div className="text-xs text-teal-700 font-bold mt-1">{sc.subject}</div>
                 {sc.isCurrentPeriod && (
                   <div className="mt-3 text-[11px] font-bold text-emerald-700 flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
@@ -499,7 +468,7 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
 
       {/* Modal: Quick Add Question to Regional Question Bank */}
       {showAddQuestion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-right animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -646,7 +615,7 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold transition-all shadow-xs"
+                  className="px-5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold transition-all shadow-xs"
                 >
                   ثبت در بانک سوالات شهرستان
                 </button>

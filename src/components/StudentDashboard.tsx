@@ -10,16 +10,23 @@ import {
   Sparkles,
   HelpCircle,
   FileText,
-  ChevronLeft
+  ChevronLeft,
+  FileQuestion,
+  Eye
 } from 'lucide-react';
 import { SponsorBannerCard } from './SponsorBannerCard';
+import { toPersianDigits } from '../utils/persianUtils';
+import { Student } from '../types';
 
 interface Props {
   onOpenQuestionBank: () => void;
+  onOpenStudentDossier?: (student: Student) => void;
 }
 
-export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
-  const { currentSchool, currentUser, schedule, questionBank } = useApp();
+export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenStudentDossier }) => {
+  const { currentSchool, currentUser, schedule, questionBank, homework, exams, students, setSelectedStudentForDossier } = useApp();
+
+  const currentStudent = students.find((s) => s.id === 'std-1') || students[0];
 
   // Pick a sample practice question for the student
   const sampleQuestion = questionBank[0];
@@ -31,10 +38,18 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
     setIsAnswerSubmitted(true);
   };
 
+  const handleOpenMyDossier = () => {
+    if (onOpenStudentDossier) {
+      onOpenStudentDossier(currentStudent);
+    } else {
+      setSelectedStudentForDossier(currentStudent);
+    }
+  };
+
   return (
     <div className="space-y-6" id="student-dashboard-view">
       {/* Top Greeting Card */}
-      <div className="bg-linear-to-r from-teal-800 to-cyan-900 text-white p-6 rounded-3xl shadow-md relative overflow-hidden">
+      <div className="bg-gradient-to-r from-teal-800 to-cyan-900 text-white p-6 rounded-3xl shadow-md relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-500/20 text-teal-200 text-xs font-bold border border-teal-400/30">
@@ -45,17 +60,27 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
               سلام {currentUser.name} عزیز، روزت پر از یادگیری!
             </h1>
             <p className="text-xs text-teal-100 max-w-xl leading-relaxed">
-              کلاس دهم ریاضی - الف • {currentSchool?.name}
+              کلاس {currentStudent.grade} • {currentSchool?.name}
             </p>
           </div>
 
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/20">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <div className="text-right">
-              <div className="text-[10px] text-teal-200 font-medium">وضعیت حضور امروز شما:</div>
-              <div className="text-sm font-bold text-white">حاضر در کلاس درس</div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleOpenMyDossier}
+              className="px-4 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold backdrop-blur-sm border border-white/30 flex items-center gap-2 transition-all shadow-xs"
+            >
+              <FileText className="w-4 h-4 text-teal-200" />
+              <span>مشاهده کارنامه و پرونده تحصیلی من</span>
+            </button>
+
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm p-2.5 rounded-2xl border border-white/20">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] text-teal-200 font-medium">وضعیت حضور امروز شما:</div>
+                <div className="text-xs font-bold text-white">حاضر در کلاس درس</div>
+              </div>
             </div>
           </div>
         </div>
@@ -63,7 +88,7 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Col (7 cols): Today's Schedule & Recent Grades */}
+        {/* Left Col (7 cols): Today's Schedule, Active Homework, Upcoming Exams */}
         <div className="lg:col-span-7 space-y-5">
           {/* Today's Schedule */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
@@ -89,17 +114,17 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
                   <p className="text-slate-500 mt-1">دبیر: استاد کاظمی • مبحث: مجموعه‌ها و دنباله حسابی</p>
                 </div>
                 <span className="font-mono font-bold text-slate-700 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
-                  ۰۸:۰۰ - ۰۹:۳۰
+                  {toPersianDigits('۰۸:۰۰')} - {toPersianDigits('۰۹:۳۰')}
                 </span>
               </div>
 
               <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between text-xs opacity-85">
                 <div>
                   <div className="font-bold text-slate-900">زنگ دوم: زبان انگلیسی</div>
-                  <p className="text-slate-500 mt-0.5">دبیر: آقای حسنی • Lesson 1</p>
+                  <p className="text-slate-500 mt-0.5">دبیر: آقای حسنی • درس اول</p>
                 </div>
                 <span className="font-mono text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
-                  ۰۹:۴۵ - ۱۱:۱۵
+                  {toPersianDigits('۰۹:۴۵')} - {toPersianDigits('۱۱:۱۵')}
                 </span>
               </div>
 
@@ -109,42 +134,64 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
                   <p className="text-slate-500 mt-0.5">دبیر: مهندس نوری • اندازه‌گیری و چگالی</p>
                 </div>
                 <span className="font-mono text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
-                  ۱۱:۳۰ - ۱۲:۴۵
+                  {toPersianDigits('۱۱:۳۰')} - {toPersianDigits('۱۲:۴۵')}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Academic Report / Recent Grades */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 shadow-xs">
+          {/* Active Homework & Exams */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-amber-500" />
+                <FileQuestion className="w-5 h-5 text-teal-600" />
                 <h3 className="font-bold text-sm text-slate-900">
-                  آخرین نمرات و بازخوردهای کلاسی
+                  تکالیف درسی و آزمون‌های پیش‌رو
                 </h3>
               </div>
-              <span className="text-xs text-slate-500 font-medium">معدل مستمر: ۱۹.۶</span>
+              <span className="text-xs text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-md">
+                {toPersianDigits(homework.length + exams.length)} مورد فعال
+              </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                <div className="text-xs text-slate-500">ریاضی ۱ (پرسش کلاسی)</div>
-                <div className="text-xl font-black text-slate-900 mt-1 font-mono">۱۹.۵</div>
-                <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">بسیار عالی</div>
-              </div>
+            <div className="space-y-2.5">
+              {homework.slice(0, 2).map((hw) => (
+                <div key={hw.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-start justify-between gap-3 text-xs">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 font-bold text-[10px]">
+                        تکلیف: {hw.subject}
+                      </span>
+                      <span className="font-bold text-slate-800 text-xs">{hw.title}</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">{hw.description}</p>
+                  </div>
+                  <div className="text-left shrink-0">
+                    <span className="text-[10px] text-slate-400 block">مهلت تحویل:</span>
+                    <span className="font-mono font-bold text-rose-700 text-xs">{toPersianDigits(hw.dueDate)}</span>
+                  </div>
+                </div>
+              ))}
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                <div className="text-xs text-slate-500">فیزیک ۱ (آزمون کوتاه)</div>
-                <div className="text-xl font-black text-slate-900 mt-1 font-mono">۲۰</div>
-                <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">نمره کامل</div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                <div className="text-xs text-slate-500">انضباط و حضور</div>
-                <div className="text-xl font-black text-slate-900 mt-1 font-mono">۲۰</div>
-                <div className="text-[10px] text-teal-600 font-semibold mt-0.5">بدون تاخیر</div>
-              </div>
+              {exams.slice(0, 1).map((ex) => (
+                <div key={ex.id} className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 flex items-start justify-between gap-3 text-xs">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded-md bg-purple-200 text-purple-900 font-bold text-[10px]">
+                        آزمون آنلاین: {ex.subject}
+                      </span>
+                      <span className="font-bold text-slate-900 text-xs">{ex.title}</span>
+                    </div>
+                    <p className="text-purple-800 text-[11px]">
+                      مدت آزمون: {toPersianDigits(ex.durationMinutes)} دقیقه • تعداد سوالات: {toPersianDigits(ex.questionsCount)}
+                    </p>
+                  </div>
+                  <div className="text-left shrink-0">
+                    <span className="text-[10px] text-purple-700 block">زمان آزمون:</span>
+                    <span className="font-mono font-bold text-purple-900 text-xs">{toPersianDigits(ex.examDate)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -217,9 +264,9 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
 
             <button
               onClick={onOpenQuestionBank}
-              className="w-full py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors flex items-center justify-center gap-1.5"
             >
-              <span>مشاهده سایر نمونه سوالات درس‌های پایه دهم</span>
+              <span>مشاهده سایر نمونه سوالات پایه دهم</span>
               <ChevronLeft className="w-4 h-4" />
             </button>
           </div>

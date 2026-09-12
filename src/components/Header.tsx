@@ -12,6 +12,7 @@ import {
   BookOpen,
   MessageSquare
 } from 'lucide-react';
+import { toPersianDigits } from '../utils/persianUtils';
 
 export const Header: React.FC = () => {
   const {
@@ -115,7 +116,7 @@ export const Header: React.FC = () => {
                 <Bell className="w-5 h-5" />
                 {notifications.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                    {notifications.length}
+                    {toPersianDigits(notifications.length)}
                   </span>
                 )}
               </button>
@@ -130,7 +131,7 @@ export const Header: React.FC = () => {
                       <MessageSquare className="w-4 h-4 text-teal-600" />
                       <span>پیام‌های خودکار مخابره شده به اولیا (بله / پیامک)</span>
                     </div>
-                    <span className="text-[11px] text-slate-500">{notifications.length} پیام</span>
+                    <span className="text-[11px] text-slate-500">{toPersianDigits(notifications.length)} پیام</span>
                   </div>
 
                   <div className="max-h-72 overflow-y-auto px-2 divide-y divide-slate-100">
@@ -150,7 +151,7 @@ export const Header: React.FC = () => {
                           </p>
                           <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
                             <span>گیرنده: {ntf.recipientName}</span>
-                            <span>{ntf.timestamp}</span>
+                            <span>{toPersianDigits(ntf.timestamp)}</span>
                           </div>
                         </div>
                       ))
@@ -187,7 +188,7 @@ export const Header: React.FC = () => {
               </div>
               <div className="hidden xl:block text-right">
                 <div className="text-xs font-bold text-slate-800">{currentUser.name}</div>
-                <div className="text-[10px] text-slate-500">{currentUser.phone}</div>
+                <div className="text-[10px] text-slate-500">{toPersianDigits(currentUser.phone)}</div>
               </div>
             </div>
           </div>

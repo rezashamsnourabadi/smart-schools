@@ -8,8 +8,21 @@ import {
   BannerAd,
   Announcement,
   AttendanceSession,
-  NotificationLog
+  NotificationLog,
+  HomeworkItem,
+  OnlineExam,
+  VicePrincipalPermissions,
+  ReportCard,
+  GradeItem
 } from '../types';
+
+export const INITIAL_VICE_PRINCIPAL_PERMISSIONS: VicePrincipalPermissions = {
+  canManageAnnouncements: true,
+  canManageSchedule: true,
+  canManageStudentsAndClasses: true,
+  canViewFullDossier: true,
+  canLogDisciplinary: true
+};
 
 export const INITIAL_SCHOOLS: School[] = [
   {
@@ -143,25 +156,311 @@ export const INITIAL_CLASSES: ClassGroup[] = [
   }
 ];
 
+const sampleSubjectsTerm1 = [
+  { name: 'ریاضی ۱', unit: 4, continuousScore: 19.5, finalScore: 19.0, totalScore: 19.25, status: 'قبول' as const, teacherName: 'استاد کاظمی' },
+  { name: 'فیزیک ۱', unit: 3, continuousScore: 20.0, finalScore: 19.5, totalScore: 19.75, status: 'قبول' as const, teacherName: 'مهندس نوری' },
+  { name: 'شیمی ۱', unit: 3, continuousScore: 18.5, finalScore: 19.0, totalScore: 18.75, status: 'قبول' as const, teacherName: 'دکتر صابری' },
+  { name: 'هندسه ۱', unit: 2, continuousScore: 19.0, finalScore: 18.5, totalScore: 18.75, status: 'قبول' as const, teacherName: 'استاد کاظمی' },
+  { name: 'فارسی و نگارش ۱', unit: 3, continuousScore: 19.5, finalScore: 19.5, totalScore: 19.5, status: 'قبول' as const, teacherName: 'دکتر حسینی' },
+  { name: 'عربی، زبان قرآن ۱', unit: 2, continuousScore: 19.0, finalScore: 20.0, totalScore: 19.5, status: 'قبول' as const, teacherName: 'استاد جعفری' },
+  { name: 'دین و زندگی ۱', unit: 2, continuousScore: 20.0, finalScore: 20.0, totalScore: 20.0, status: 'قبول' as const, teacherName: 'حجت‌الاسلام تقوی' },
+  { name: 'زبان انگلیسی ۱', unit: 2, continuousScore: 19.0, finalScore: 18.5, totalScore: 18.75, status: 'قبول' as const, teacherName: 'آقای حسنی' },
+  { name: 'جغرافیای ایران', unit: 2, continuousScore: 19.5, finalScore: 19.0, totalScore: 19.25, status: 'قبول' as const, teacherName: 'آقای شمس' },
+  { name: 'کارگاه کارآفرینی و تولید', unit: 2, continuousScore: 20.0, finalScore: 20.0, totalScore: 20.0, status: 'قبول' as const, teacherName: 'مهندس طاهری' }
+];
+
+const sampleSubjectsTerm2 = [
+  { name: 'ریاضی ۱', unit: 4, continuousScore: 19.5, finalScore: 19.5, totalScore: 19.5, status: 'قبول' as const, teacherName: 'استاد کاظمی' },
+  { name: 'فیزیک ۱', unit: 3, continuousScore: 20.0, finalScore: 20.0, totalScore: 20.0, status: 'قبول' as const, teacherName: 'مهندس نوری' },
+  { name: 'شیمی ۱', unit: 3, continuousScore: 19.0, finalScore: 19.5, totalScore: 19.25, status: 'قبول' as const, teacherName: 'دکتر صابری' },
+  { name: 'هندسه ۱', unit: 2, continuousScore: 19.5, finalScore: 19.0, totalScore: 19.25, status: 'قبول' as const, teacherName: 'استاد کاظمی' },
+  { name: 'فارسی و نگارش ۱', unit: 3, continuousScore: 19.5, finalScore: 19.5, totalScore: 19.5, status: 'قبول' as const, teacherName: 'دکتر حسینی' },
+  { name: 'عربی، زبان قرآن ۱', unit: 2, continuousScore: 20.0, finalScore: 19.5, totalScore: 19.75, status: 'قبول' as const, teacherName: 'استاد جعفری' },
+  { name: 'دین و زندگی ۱', unit: 2, continuousScore: 20.0, finalScore: 20.0, totalScore: 20.0, status: 'قبول' as const, teacherName: 'حجت‌الاسلام تقوی' },
+  { name: 'زبان انگلیسی ۱', unit: 2, continuousScore: 19.5, finalScore: 19.0, totalScore: 19.25, status: 'قبول' as const, teacherName: 'آقای حسنی' },
+  { name: 'جغرافیای ایران', unit: 2, continuousScore: 20.0, finalScore: 19.5, totalScore: 19.75, status: 'قبول' as const, teacherName: 'آقای شمس' },
+  { name: 'کارگاه کارآفرینی و تولید', unit: 2, continuousScore: 20.0, finalScore: 20.0, totalScore: 20.0, status: 'قبول' as const, teacherName: 'مهندس طاهری' }
+];
+
 export const INITIAL_STUDENTS: Student[] = [
-  { id: 'std-1', schoolId: 'school-1', classGroupId: 'cls-1', name: 'آرین احمدی', nationalCode: '۴۰۲۸۹۱۰۰۱', parentName: 'بهروز احمدی', parentPhone: '۰۹۱۸۷۷۷۵۰۵۵', parentBaleAccount: '@behrooz_ahmadi' },
-  { id: 'std-2', schoolId: 'school-1', classGroupId: 'cls-1', name: 'امیرعلی رضایی', nationalCode: '۴۰۲۸۹۱۰۰۲', parentName: 'محسن رضایی', parentPhone: '۰۹۱۸۱۱۱۲۲۳۳', parentBaleAccount: '@m_rezaei' },
-  { id: 'std-3', schoolId: 'school-1', classGroupId: 'cls-1', name: 'پارسا قاسمی', nationalCode: '۴۰۲۸۹۱۰۰۳', parentName: 'صادق قاسمی', parentPhone: '۰۹۱۸۲۲۲۳۳۴۴', parentBaleAccount: '@sadegh_gh' },
-  { id: 'std-4', schoolId: 'school-1', classGroupId: 'cls-1', name: 'سینا محمدی', nationalCode: '۴۰۲۸۹۱۰۰۴', parentName: 'داوود محمدی', parentPhone: '۰۹۱۸۳۳۳۴۴۵۵', parentBaleAccount: '@d_mohammadi' },
-  { id: 'std-5', schoolId: 'school-1', classGroupId: 'cls-1', name: 'دانیال کریمی', nationalCode: '۴۰۲۸۹۱۰۰۵', parentName: 'عباس کریمی', parentPhone: '۰۹۱۸۴۴۴۵۵۶۶', parentBaleAccount: '@karimi_a' },
-  { id: 'std-6', schoolId: 'school-1', classGroupId: 'cls-1', name: 'مهدی یوسفی', nationalCode: '۴۰۲۸۹۱۰۰۶', parentName: 'سعید یوسفی', parentPhone: '۰۹۱۸۵۵۵۶۶۷۷', parentBaleAccount: '@saeed_yousefi' },
-  { id: 'std-7', schoolId: 'school-1', classGroupId: 'cls-1', name: 'علی صادقی', nationalCode: '۴۰۲۸۹۱۰۰۷', parentName: 'حسین صادقی', parentPhone: '۰۹۱۸۶۶۶۷۷۸۸', parentBaleAccount: '@h_sadeghi' },
-  { id: 'std-8', schoolId: 'school-1', classGroupId: 'cls-1', name: 'محمدمهدی اکبری', nationalCode: '۴۰۲۸۹۱۰۰۸', parentName: 'مهدی اکبری', parentPhone: '۰۹۱۸۷۷۷۸۸۹۹', parentBaleAccount: '@akbari_m' },
-  { id: 'std-9', schoolId: 'school-1', classGroupId: 'cls-1', name: 'بردیا مرادی', nationalCode: '۴۰۲۸۹۱۰۰۹', parentName: 'فرهاد مرادی', parentPhone: '۰۹۱۸۸۸۸۹۹۰۰', parentBaleAccount: '@farhad_moradi' },
-  { id: 'std-10', schoolId: 'school-1', classGroupId: 'cls-1', name: 'پوریا صالحی', nationalCode: '۴۰۲۸۹۱۰۱۰', parentName: 'مجید صالحی', parentPhone: '۰۹۱۸۹۹۹۰۰۱۱', parentBaleAccount: '@salehi_m' },
-  { id: 'std-11', schoolId: 'school-1', classGroupId: 'cls-1', name: 'مانی رحیمی', nationalCode: '۴۰۲۸۹۱۰۱۱', parentName: 'اصغر رحیمی', parentPhone: '۰۹۱۸۱۱۱۲۲۴۴', parentBaleAccount: '@rahimi_asghar' },
-  { id: 'std-12', schoolId: 'school-1', classGroupId: 'cls-1', name: 'کیان سلطانی', nationalCode: '۴۰۲۸۹۱۰۱۲', parentName: 'ابراهیم سلطانی', parentPhone: '۰۹۱۸۲۲۲۳۳۵۵', parentBaleAccount: '@soltani_eb' },
-  { id: 'std-13', schoolId: 'school-1', classGroupId: 'cls-1', name: 'آراد حسینی', nationalCode: '۴۰۲۸۹۱۰۱۳', parentName: 'احمد حسینی', parentPhone: '۰۹۱۸۳۳۳۴۴۶۶', parentBaleAccount: '@hosseini_a' },
-  { id: 'std-14', schoolId: 'school-1', classGroupId: 'cls-1', name: 'سامان شریفی', nationalCode: '۴۰۲۸۹۱۰۱۴', parentName: 'جمال شریفی', parentPhone: '۰۹۱۸۴۴۴۵۵۷۷', parentBaleAccount: '@sharifi_j' },
-  { id: 'std-15', schoolId: 'school-1', classGroupId: 'cls-1', name: 'امیرمحمد نوری', nationalCode: '۴۰۲۸۹۱۰۱۵', parentName: 'قاسم نوری', parentPhone: '۰۹۱۸۵۵۵۶۶۸۸', parentBaleAccount: '@nouri_gh' },
-  { id: 'std-16', schoolId: 'school-1', classGroupId: 'cls-1', name: 'نوید فتاحی', nationalCode: '۴۰۲۸۹۱۰۱۶', parentName: 'مرتضی فتاحی', parentPhone: '۰۹۱۸۶۶۶۷۷۹۹', parentBaleAccount: '@fattahi_m' },
-  { id: 'std-17', schoolId: 'school-1', classGroupId: 'cls-1', name: 'عرفان باقری', nationalCode: '۴۰۲۸۹۱۰۱۷', parentName: 'جواد باقری', parentPhone: '۰۹۱۸۷۷۷۸۸۰۰', parentBaleAccount: '@bagheri_j' },
-  { id: 'std-18', schoolId: 'school-1', classGroupId: 'cls-1', name: 'شایان حیدری', nationalCode: '۴۰۲۸۹۱۰۱۸', parentName: 'علی حیدری', parentPhone: '۰۹۱۸۸۸۸۹۹۱۱', parentBaleAccount: '@heydari_ali' }
+  {
+    id: 'std-1',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'آرین احمدی',
+    nationalCode: '۴۰۲۸۹۱۰۰۱',
+    birthDate: '۱۳۸۹/۰۴/۱۵',
+    fatherName: 'بهروز',
+    motherName: 'فاطمه',
+    studentPhone: '۰۹۱۸۵۵۵۴۰۴۴',
+    parentName: 'بهروز احمدی',
+    parentPhone: '۰۹۱۸۷۷۷۵۰۵۵',
+    emergencyPhone: '۰۲۱-۵۵۴۲۸۸۹',
+    address: 'شهرستان، خیابان مطهری، کوچه گلستان ۴، پلاک ۱۸، زنگ ۲',
+    parentBaleAccount: '@behrooz_ahmadi',
+    grade: 'پایه دهم',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۲۱۰۸۹۱',
+    attendanceStats: {
+      totalDays: 142,
+      presentDays: 140,
+      absentDays: 1,
+      lateDays: 1,
+      excusedDays: 0
+    },
+    disciplinaryRecords: [
+      {
+        id: 'disc-1',
+        type: 'تشویقی',
+        title: 'کسب رتبه نخست مسابقات آزمایشگاهی و ابتکارات فیزیک',
+        note: 'اهدای تقدیرنامه کتبی و ۲ نمره مثبت در نمره مستمر فیزیک',
+        date: '۱۴۰۴/۰۹/۱۰',
+        recordedBy: 'دکتر حسینی (مدیر مدرسه)'
+      },
+      {
+        id: 'disc-2',
+        type: 'تاخیر',
+        title: 'تاخیر زنگ اول با موجه‌سازی ولی',
+        note: 'به علت ترافیک شهری با هماهنگی تلفنی ولی',
+        date: '۱۴۰۴/۱۱/۰۴',
+        recordedBy: 'آقای مرادی (معاونت انضباطی)'
+      }
+    ],
+    reportCards: [
+      {
+        term: 'term1',
+        termTitle: 'کارنامه نوبت اول (دی‌ماه)',
+        year: '۱۴۰۴-۱۴۰۵',
+        gpa: 19.42,
+        rankInClass: 2,
+        disciplineScore: 20,
+        subjects: sampleSubjectsTerm1,
+        isPublished: true
+      },
+      {
+        term: 'term2',
+        termTitle: 'کارنامه نوبت دوم (خردادماه)',
+        year: '۱۴۰۴-۱۴۰۵',
+        gpa: 19.68,
+        rankInClass: 1,
+        disciplineScore: 20,
+        subjects: sampleSubjectsTerm2,
+        isPublished: true
+      }
+    ],
+    pastYearHistory: [
+      {
+        year: '۱۴۰۳-۱۴۰۴',
+        grade: 'پایه نهم (دوره اول)',
+        schoolName: 'مدرسه شهید بهشتی',
+        gpa: 19.85,
+        disciplineScore: 20,
+        status: 'قبول با رتبه ممتاز'
+      },
+      {
+        year: '۱۴۰۲-۱۴۰۳',
+        grade: 'پایه هشتم (دوره اول)',
+        schoolName: 'مدرسه شهید بهشتی',
+        gpa: 19.78,
+        disciplineScore: 20,
+        status: 'قبول با رتبه ممتاز'
+      }
+    ]
+  },
+  {
+    id: 'std-2',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'امیرعلی رضایی',
+    nationalCode: '۴۰۲۸۹۱۰۰۲',
+    birthDate: '۱۳۸۹/۰۶/۲۰',
+    fatherName: 'محسن',
+    parentName: 'محسن رضایی',
+    parentPhone: '۰۹۱۸۱۱۱۲۲۳۳',
+    address: 'خیابان تختی، فرعی سوم، پلاک ۴',
+    parentBaleAccount: '@m_rezaei',
+    grade: 'پایه دهم',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۲۱۰۸۹۲',
+    attendanceStats: { totalDays: 142, presentDays: 139, absentDays: 2, lateDays: 1, excusedDays: 0 },
+    disciplinaryRecords: [
+      { id: 'disc-r2', type: 'تشویقی', title: 'فعالیت در مسابقات ورزشی شطرنج', note: 'مقام سوم ناحیه', date: '۱۴۰۴/۰۸/۱۴', recordedBy: 'آقای مرادی' }
+    ],
+    reportCards: [
+      {
+        term: 'term1',
+        termTitle: 'کارنامه نوبت اول (دی‌ماه)',
+        year: '۱۴۰۴-۱۴۰۵',
+        gpa: 18.90,
+        rankInClass: 4,
+        disciplineScore: 19.5,
+        subjects: sampleSubjectsTerm1.map(s => ({ ...s, totalScore: Math.max(16, s.totalScore - 0.5) })),
+        isPublished: true
+      }
+    ],
+    pastYearHistory: [
+      { year: '۱۴۰۳-۱۴۰۴', grade: 'پایه نهم', schoolName: 'دبیرستان امام صادق (ع)', gpa: 19.10, disciplineScore: 20, status: 'قبول خرداد' }
+    ]
+  },
+  {
+    id: 'std-3',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'پارسا قاسمی',
+    nationalCode: '۴۰۲۸۹۱۰۰۳',
+    birthDate: '۱۳۸۹/۰۲/۱۲',
+    fatherName: 'صادق',
+    parentName: 'صادق قاسمی',
+    parentPhone: '۰۹۱۸۲۲۲۳۳۴۴',
+    address: 'میدان قدس، کوی فرهنگیان، بلوک ب',
+    parentBaleAccount: '@sadegh_gh',
+    grade: 'پایه دهم',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۲۱۰۸۹۳',
+    attendanceStats: { totalDays: 142, presentDays: 135, absentDays: 5, lateDays: 2, excusedDays: 1 },
+    disciplinaryRecords: [
+      { id: 'disc-r3', type: 'تذکر', title: 'تاخیرهای مکرر در زنگ اول', note: 'دعوت از ولی جهت بررسی سرویس ایاب و ذهاب', date: '۱۴۰۴/۱۰/۱۵', recordedBy: 'آقای مرادی' }
+    ],
+    reportCards: [
+      {
+        term: 'term1',
+        termTitle: 'کارنامه نوبت اول (دی‌ماه)',
+        year: '۱۴۰۴-۱۴۰۵',
+        gpa: 17.65,
+        rankInClass: 9,
+        disciplineScore: 18.5,
+        subjects: sampleSubjectsTerm1.map(s => ({ ...s, totalScore: Math.max(14, s.totalScore - 1.8) })),
+        isPublished: true
+      }
+    ],
+    pastYearHistory: [
+      { year: '۱۴۰۳-۱۴۰۴', grade: 'پایه نهم', schoolName: 'مدرسه شهید فهمیده', gpa: 18.40, disciplineScore: 19, status: 'قبول خرداد' }
+    ]
+  },
+  {
+    id: 'std-4',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'سینا محمدی',
+    nationalCode: '۴۰۲۸۹۱۰۰۴',
+    birthDate: '۱۳۸۹/۰۷/۰۱',
+    fatherName: 'داوود',
+    parentName: 'داوود محمدی',
+    parentPhone: '۰۹۱۸۳۳۳۴۴۵۵',
+    address: 'خیابان امام خمینی، روبروی بانک ملی',
+    parentBaleAccount: '@d_mohammadi',
+    grade: 'پایه دهم',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۲۱۰۸۹۴',
+    attendanceStats: { totalDays: 142, presentDays: 141, absentDays: 0, lateDays: 1, excusedDays: 0 },
+    disciplinaryRecords: [],
+    reportCards: [
+      {
+        term: 'term1',
+        termTitle: 'کارنامه نوبت اول (دی‌ماه)',
+        year: '۱۴۰۴-۱۴۰۵',
+        gpa: 19.15,
+        rankInClass: 3,
+        disciplineScore: 20,
+        subjects: sampleSubjectsTerm1,
+        isPublished: true
+      }
+    ],
+    pastYearHistory: [
+      { year: '۱۴۰۳-۱۴۰۴', grade: 'پایه نهم', schoolName: 'دبیرستان امام صادق (ع)', gpa: 19.30, disciplineScore: 20, status: 'قبول با رتبه ممتاز' }
+    ]
+  },
+  {
+    id: 'std-5',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'دانیال کریمی',
+    nationalCode: '۴۰۲۸۹۱۰۰۵',
+    birthDate: '۱۳۸۹/۰۸/۲۲',
+    fatherName: 'عباس',
+    parentName: 'عباس کریمی',
+    parentPhone: '۰۹۱۸۴۴۴۵۵۶۶',
+    address: 'بلوار استقلال، مجتمع نگین، واحد ۶',
+    parentBaleAccount: '@karimi_a',
+    grade: 'پایه دهم',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۲۱۰۸۹۵',
+    attendanceStats: { totalDays: 142, presentDays: 137, absentDays: 3, lateDays: 2, excusedDays: 0 },
+    disciplinaryRecords: [],
+    reportCards: [
+      {
+        term: 'term1',
+        termTitle: 'کارنامه نوبت اول (دی‌ماه)',
+        year: '۱۴۰۴-۱۴۰۵',
+        gpa: 18.20,
+        rankInClass: 7,
+        disciplineScore: 19.0,
+        subjects: sampleSubjectsTerm1.map(s => ({ ...s, totalScore: Math.max(15, s.totalScore - 1.2) })),
+        isPublished: true
+      }
+    ],
+    pastYearHistory: []
+  },
+  {
+    id: 'std-6',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'مهدی یوسفی',
+    nationalCode: '۴۰۲۸۹۱۰۰۶',
+    birthDate: '۱۳۸۹/۰۱/۱۸',
+    fatherName: 'سعید',
+    parentName: 'سعید یوسفی',
+    parentPhone: '۰۹۱۸۵۵۵۶۶۷۷',
+    address: 'خیابان ۱۷ شهریور، پلاک ۲۵',
+    parentBaleAccount: '@saeed_yousefi',
+    grade: 'پایه دهم',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۲۱۰۸۹۶',
+    attendanceStats: { totalDays: 142, presentDays: 142, absentDays: 0, lateDays: 0, excusedDays: 0 },
+    disciplinaryRecords: [],
+    reportCards: [],
+    pastYearHistory: []
+  },
+  {
+    id: 'std-7',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'علی صادقی',
+    nationalCode: '۴۰۲۸۹۱۰۰۷',
+    birthDate: '۱۳۸۹/۰۳/۰۵',
+    fatherName: 'حسین',
+    parentName: 'حسین صادقی',
+    parentPhone: '۰۹۱۸۶۶۶۷۷۸۸',
+    address: 'میدان رسالت، کوچه بهار، پلاک ۹',
+    parentBaleAccount: '@h_sadeghi',
+    grade: 'پایه دهم',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۲۱۰۸۹۷',
+    attendanceStats: { totalDays: 142, presentDays: 138, absentDays: 2, lateDays: 2, excusedDays: 0 },
+    disciplinaryRecords: [],
+    reportCards: [],
+    pastYearHistory: []
+  },
+  {
+    id: 'std-8',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'محمدمهدی اکبری',
+    nationalCode: '۴۰۲۸۹۱۰۰۸',
+    birthDate: '۱۳۸۹/۰۹/۱۰',
+    fatherName: 'مهدی',
+    parentName: 'مهدی اکبری',
+    parentPhone: '۰۹۱۸۷۷۷۸۸۹۹',
+    address: 'خیابان فلسطین، روبروی پارک ملت',
+    parentBaleAccount: '@akbari_m',
+    grade: 'پایه دهم',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۲۱۰۸۹۸',
+    attendanceStats: { totalDays: 142, presentDays: 140, absentDays: 1, lateDays: 1, excusedDays: 0 },
+    disciplinaryRecords: [],
+    reportCards: [],
+    pastYearHistory: []
+  }
 ];
 
 export const INITIAL_SCHEDULE: ScheduleSlot[] = [
@@ -177,7 +476,7 @@ export const INITIAL_SCHEDULE: ScheduleSlot[] = [
     period: 1,
     startTime: '۰۸:۰۰',
     endTime: '۰۹:۳۰',
-    isCurrentPeriod: true // Teacher's immediately active class right now!
+    isCurrentPeriod: true
   },
   {
     id: 'sch-2',
@@ -206,6 +505,116 @@ export const INITIAL_SCHEDULE: ScheduleSlot[] = [
     startTime: '۰۸:۰۰',
     endTime: '۰۹:۳۰',
     isCurrentPeriod: false
+  },
+  {
+    id: 'sch-4',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    className: 'دهم ریاضی - الف',
+    teacherId: 'user-t2',
+    teacherName: 'مهندس نوری',
+    subject: 'فیزیک ۱ (چگالی و اندازه‌گیری)',
+    dayOfWeek: 'یکشنبه',
+    period: 2,
+    startTime: '۰۹:۴۵',
+    endTime: '۱۱:۱۵',
+    isCurrentPeriod: false
+  },
+  {
+    id: 'sch-5',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    className: 'دهم ریاضی - الف',
+    teacherId: 'user-t3',
+    teacherName: 'دکتر حسینی',
+    subject: 'فارسی و نگارش ۱',
+    dayOfWeek: 'سه‌شنبه',
+    period: 1,
+    startTime: '۰۸:۰۰',
+    endTime: '۰۹:۳۰',
+    isCurrentPeriod: false
+  },
+  {
+    id: 'sch-6',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    className: 'دهم ریاضی - الف',
+    teacherId: 'user-t4',
+    teacherName: 'استاد حسنی',
+    subject: 'زبان انگلیسی ۱',
+    dayOfWeek: 'چهارشنبه',
+    period: 3,
+    startTime: '۱۱:۳۰',
+    endTime: '۱۲:۴۵',
+    isCurrentPeriod: false
+  }
+];
+
+export const INITIAL_HOMEWORK: HomeworkItem[] = [
+  {
+    id: 'hw-1',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    className: 'دهم ریاضی - الف',
+    subject: 'ریاضی ۱',
+    teacherId: 'user-t1',
+    teacherName: 'استاد مسعود کاظمی',
+    title: 'تمرینات تکمیلی فصل اول: دنباله حسابی و هندسی',
+    description: 'حل تمرین‌های صفحه ۲۴ و ۲۵ کتاب درسی (مسائل ۴ تا ۹) همراه با استدلال در دفتر ریاضی.',
+    assignedDate: '۱۴۰۵/۰۶/۲۲',
+    dueDate: '۱۴۰۵/۰۶/۲۵',
+    submissionsCount: 14,
+    totalStudents: 18,
+    status: 'active'
+  },
+  {
+    id: 'hw-2',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    className: 'دهم ریاضی - الف',
+    subject: 'فیزیک ۱',
+    teacherId: 'user-t2',
+    teacherName: 'مهندس نوری',
+    title: 'گزارش کار آزمایشگاه: اندازه‌گیری چگالی مایعات',
+    description: 'ترسیم جدول خطای اندازه‌گیری و پاسخ به پرسش‌های آزمایشگاهی انتهای فصل ۱.',
+    assignedDate: '۱۴۰۵/۰۶/۲۰',
+    dueDate: '۱۴۰۵/۰۶/۲۴',
+    submissionsCount: 16,
+    totalStudents: 18,
+    status: 'active'
+  }
+];
+
+export const INITIAL_EXAMS: OnlineExam[] = [
+  {
+    id: 'exam-1',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    className: 'دهم ریاضی - الف',
+    subject: 'ریاضی ۱',
+    teacherName: 'استاد مسعود کاظمی',
+    title: 'آزمون آنلاین کوییز: مجموعه‌ها و متناهی/نامتناهی',
+    examDate: '۱۴۰۵/۰۶/۲۵',
+    startTime: '۱۷:۰۰',
+    durationMinutes: 20,
+    totalScore: 20,
+    status: 'scheduled',
+    questions: [
+      {
+        id: 'eq-1',
+        question: 'تعداد زیرمجموعه‌های محض یک مجموعه ۶ عضوی کدام است؟',
+        options: ['۶۳', '۶۴', '۳۱', '۳۲'],
+        correctAnswer: '۶۳',
+        score: 10
+      },
+      {
+        id: 'eq-2',
+        question: 'اگر A و B دو مجموعه جدا از هم باشند، اشتراک آن‌ها چه ویژگی دارد؟',
+        options: ['برابر با تهی است', 'برابر با مجموعه مرجع است', 'برابر با اجتماع است', 'نامتناهی است'],
+        correctAnswer: 'برابر با تهی است',
+        score: 10
+      }
+    ]
   }
 ];
 
@@ -343,6 +752,7 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
   {
     id: 'anc-1',
     schoolId: 'all',
+    type: 'announcement',
     title: 'آغاز رسمی فعالیت سامانه جامع مدیریت یکپارچه مدارس شهرستان',
     content: 'به اطلاع کلیه مدیران، معلمان گرامی و اولیا می‌رساند سامانه هوشمند با هدف تسهیل حداکثری فرآیندهای اداری، ثبت حضور و غیاب لحظه‌ای و دسترسی به بانک سوالات شهرستانی فعال گردید.',
     senderRole: 'مدیریت کل پلتفرم شهرستان',
@@ -354,24 +764,52 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
   {
     id: 'anc-2',
     schoolId: 'school-1',
+    type: 'event',
     title: 'جلسه مجمع عمومی اولیا و مربیان دبیرستان امام صادق (ع)',
-    content: 'جلسه آشنایی با برنامه آموزشی سال جدید و ارائه گزارش سامانه هوشمند در روز چهارشنبه ساعت ۱۵:۳۰ در سالن همایش دبیرستان برگزار می‌شود.',
+    content: 'جلسه آشنایی با برنامه آموزشی سال جدید و ارائه گزارش عملکرد سامانه هوشمند دبیرستان.',
     senderRole: 'مدیر مدرسه',
     senderName: 'دکتر حسینی',
     target: 'parents',
     date: '۱۴۰۵/۰۶/۲۱',
+    eventDate: 'چهارشنبه ۲۶ شهریور - ساعت ۱۵:۳۰',
+    eventLocation: 'سالن همایش‌های دبیرستان امام صادق (ع)',
     priority: 'normal'
   },
   {
     id: 'anc-3',
     schoolId: 'school-1',
+    type: 'announcement',
     title: 'دستورالعمل ثبت حضور و غیاب الکترونیک در زنگ‌های اول',
     content: 'همکاران محترم آموزشی لطفاً در ۵ دقیقه ابتدایی هر زنگ، نسبت به تایید حضور و غیاب کلاس خود اقدام فرمایند تا پیامک و اعلان بله به صورت خودکار برای اولیا ارسال گردد.',
     senderRole: 'معاونت انضباطی',
     senderName: 'آقای مرادی',
     target: 'teachers',
-    date: '۱۴۰5/۰۶/۲۲',
+    date: '۱۴۰۵/۰۶/۲۲',
     priority: 'urgent'
+  },
+  {
+    id: 'anc-4',
+    schoolId: 'school-1',
+    type: 'event_report',
+    title: 'گزارش تصویری: کسب رتبه نخست المپیاد ریاضی استانی توسط دانش‌آموزان دبیرستان',
+    content: 'تیم ریاضی دبیرستان امام صادق (ع) با سرپرستی استاد کاظمی موفق به کسب مدال طلا و مقام برتر استانی گردیدند. از تلاش ستودنی فرزندان و همراهی اولیا سپاسگزاریم.',
+    senderRole: 'مدیر مدرسه',
+    senderName: 'دکتر حسینی',
+    target: 'all',
+    date: '۱۴۰۵/۰۶/۱۸',
+    priority: 'normal'
+  },
+  {
+    id: 'anc-5',
+    schoolId: 'school-1',
+    type: 'news',
+    title: 'تجهیز سالن رایانه و آزمایشگاه فیزیک به ابزارهای نوین چندرسانه‌ای',
+    content: 'با مشارکت انجمن اولیا و مربیان، کارگاه کامپیوتر مدرسه به سیستم‌های پیشرفته و اینترنت ملی پرسرعت مجهز شد.',
+    senderRole: 'مدیر مدرسه',
+    senderName: 'دکتر حسینی',
+    target: 'all',
+    date: '۱۴۰۵/۰۶/۱۵',
+    priority: 'normal'
   }
 ];
 
@@ -395,9 +833,7 @@ export const INITIAL_ATTENDANCE_LOGS: AttendanceSession[] = [
       { studentId: 'std-5', status: 'late', note: '۱۰ دقیقه تاخیر' },
       { studentId: 'std-6', status: 'present' },
       { studentId: 'std-7', status: 'present' },
-      { studentId: 'std-8', status: 'present' },
-      { studentId: 'std-9', status: 'present' },
-      { studentId: 'std-10', status: 'present' }
+      { studentId: 'std-8', status: 'present' }
     ],
     sentNotificationsCount: 2
   }
@@ -427,3 +863,50 @@ export const INITIAL_NOTIFICATIONS: NotificationLog[] = [
     schoolName: 'دبیرستان نمونه دولتی امام صادق (ع)'
   }
 ];
+
+export const INITIAL_GRADES: GradeItem[] = [
+  {
+    id: 'grd-1',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    subject: 'ریاضی ۱',
+    title: 'ارزشیابی مستمر مهر و آبان',
+    category: 'continuous',
+    categoryTitle: 'نمره مستمر کلاسی',
+    date: '۱۴۰۴/۰۸/۲۸',
+    maxScore: 20,
+    scores: [
+      { studentId: 'std-1', score: 19.5, note: 'عالی، حل تمرین در پای تخته' },
+      { studentId: 'std-2', score: 18.0 },
+      { studentId: 'std-3', score: 16.5 },
+      { studentId: 'std-4', score: 19.0 },
+      { studentId: 'std-5', score: 17.5 },
+      { studentId: 'std-6', score: 18.5 },
+      { studentId: 'std-7', score: 17.0 },
+      { studentId: 'std-8', score: 18.0 }
+    ]
+  },
+  {
+    id: 'grd-2',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    subject: 'ریاضی ۱',
+    title: 'امتحان نوبت اول (دی‌ماه)',
+    category: 'term1',
+    categoryTitle: 'امتحان نوبت اول دی‌ماه',
+    date: '۱۴۰۴/۱۰/۱۸',
+    maxScore: 20,
+    scores: [
+      { studentId: 'std-1', score: 19.0 },
+      { studentId: 'std-2', score: 18.5 },
+      { studentId: 'std-3', score: 15.5 },
+      { studentId: 'std-4', score: 19.0 },
+      { studentId: 'std-5', score: 17.0 },
+      { studentId: 'std-6', score: 18.0 },
+      { studentId: 'std-7', score: 16.5 },
+      { studentId: 'std-8', score: 17.5 }
+    ]
+  }
+];
+
+

@@ -28,6 +28,14 @@ export interface School {
   accentColor: string;
 }
 
+export interface VicePrincipalPermissions {
+  canManageAnnouncements: boolean;
+  canManageSchedule: boolean;
+  canManageStudentsAndClasses: boolean;
+  canViewFullDossier: boolean;
+  canLogDisciplinary: boolean;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -41,16 +49,78 @@ export interface UserProfile {
   childStudentId?: string;
 }
 
+export interface AcademicSubjectScore {
+  name: string;
+  unit: number; // تعداد واحد
+  continuousScore: number; // مستمر
+  finalScore: number; // پایانی
+  totalScore: number; // نمره نهایی
+  status: 'قبول' | 'تجدید';
+  teacherName: string;
+}
+
+export interface ReportCard {
+  term: 'term1' | 'term2';
+  termTitle: string; // کارنامه نوبت اول (دی‌ماه) یا نوبت دوم (خرداد)
+  year: string; // ۱۴۰۴-۱۴۰۵
+  gpa: number; // معدل
+  rankInClass: number; // رتبه در کلاس
+  disciplineScore: number; // انضباط
+  subjects: AcademicSubjectScore[];
+  isPublished: boolean; // آیا در دسترس اولیا و دانش‌آموزان قرار گرفته؟
+}
+
+export interface PastYearAcademicHistory {
+  year: string;
+  grade: string;
+  schoolName: string;
+  gpa: number;
+  disciplineScore: number;
+  status: 'قبول با رتبه ممتاز' | 'قبول خرداد';
+}
+
+export interface DisciplinaryRecord {
+  id: string;
+  type: 'تشویقی' | 'تذکر' | 'تاخیر';
+  title: string;
+  note: string;
+  date: string;
+  recordedBy: string;
+}
+
+export interface AttendanceStats {
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  lateDays: number;
+  excusedDays: number;
+}
+
 export interface Student {
   id: string;
   schoolId: string;
   classGroupId: string;
   name: string;
   nationalCode: string;
+  birthDate: string;
+  fatherName: string;
+  motherName?: string;
+  studentPhone?: string;
   parentName: string;
   parentPhone: string;
+  emergencyPhone?: string;
+  address: string;
   parentBaleAccount: string;
+  grade: string;
+  fieldOfStudy: string;
+  studentNumber: string; // شماره دانش‌آموزی
   todayStatus?: 'present' | 'absent' | 'late' | 'excused';
+  
+  // Comprehensive Dossier History
+  attendanceStats: AttendanceStats;
+  disciplinaryRecords: DisciplinaryRecord[];
+  reportCards: ReportCard[];
+  pastYearHistory: PastYearAcademicHistory[];
 }
 
 export interface ClassGroup {
@@ -101,15 +171,60 @@ export interface AttendanceSession {
   sentNotificationsCount: number;
 }
 
+export type GradeCategory = 'continuous' | 'term1' | 'term2' | 'quiz';
+
 export interface GradeItem {
   id: string;
   schoolId: string;
   classGroupId: string;
   subject: string;
   title: string;
+  category: GradeCategory;
+  categoryTitle: string; // نمره مستمر، امتحان نوبت اول دی‌ماه، امتحان نوبت دوم، کوییز کلاسی
   date: string;
   maxScore: number;
-  scores: { studentId: string; score: number }[];
+  scores: { studentId: string; score: number; note?: string }[];
+}
+
+export interface HomeworkItem {
+  id: string;
+  schoolId: string;
+  classGroupId: string;
+  className: string;
+  subject: string;
+  teacherId: string;
+  teacherName: string;
+  title: string;
+  description: string;
+  assignedDate: string;
+  dueDate: string;
+  submissionsCount: number;
+  totalStudents: number;
+  status: 'active' | 'expired';
+}
+
+export interface OnlineExamQuestion {
+  id: string;
+  question: string;
+  options?: string[];
+  correctAnswer?: string;
+  score: number;
+}
+
+export interface OnlineExam {
+  id: string;
+  schoolId: string;
+  classGroupId: string;
+  className: string;
+  subject: string;
+  teacherName: string;
+  title: string;
+  examDate: string;
+  startTime: string;
+  durationMinutes: number;
+  totalScore: number;
+  status: 'scheduled' | 'active' | 'completed';
+  questions: OnlineExamQuestion[];
 }
 
 export interface QuestionBankItem {
@@ -143,15 +258,21 @@ export interface BannerAd {
   clicksCount: number;
 }
 
+export type PostType = 'announcement' | 'news' | 'event' | 'event_report';
+
 export interface Announcement {
   id: string;
   schoolId: string | 'all'; // 'all' means platform-wide
+  type?: PostType; // 'announcement' | 'news' | 'event' | 'event_report'
   title: string;
   content: string;
   senderRole: string;
   senderName: string;
   target: 'all' | 'teachers' | 'parents' | 'students';
   date: string;
+  eventDate?: string;
+  eventLocation?: string;
+  imageUrl?: string;
   priority: 'normal' | 'important' | 'urgent';
 }
 
@@ -166,3 +287,4 @@ export interface NotificationLog {
   timestamp: string;
   schoolName: string;
 }
+
