@@ -25,6 +25,8 @@ import { Student } from '../types';
 interface Props {
   onOpenScheduleModal?: () => void;
   onOpenClassStudentModal?: () => void;
+  onOpenClassModal?: () => void;
+  onOpenStudentModal?: () => void;
   onOpenPostModal?: () => void;
   onOpenStudentDossier?: (student: Student) => void;
 }
@@ -32,6 +34,8 @@ interface Props {
 export const VicePrincipalDashboard: React.FC<Props> = ({
   onOpenScheduleModal,
   onOpenClassStudentModal,
+  onOpenClassModal,
+  onOpenStudentModal,
   onOpenPostModal,
   onOpenStudentDossier
 }) => {
@@ -126,14 +130,27 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
 
         {/* Action Buttons conditionally enabled by Granular Permissions */}
         <div className="flex flex-wrap items-center gap-2">
-          {activeVicePrincipalPermissions.canManageStudentsAndClasses && onOpenClassStudentModal && (
-            <button
-              onClick={onOpenClassStudentModal}
-              className="px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
-            >
-              <Users className="w-4 h-4 text-teal-600" />
-              <span>کلاس‌بندی و دانش‌آموزان</span>
-            </button>
+          {activeVicePrincipalPermissions.canManageStudentsAndClasses && (
+            <>
+              {(onOpenStudentModal || onOpenClassStudentModal) && (
+                <button
+                  onClick={onOpenStudentModal || onOpenClassStudentModal}
+                  className="px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
+                >
+                  <Users className="w-4 h-4 text-teal-600" />
+                  <span>مدیریت دانش‌آموزان</span>
+                </button>
+              )}
+              {(onOpenClassModal || onOpenClassStudentModal) && (
+                <button
+                  onClick={onOpenClassModal || onOpenClassStudentModal}
+                  className="px-3 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
+                >
+                  <Users className="w-4 h-4 text-cyan-600" />
+                  <span>کلاس‌بندی و پایه‌ها</span>
+                </button>
+              )}
+            </>
           )}
 
           {activeVicePrincipalPermissions.canManageSchedule && onOpenScheduleModal && (

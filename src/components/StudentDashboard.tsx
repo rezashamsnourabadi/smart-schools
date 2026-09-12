@@ -19,7 +19,9 @@ import {
   Megaphone,
   AlertCircle,
   X,
-  MessageSquare
+  MessageSquare,
+  UploadCloud,
+  Trash2
 } from 'lucide-react';
 import { SponsorBannerCard } from './SponsorBannerCard';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -55,7 +57,29 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenSt
   // Homework submission modal state
   const [activeHwForSubmit, setActiveHwForSubmit] = useState<HomeworkItem | null>(null);
   const [submissionText, setSubmissionText] = useState('');
-  const [attachmentName, setAttachmentName] = useState('');
+  const [studentUploadedFile, setStudentUploadedFile] = useState<{
+    name: string;
+    size: string;
+    url: string;
+    type: string;
+  } | null>(null);
+
+  const handleStudentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setStudentUploadedFile({
+        name: file.name,
+        size: `${toPersianDigits(sizeInMb)} مگابایت`,
+        url: reader.result as string,
+        type: file.type.startsWith('image/') ? 'image' : 'pdf'
+      });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleTestAnswer = (opt: string) => {
     setSelectedOption(opt);
@@ -79,13 +103,13 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenSt
       studentId: currentStudent.id,
       studentName: currentStudent.name,
       textContent: submissionText.trim(),
-      attachments: attachmentName.trim()
-        ? [{ name: attachmentName.trim(), type: 'pdf' }]
+      attachments: studentUploadedFile
+        ? [{ name: studentUploadedFile.name, type: studentUploadedFile.type, url: studentUploadedFile.url }]
         : []
     });
 
     setSubmissionText('');
-    setAttachmentName('');
+    setStudentUploadedFile(null);
     setActiveHwForSubmit(null);
   };
 
@@ -95,7 +119,10 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenSt
   );
 
   return (
-    <div className="space-y-6" id="student-dashboard-view">
+    <div className="space-y-4 sm:space-y-6" id="student-dashboard-view">
+      {/* Top High-Visibility Sponsor Ribbon */}
+      <SponsorBannerCard audienceFilter="students" variant="compact" />
+
       {/* Top Greeting Card */}
       <div className="bg-gradient-to-r from-teal-800 to-cyan-900 text-white p-6 rounded-3xl shadow-md relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -467,21 +494,55 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenSt
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  پیوست فایل یا تصویر تمرین (اختیاری):
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <UploadCloud className="w-4 h-4 text-teal-600" />
+                  <span>آپلود تصویر حل تمرین یا فایل PDF (اختیاری):</span>
                 </label>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      placeholder="مثال: Taklif-Fizik-AliRezaei.pdf یا تصویر حل تمرین"
-                      value={attachmentName}
-                      onChange={(e) => setAttachmentName(e.target.value)}
-                      className="w-full text-xs p-2.5 ps-8 bg-slate-50 border border-slate-300 rounded-xl outline-none"
-                    />
-                    <Paperclip className="w-4 h-4 text-slate-400 absolute right-2.5 top-3" />
+
+                <input
+                  type="file"
+                  id="student-solution-upload"
+                  onChange={handleStudentFileChange}
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                />
+
+                {!studentUploadedFile ? (
+                  <label
+                    htmlFor="student-solution-upload"
+                    className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 hover:border-teal-500 bg-white hover:bg-teal-50/50 rounded-xl cursor-pointer transition-colors text-center"
+                  >
+                    <UploadCloud className="w-4 h-4 text-slate-400" />
+                    <span className="text-xs text-slate-600 font-medium">
+                      کلیک برای عکس گرفتن یا آپلود فایل حل تمرین
+                    </span>
+                  </label>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs">
+                      {studentUploadedFile.type === 'image' ? (
+                        <img
+                          src={studentUploadedFile.url}
+                          alt="solution preview"
+                          className="w-9 h-9 rounded-lg object-cover border border-teal-300"
+                        />
+                      ) : (
+                        <FileText className="w-6 h-6 text-teal-700" />
+                      )}
+                      <div>
+                        <span className="font-bold text-slate-900 block truncate max-w-xs">{studentUploadedFile.name}</span>
+                        <span className="text-[10px] text-slate-500">{studentUploadedFile.size}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setStudentUploadedFile(null)}
+                      className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">

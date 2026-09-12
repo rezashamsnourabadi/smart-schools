@@ -12,7 +12,9 @@ import { ParentDashboard } from './components/ParentDashboard';
 import { QuestionBankModal } from './components/QuestionBankModal';
 import { StudentDossierModal } from './components/StudentDossierModal';
 import { SchedulePlannerModal } from './components/SchedulePlannerModal';
-import { ClassAndStudentManagerModal } from './components/ClassAndStudentManagerModal';
+import { ClassManagerModal } from './components/ClassManagerModal';
+import { StudentManagerModal } from './components/StudentManagerModal';
+import { UserProfileModal } from './components/UserProfileModal';
 import { PostManagerModal } from './components/PostManagerModal';
 import { VicePrincipalPermissionsModal } from './components/VicePrincipalPermissionsModal';
 import { TeacherGradeEntryModal } from './components/TeacherGradeEntryModal';
@@ -24,6 +26,7 @@ import { Student } from './types';
 const AppContent: React.FC = () => {
   const {
     currentRole,
+    students,
     selectedStudentForDossier,
     setSelectedStudentForDossier,
     vicePrincipalPermissions
@@ -31,34 +34,16 @@ const AppContent: React.FC = () => {
 
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [isClassStudentModalOpen, setIsClassStudentModalOpen] = useState(false);
+  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isVpPermsModalOpen, setIsVpPermsModalOpen] = useState(false);
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false);
   const [isHomeworkExamModalOpen, setIsHomeworkExamModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleOpenStudentDossier = (student: Student) => {
     setSelectedStudentForDossier(student);
-  };
-
-  const handleOpenMobileAction = (action: 'schedule' | 'classes' | 'posts' | 'grades' | 'bank') => {
-    switch (action) {
-      case 'schedule':
-        setIsScheduleModalOpen(true);
-        break;
-      case 'classes':
-        setIsClassStudentModalOpen(true);
-        break;
-      case 'posts':
-        setIsPostModalOpen(true);
-        break;
-      case 'grades':
-        setIsGradeModalOpen(true);
-        break;
-      case 'bank':
-        setIsQuestionBankOpen(true);
-        break;
-    }
   };
 
   const renderDashboardByRole = () => {
@@ -70,7 +55,8 @@ const AppContent: React.FC = () => {
           <PrincipalDashboard
             onOpenQuestionBank={() => setIsQuestionBankOpen(true)}
             onOpenScheduleModal={() => setIsScheduleModalOpen(true)}
-            onOpenClassStudentModal={() => setIsClassStudentModalOpen(true)}
+            onOpenClassModal={() => setIsClassModalOpen(true)}
+            onOpenStudentModal={() => setIsStudentModalOpen(true)}
             onOpenPostModal={() => setIsPostModalOpen(true)}
             onOpenVpPermsModal={() => setIsVpPermsModalOpen(true)}
             onOpenStudentDossier={handleOpenStudentDossier}
@@ -80,7 +66,8 @@ const AppContent: React.FC = () => {
         return (
           <VicePrincipalDashboard
             onOpenScheduleModal={() => setIsScheduleModalOpen(true)}
-            onOpenClassStudentModal={() => setIsClassStudentModalOpen(true)}
+            onOpenClassModal={() => setIsClassModalOpen(true)}
+            onOpenStudentModal={() => setIsStudentModalOpen(true)}
             onOpenPostModal={() => setIsPostModalOpen(true)}
             onOpenStudentDossier={handleOpenStudentDossier}
           />
@@ -121,8 +108,8 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100/70 text-slate-800 antialiased selection:bg-teal-200" dir="rtl">
-      {/* Top Header */}
-      <Header />
+      {/* Top Header with Profile Modal trigger and Brand Switcher */}
+      <Header onOpenProfileModal={() => setIsProfileModalOpen(true)} />
 
       {/* Role Quick Switcher bar */}
       <RoleQuickSwitch />
@@ -133,7 +120,20 @@ const AppContent: React.FC = () => {
       </main>
 
       {/* Mobile Bottom Navigation for Quick Access on Smartphones */}
-      <MobileBottomNav onOpenAction={handleOpenMobileAction} />
+      <MobileBottomNav
+        onOpenStudents={() => setIsStudentModalOpen(true)}
+        onOpenClasses={() => setIsClassModalOpen(true)}
+        onOpenSchedule={() => setIsScheduleModalOpen(true)}
+        onOpenPosts={() => setIsPostModalOpen(true)}
+        onOpenQuestionBank={() => setIsQuestionBankOpen(true)}
+        onOpenGrades={() => setIsGradeModalOpen(true)}
+        onOpenHomework={() => setIsHomeworkExamModalOpen(true)}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+        onOpenDossier={() => {
+          const s = students[0];
+          if (s) setSelectedStudentForDossier(s);
+        }}
+      />
 
       {/* Full Student Dossier Modal */}
       {selectedStudentForDossier && (
@@ -148,6 +148,28 @@ const AppContent: React.FC = () => {
         />
       )}
 
+      {/* Dedicated Student Manager Modal */}
+      {isStudentModalOpen && (
+        <StudentManagerModal
+          onClose={() => setIsStudentModalOpen(false)}
+          onOpenDossier={(student) => setSelectedStudentForDossier(student)}
+        />
+      )}
+
+      {/* Dedicated Class Manager Modal */}
+      {isClassModalOpen && (
+        <ClassManagerModal
+          onClose={() => setIsClassModalOpen(false)}
+        />
+      )}
+
+      {/* User Profile & Contact Settings Modal */}
+      {isProfileModalOpen && (
+        <UserProfileModal
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+      )}
+
       {/* Weekly Schedule Planner Modal */}
       {isScheduleModalOpen && (
         <SchedulePlannerModal
@@ -155,15 +177,7 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* Class Grouping & Student Enrollment Modal */}
-      {isClassStudentModalOpen && (
-        <ClassAndStudentManagerModal
-          onClose={() => setIsClassStudentModalOpen(false)}
-          onOpenDossier={(student) => setSelectedStudentForDossier(student)}
-        />
-      )}
-
-      {/* Post, News & Event Manager Modal */}
+      {/* Post, News & Event Manager Modal with Direct File/Poster Upload */}
       {isPostModalOpen && (
         <PostManagerModal
           onClose={() => setIsPostModalOpen(false)}
@@ -208,9 +222,9 @@ const AppContent: React.FC = () => {
               <GraduationCap className="w-4 h-4" />
             </div>
             <span className="font-bold text-slate-800">
-              سامانه هوشمند قطب مدارس شهرستان
+              سامانه هوشمند مدیریت مدارس
             </span>
-            <span>— پلتفرم جامع مدیریت یکپارچه آموزشی و ارتباطی مدارس</span>
+            <span>— پلتفرم یکپارچه آموزشی، انضباطی و ارتباطی مدارس</span>
           </div>
 
           <div className="flex items-center gap-4 text-slate-400">

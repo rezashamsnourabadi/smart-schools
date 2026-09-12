@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   Bell,
@@ -14,7 +14,10 @@ import {
   Image as ImageIcon,
   Video,
   Paperclip,
-  FileText
+  FileText,
+  UploadCloud,
+  CheckCircle2,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Announcement, PostType, PostAttachment } from '../types';
@@ -40,24 +43,52 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
   const [content, setContent] = useState('');
   const [target, setTarget] = useState<'all' | 'teachers' | 'parents' | 'students'>('all');
   const [priority, setPriority] = useState<'normal' | 'urgent'>('normal');
-  const [coverImage, setCoverImage] = useState<string>('');
-  const [attachmentName, setAttachmentName] = useState<string>('');
-  const [attachmentType, setAttachmentType] = useState<'image' | 'video' | 'file'>('file');
+  
+  // Real Uploaded File State
+  const [uploadedFile, setUploadedFile] = useState<{
+    name: string;
+    size: string;
+    dataUrl: string;
+    type: 'image' | 'video' | 'file';
+  } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredPosts = announcements.filter((a) =>
     activeFilter === 'all' ? true : a.type === activeFilter
   );
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
+    const isImg = file.type.startsWith('image/');
+    const isVid = file.type.startsWith('video/');
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setUploadedFile({
+        name: file.name,
+        size: `${toPersianDigits(sizeInMb)} مگابایت`,
+        dataUrl: reader.result as string,
+        type: isImg ? 'image' : isVid ? 'video' : 'file'
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
-    const attachments: PostAttachment[] = attachmentName.trim()
+    const attachments: PostAttachment[] = uploadedFile
       ? [
           {
-            name: attachmentName.trim(),
-            type: attachmentType,
-            caption: 'پیوست رسمی اطلاعیه'
+            name: uploadedFile.name,
+            type: uploadedFile.type,
+            caption: `پیوست رسمی (${uploadedFile.size})`,
+            url: uploadedFile.dataUrl
           }
         ]
       : [];
@@ -65,50 +96,49 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
     addAnnouncement({
       schoolId: currentSchoolId,
       type: postType,
-      title,
-      content,
+      title: title.trim(),
+      content: content.trim(),
       senderRole: currentUser.roleTitle,
       senderName: currentUser.name,
       target,
       priority,
-      coverImage: coverImage.trim() || undefined,
+      coverImage: uploadedFile && uploadedFile.type === 'image' ? uploadedFile.dataUrl : undefined,
       attachments: attachments.length > 0 ? attachments : undefined
     });
 
     setTitle('');
     setContent('');
-    setCoverImage('');
-    setAttachmentName('');
+    setUploadedFile(null);
     setShowAddForm(false);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
       <div 
-        className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
+        className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-teal-500/20 text-teal-300">
+            <div className="p-2.5 rounded-2xl bg-teal-500/20 text-teal-300">
               <Bell className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-base sm:text-lg">سامانه اطلاع‌رسانی، اخبار و گزارش رویدادها</h3>
-              <p className="text-xs text-slate-400">انتشار فوری برای اولیا، دانش‌آموزان و کادر آموزشی مدرسه</p>
+              <p className="text-xs text-slate-400">انتشار با امکان آپلود مستقیم فایل و پوستر رویداد</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Filter Bar & Add Action */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
             <button
               onClick={() => setActiveFilter('all')}
@@ -138,7 +168,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   : 'bg-white text-slate-700 border border-slate-200'
               }`}
             >
-              اخبار مدرسه
+              اخبار
             </button>
             <button
               onClick={() => setActiveFilter('event')}
@@ -158,264 +188,304 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   : 'bg-white text-slate-700 border border-slate-200'
               }`}
             >
-              گزارش رویدادها
+              گزارش‌ها
             </button>
           </div>
 
           {canPublish && (
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors"
+              className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
             >
               <Plus className="w-4 h-4" />
-              مطلب جدید
+              <span>مطلب جدید</span>
             </button>
           )}
         </div>
 
-        {/* Add Post Form */}
-        {showAddForm && canPublish && (
-          <form onSubmit={handleSubmit} className="bg-teal-50/60 p-4 border-b border-teal-200 space-y-3 shrink-0">
-            <div className="font-bold text-slate-800 text-xs sm:text-sm">انتشار مطلب یا رویداد جدید</div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">دسته‌بندی مطلب:</label>
-                <select
-                  value={postType}
-                  onChange={(e) => setPostType(e.target.value as PostType)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
+        {/* Scrollable Container (Smooth scrolling on mobile and desktop) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-50">
+          {/* Add Post Form (Inside scrollable container for mobile touch scrolling) */}
+          {showAddForm && canPublish && (
+            <form
+              onSubmit={handleSubmit}
+              className="bg-white p-4 sm:p-5 rounded-2xl border-2 border-teal-500/40 shadow-md space-y-3.5 animate-in fade-in"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                  <Plus className="w-4 h-4 text-teal-600" />
+                  انتشار مطلب یا رویداد جدید
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="text-slate-400 hover:text-slate-700 text-xs"
                 >
-                  <option value="announcement">اطلاعیه رسمی</option>
-                  <option value="news">خبر مدرسه</option>
-                  <option value="event">رویداد و برنامه آینده</option>
-                  <option value="event_report">گزارش و دستاورد رویداد گذشته</option>
-                </select>
+                  انصراف
+                </button>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">دسته‌بندی مطلب:</label>
+                  <select
+                    value={postType}
+                    onChange={(e) => setPostType(e.target.value as PostType)}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="announcement">اطلاعیه رسمی</option>
+                    <option value="news">خبر مدرسه</option>
+                    <option value="event">رویداد و برنامه آینده</option>
+                    <option value="event_report">گزارش و دستاورد رویداد گذشته</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">مخاطبان هدف:</label>
+                  <select
+                    value={target}
+                    onChange={(e) => setTarget(e.target.value as any)}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="all">همه (عمومی)</option>
+                    <option value="parents">فقط اولیا و خانواده‌ها</option>
+                    <option value="students">فقط دانش‌آموزان</option>
+                    <option value="teachers">فقط کادر آموزشی و دبیران</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">اولویت نمایش:</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as any)}
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value="normal">عادی</option>
+                    <option value="urgent">فوری / بااهمیت</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">مخاطبان هدف:</label>
-                <select
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value as any)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                >
-                  <option value="all">همه (عمومی)</option>
-                  <option value="parents">فقط اولیا و خانواده‌ها</option>
-                  <option value="students">فقط دانش‌آموزان</option>
-                  <option value="teachers">فقط کادر آموزشی و دبیران</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">اولویت نمایش:</label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as any)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                >
-                  <option value="normal">عادی</option>
-                  <option value="urgent">فوری / بااهمیت</option>
-                </select>
-              </div>
-              <div className="sm:col-span-3">
                 <label className="block text-xs font-medium text-slate-700 mb-1">عنوان مطلب:</label>
                 <input
                   type="text"
                   required
-                  placeholder="مثال: برگزاری جشن تقدیر از نخبگان مسابقات فیزیک"
+                  placeholder="مثال: برگزاری جشن تقدیر از برگزیدگان مسابقات علمی"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>
-              <div className="sm:col-span-3">
+
+              <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">متن کامل اطلاعیه / شرح رویداد:</label>
                 <textarea
-                  rows={3}
+                  rows={4}
                   required
                   placeholder="متن پیام، زمان دقیق، اهداف و دستاوردهای رویداد..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>
 
-              {/* Media Attachments Inputs */}
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  تصویر شاخص یا پوستر خبر (اختیاری):
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="آدرس اینترنتی تصویر یا پوستر (URL)"
-                    value={coverImage}
-                    onChange={(e) => setCoverImage(e.target.value)}
-                    className="w-full text-xs p-2 ps-7 bg-white border border-slate-300 rounded-lg"
-                  />
-                  <ImageIcon className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2.5" />
-                </div>
-              </div>
-
+              {/* REAL FILE & IMAGE UPLOAD ZONE */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  نوع فایل ضمیمه:
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <UploadCloud className="w-4 h-4 text-teal-600" />
+                  <span>آپلود مستقیم تصویر، پوستر یا فایل ضمیمه (PDF / عکس):</span>
                 </label>
-                <select
-                  value={attachmentType}
-                  onChange={(e) => setAttachmentType(e.target.value as any)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                >
-                  <option value="file">بخشنامه و فایل PDF</option>
-                  <option value="image">عکس و آلبوم گزارش</option>
-                  <option value="video">ویدیو و کلیپ گزارش</option>
-                </select>
-              </div>
 
-              <div className="sm:col-span-3">
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  نام فایل یا عنوان فایل ضمیمه (اختیاری):
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="مثال: bakhshnameh-mosabeghat.pdf یا clip-jashnvareh.mp4"
-                    value={attachmentName}
-                    onChange={(e) => setAttachmentName(e.target.value)}
-                    className="w-full text-xs p-2 ps-7 bg-white border border-slate-300 rounded-lg"
-                  />
-                  <Paperclip className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2.5" />
-                </div>
-              </div>
-            </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*,application/pdf,video/*"
+                  className="hidden"
+                  id="post-file-upload"
+                />
 
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-200 rounded-lg"
-              >
-                انصراف
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-2xs"
-              >
-                <Send className="w-3.5 h-3.5" />
-                انتشار سراسری
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Posts List */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50 space-y-3">
-          {filteredPosts.length > 0 ? (
-            filteredPosts.map((post) => {
-              const getTypeBadge = () => {
-                switch (post.type) {
-                  case 'news':
-                    return { label: 'خبر', bg: 'bg-blue-100 text-blue-800' };
-                  case 'event':
-                    return { label: 'رویداد پیش‌رو', bg: 'bg-purple-100 text-purple-800' };
-                  case 'event_report':
-                    return { label: 'گزارش رویداد', bg: 'bg-emerald-100 text-emerald-800' };
-                  default:
-                    return { label: 'اطلاعیه', bg: 'bg-amber-100 text-amber-800' };
-                }
-              };
-
-              const badge = getTypeBadge();
-
-              return (
-                <div
-                  key={post.id}
-                  className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs hover:shadow-xs transition-shadow"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${badge.bg}`}>
-                        {badge.label}
-                      </span>
-                      {post.priority === 'urgent' && (
-                        <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold">
-                          فوری
-                        </span>
+                {!uploadedFile ? (
+                  <label
+                    htmlFor="post-file-upload"
+                    className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 hover:border-teal-500 bg-slate-50 hover:bg-teal-50/40 rounded-2xl cursor-pointer transition-colors text-center group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-slate-200 group-hover:bg-teal-100 text-slate-600 group-hover:text-teal-700 flex items-center justify-center mb-1 transition-colors">
+                      <UploadCloud className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-800">
+                      کلیک کنید یا فایل را اینجا رها کنید
+                    </span>
+                    <span className="text-[11px] text-slate-500 mt-0.5">
+                      تصاویر JPG/PNG، فایل‌های بخشنامه PDF یا ویدیوهای گزارش
+                    </span>
+                  </label>
+                ) : (
+                  <div className="p-3 rounded-2xl bg-teal-50/80 border border-teal-200 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      {uploadedFile.type === 'image' ? (
+                        <img
+                          src={uploadedFile.dataUrl}
+                          alt="preview"
+                          className="w-12 h-12 rounded-xl object-cover border border-teal-300 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0">
+                          <FileText className="w-6 h-6" />
+                        </div>
                       )}
-                      <h4 className="font-bold text-slate-800 text-sm sm:text-base">{post.title}</h4>
+                      <div className="text-right truncate text-xs">
+                        <span className="font-bold text-slate-900 block truncate">
+                          {uploadedFile.name}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-mono">
+                          {uploadedFile.size} • آماده انتشار
+                        </span>
+                      </div>
                     </div>
 
-                    {canPublish && (
-                      <button
-                        onClick={() => deleteAnnouncement(post.id)}
-                        className="text-slate-300 hover:text-rose-600 p-1 transition-colors"
-                        title="حذف"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => setUploadedFile(null)}
+                      className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                      title="حذف فایل"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>انتشار رسمی مطلب</span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Posts Feed */}
+          <div className="space-y-4">
+            {filteredPosts.map((post) => (
+              <div
+                key={post.id}
+                className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs hover:border-teal-300 transition-all space-y-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                        post.type === 'announcement'
+                          ? 'bg-teal-50 text-teal-800 border border-teal-200'
+                          : post.type === 'news'
+                          ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                          : post.type === 'event'
+                          ? 'bg-purple-50 text-purple-800 border border-purple-200'
+                          : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      }`}
+                    >
+                      {post.type === 'announcement'
+                        ? 'اطلاعیه رسمی'
+                        : post.type === 'news'
+                        ? 'خبر مدرسه'
+                        : post.type === 'event'
+                        ? 'رویداد'
+                        : 'گزارش رویداد'}
+                    </span>
+                    {post.priority === 'urgent' && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+                        فوری
+                      </span>
                     )}
+                    <span className="text-xs text-slate-400 font-mono">
+                      {toPersianDigits(post.date)}
+                    </span>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
+                  {canPublish && (
+                    <button
+                      onClick={() => deleteAnnouncement(post.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                      title="حذف مطلب"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm sm:text-base leading-snug">
+                    {post.title}
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-1.5 whitespace-pre-line">
                     {post.content}
                   </p>
-
-                  {/* Media Cover Preview */}
-                  {post.coverImage && (
-                    <div className="mb-3 rounded-xl overflow-hidden border border-slate-200 max-h-48 bg-slate-100">
-                      <img
-                        src={post.coverImage}
-                        alt={post.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Attachments List */}
-                  {post.attachments && post.attachments.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 mb-3 pt-2 border-t border-slate-100">
-                      <span className="text-[11px] text-slate-400">ضمایم و فایل‌های پیوست:</span>
-                      {post.attachments.map((att, idx) => (
-                        <div
-                          key={idx}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs transition-colors border border-slate-200"
-                        >
-                          {att.type === 'image' && <ImageIcon className="w-3.5 h-3.5 text-teal-600" />}
-                          {att.type === 'video' && <Video className="w-3.5 h-3.5 text-blue-600" />}
-                          {att.type === 'file' && <FileText className="w-3.5 h-3.5 text-amber-600" />}
-                          <span className="font-mono text-[11px]">{att.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 border-t border-slate-100 pt-2 gap-2">
-                    <div className="flex items-center gap-3">
-                      <span>نویسنده: <strong className="text-slate-600">{post.senderName} ({post.senderRole})</strong></span>
-                      <span>مخاطب: <strong className="text-teal-700">
-                        {post.target === 'all' ? 'همه کاربران' :
-                         post.target === 'parents' ? 'اولیا' :
-                         post.target === 'students' ? 'دانش‌آموزان' : 'دبیران'}
-                      </strong></span>
-                    </div>
-                    <span className="font-mono">{toPersianDigits(post.date)}</span>
-                  </div>
                 </div>
-              );
-            })
-          ) : (
-            <div className="bg-white p-8 text-center rounded-2xl border border-slate-200 text-slate-500 text-xs">
-              مطلبی در این دسته وجود ندارد.
-            </div>
-          )}
+
+                {/* Uploaded Cover Image / Poster */}
+                {post.coverImage && (
+                  <div className="rounded-xl overflow-hidden border border-slate-200 max-h-64 bg-slate-100">
+                    <img
+                      src={post.coverImage}
+                      alt={post.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
+                {/* Attachments */}
+                {post.attachments && post.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {post.attachments.map((att, idx) => (
+                      <div
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700"
+                      >
+                        <Paperclip className="w-3.5 h-3.5 text-teal-600" />
+                        <span className="font-medium">{att.name}</span>
+                        {att.caption && (
+                          <span className="text-[10px] text-slate-400">({att.caption})</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5">
+                    <span>فرستنده: {post.senderName}</span>
+                    <span className="text-slate-300">•</span>
+                    <span>({post.senderRole})</span>
+                  </div>
+                  <span>مخاطب: {post.target === 'all' ? 'عمومی' : post.target}</span>
+                </div>
+              </div>
+            ))}
+
+            {filteredPosts.length === 0 && (
+              <div className="bg-white p-10 text-center rounded-2xl border border-slate-200 text-slate-400 text-xs">
+                مطلبی در این دسته‌بندی وجود ندارد.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="p-3.5 bg-white border-t border-slate-200 flex justify-end shrink-0">
+        <div className="p-4 bg-white border-t border-slate-200 flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold"
+            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors"
           >
             بستن
           </button>

@@ -14,7 +14,10 @@ import {
   ChevronUp,
   MessageSquare,
   Paperclip,
-  Check
+  Check,
+  UploadCloud,
+  Trash2,
+  FileText
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -48,6 +51,32 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
   const [hwTitle, setHwTitle] = useState('');
   const [hwDesc, setHwDesc] = useState('');
   const [hwDueDate, setHwDueDate] = useState('۱۴۰۵/۰۶/۲۸');
+  const [hwUploadedFile, setHwUploadedFile] = useState<{
+    name: string;
+    size: string;
+    url: string;
+    type: 'image' | 'pdf' | 'doc';
+  } | null>(null);
+
+  const handleHwFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
+    const isImg = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setHwUploadedFile({
+        name: file.name,
+        size: `${toPersianDigits(sizeInMb)} مگابایت`,
+        url: reader.result as string,
+        type: isImg ? 'image' : isPdf ? 'pdf' : 'doc'
+      });
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Exam form states
   const [exClassId, setExClassId] = useState(classes[0]?.id || 'cls-1');
@@ -80,11 +109,13 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
       dueDate: hwDueDate,
       createdAt: '۱۴۰۵/۰۶/۲۲',
       teacherName: currentUser.name,
-      totalStudents: targetClass?.studentCount || 30
+      totalStudents: targetClass?.studentCount || 30,
+      attachments: hwUploadedFile ? [hwUploadedFile] : undefined
     });
 
     setHwTitle('');
     setHwDesc('');
+    setHwUploadedFile(null);
     setShowAddHw(false);
   };
 
@@ -250,6 +281,59 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
                   onChange={(e) => setHwDesc(e.target.value)}
                   className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
                 />
+              </div>
+
+              {/* Real Homework File / Sheet Upload */}
+              <div className="sm:col-span-3">
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <UploadCloud className="w-4 h-4 text-teal-600" />
+                  <span>آپلود فایل یا تصویر برگ تکلیف (PDF یا عکس تمرین):</span>
+                </label>
+
+                <input
+                  type="file"
+                  id="hw-file-upload"
+                  onChange={handleHwFileChange}
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                />
+
+                {!hwUploadedFile ? (
+                  <label
+                    htmlFor="hw-file-upload"
+                    className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 hover:border-teal-500 bg-white hover:bg-teal-50/50 rounded-xl cursor-pointer transition-colors text-center"
+                  >
+                    <UploadCloud className="w-4 h-4 text-slate-400" />
+                    <span className="text-xs text-slate-600 font-medium">
+                      کلیک برای پیوست کاربرگ PDF یا تصویر تمرین‌ها
+                    </span>
+                  </label>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs">
+                      {hwUploadedFile.type === 'image' ? (
+                        <img
+                          src={hwUploadedFile.url}
+                          alt="preview"
+                          className="w-9 h-9 rounded-lg object-cover border border-teal-300"
+                        />
+                      ) : (
+                        <FileText className="w-6 h-6 text-teal-700" />
+                      )}
+                      <div>
+                        <span className="font-bold text-slate-900 block truncate max-w-xs">{hwUploadedFile.name}</span>
+                        <span className="text-[10px] text-slate-500">{hwUploadedFile.size}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHwUploadedFile(null)}
+                      className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2">
