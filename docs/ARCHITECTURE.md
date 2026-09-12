@@ -153,3 +153,75 @@ When migrating from in-memory state to a production database:
 - Platform Admin has global read/write.
 - Principals and Teachers read/write within their respective `schoolId`.
 - Parents and Students authenticate with their national code and phone number, with strictly constrained read access to their own sub-records.
+
+---
+
+## 6. Student Lifecycle & Regional Sync Architecture
+
+The system models the complete lifecycle of learners across schools in the county:
+
+```
+                  ┌──────────────────────────────┐
+                  │      جدیدالورود (New)        │
+                  └──────────────┬───────────────┘
+                                 │ ثبت‌نام / ثبت کد ملی
+                                 ▼
++─────────────────────────────────────────────────────────────────+
+│                    دانش‌آموز فعال (Active)                      │
+│ - کلاسبندی و انتصاب به گروه درسی                                  │
+│ - حضور و غیاب روزانه و ارسال هشدار بله/پیامک                     │
+│ - نمرات مستمر، تکالیف و کارنامه‌های رسمی نوبت اول و دوم           │
+│ - سوابق انضباطی (تشویقی و تذکرات)                               │
++─────────────────┬─────────────────────────────┬─────────────────+
+                  │ فارغ‌التحصیلی                │ انتقال به مدرسه دیگر
+                  ▼                             ▼
+┌─────────────────────────────────┐ ┌─────────────────────────────┐
+│    فارغ‌التحصیل (Graduated)      │ │     منتقل‌شده (Transferred)   │
+│ - سال فراغت از تحصیل             │ │ - نام مدرسه مقصد             │
+│ - قبولی کنکور و نام دانشگاه     │ │ - تاریخ انتقال رسمی          │
+│ - رشته قبولی و رتبه منطقه       │ │ - علت جابجایی                │
+│ - شبکه ارتباطی نخبگان شهرستان   │ │ - سوابق درسی دست‌نخورده       │
+└─────────────────────────────────┘ └──────────────┬──────────────┘
+                                                   │
+                                                   ▼
+                                    ┌─────────────────────────────┐
+                                    │    Smart Matching منطقه‌ای  │
+                                    │ با ثبت کد ملی در مدرسه جدید  │
+                                    │ کل پرونده سوابق متصل می‌شود  │
+                                    └─────────────────────────────┘
+```
+
+---
+
+## 7. Production Backend Architecture & Database Blueprint
+
+### Current Architecture vs. Production Deployment:
+
+| مؤلفه (Layer) | وضعیت فعلی پروژه (Current Prototype) | معماری پیشنهادی محیط عملیاتی (Production Roadmap) |
+| :--- | :--- | :--- |
+| **API & Server** | In-Memory React State (`AppContext.tsx`) | Node.js (Express/Fastify) یا Python (FastAPI) یا Go (Fiber) |
+| **Primary Database** | State + LocalStorage | **PostgreSQL** با Prisma/Drizzle یا **Google Cloud Firestore** |
+| **Cache & Realtime** | React Context Dispatchers | **Redis / Dragonfly** برای کش جلسات، توکن‌ها و صف پیام‌ها |
+| **Messaging Gateway**| شبیه‌ساز انیمیشنی (Animated Simulation) | اتصال به وب‌سرویس Kavenegar/Ghasedak + ربات رسمی بله (Bale Bot API) |
+| **File / Media Storage**| URL و آیکون‌های محلی | **S3-compatible Object Storage** (MinIO یا ArvanCloud Object Storage) |
+| **Auth & Sessions** | Role Quick Switcher (پیش‌نمایش سریع) | JWT HttpOnly Cookies + اعتبارسنجی دو مرحله‌ای پیامکی (OTP) |
+
+---
+
+## 8. Frontend Scalability & High-Concurrency Assessment
+
+### بررسی آمادگی فرانت‌اند برای تعداد کاربر بالا و سرعت روان (High-Load Frontend Readiness):
+
+1. **معماری تک‌صفحه‌ای با کامپوننت‌های ایزوله (Decoupled SPA):**
+   - به دلیل تفکیک کامل داشبوردها (`PlatformAdmin`, `Principal`, `Teacher`, `Student`, `Parent`)، هر کاربر فقط کدهای مربوط به پرسونای خود را بارگذاری و اجرا می‌کند.
+   - با فعال‌سازی `React.lazy` و Dynamic Imports در روتر، حجم باندل اولیه زیر **120 کیلوبایت** فشرده (Gzip/Brotli) باقی می‌ماند.
+
+2. **بهینه‌سازی رندر و DOM مجازی (Virtual DOM & Virtualization):**
+   - برای لیست‌های بیش از ۵۰۰ دانش‌آموز در سطح شهرستان، استفاده از Virtual Scrolling (`@tanstack/react-virtual`) توصیه می‌شود تا تنها المان‌های قابل مشاهده در صفحه رندر شوند و حافظه مرورگر مصرف نشود.
+
+3. **حذف رندرهای اضافه (Zero CSS-Runtime with Tailwind v4):**
+   - استفاده از Tailwind CSS v4 کامپایل‌شده در زمان بیلد، هزینه محاسبات استایل در زمان اجرا (Runtime CSS-in-JS) را به صفر رسانده است که روان‌ترین تجربه اسکرول و تعامل لمسی را روی گوشی‌های ضعیف تضمین می‌کند.
+
+4. **پیش‌بینی قابلیت آفلاین و PWA (Service Worker Ready):**
+   - فرانت‌اند به راحتی قابلیت تبدیل به PWA را دارد تا دبیران در نقاطی با اینترنت ضعیف (کلاس‌های زیرزمین یا مدارس روستایی)، حضور و غیاب را به صورت آفلاین ثبت کرده و پس از اتصال، با بکند همگام‌سازی (Background Sync) کنند.
+

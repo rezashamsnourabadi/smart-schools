@@ -40,11 +40,16 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
     students,
     attendanceSessions,
     notifications,
-    vicePrincipalPermissions,
+    vicePrincipals,
+    activeVicePrincipalId,
+    setActiveVicePrincipalId,
+    activeVicePrincipalPermissions,
     addDisciplinaryRecord,
     setSelectedStudentForDossier,
     currentUser
   } = useApp();
+
+  const currentVP = vicePrincipals.find((vp) => vp.id === activeVicePrincipalId) || vicePrincipals[0];
 
   const [studentSearch, setStudentSearch] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id || 'std-1');
@@ -53,7 +58,7 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
   const [disciplinaryNote, setDisciplinaryNote] = useState('');
 
   const handleStudentClick = (student: Student) => {
-    if (vicePrincipalPermissions.canManageGradesAndDossiers) {
+    if (activeVicePrincipalPermissions.canViewFullDossier) {
       if (onOpenStudentDossier) {
         onOpenStudentDossier(student);
       } else {
@@ -71,7 +76,7 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
       title: disciplinaryTitle,
       note: disciplinaryNote,
       date: '۱۴۰۵/۰۶/۲۲',
-      recordedBy: currentUser.name
+      recordedBy: currentVP ? `${currentVP.name} (${currentVP.roleTitle})` : currentUser.name
     });
 
     setDisciplinaryTitle('');
@@ -80,25 +85,48 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
 
   return (
     <div className="space-y-6" id="vice-principal-view">
-      {/* Top Banner */}
+      {/* Top Banner & VP Profile Switcher */}
       <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-black text-slate-900">
-              میز کار معاونت آموزشی و انضباطی
+              میز کار معاونت مدرسه
             </h1>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-bold">
               {currentSchool?.name}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            پیگیری غیبت‌های زنگ‌ها، ارتباط فوری با اولیا، ثبت موارد انضباطی و برنامه‌ریزی
-          </p>
+          
+          {/* Active VP Indicator */}
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-slate-500">معاون فعال:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {vicePrincipals.map((vp) => {
+                const isActive = vp.id === (currentVP?.id || 'vp-1');
+                return (
+                  <button
+                    key={vp.id}
+                    onClick={() => setActiveVicePrincipalId(vp.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-teal-700 text-white shadow-xs ring-2 ring-teal-700/20'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
+                  >
+                    <span>{vp.name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                      {vp.roleTitle}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* Action Buttons enabled by Principal's Permission Controls */}
+        {/* Action Buttons conditionally enabled by Granular Permissions */}
         <div className="flex flex-wrap items-center gap-2">
-          {vicePrincipalPermissions.canManageClassesAndStudents && onOpenClassStudentModal && (
+          {activeVicePrincipalPermissions.canManageStudentsAndClasses && onOpenClassStudentModal && (
             <button
               onClick={onOpenClassStudentModal}
               className="px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
@@ -108,7 +136,7 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
             </button>
           )}
 
-          {vicePrincipalPermissions.canManageSchedule && onOpenScheduleModal && (
+          {activeVicePrincipalPermissions.canManageSchedule && onOpenScheduleModal && (
             <button
               onClick={onOpenScheduleModal}
               className="px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
@@ -118,7 +146,7 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
             </button>
           )}
 
-          {vicePrincipalPermissions.canManageAnnouncements && onOpenPostModal && (
+          {activeVicePrincipalPermissions.canManageAnnouncements && onOpenPostModal && (
             <button
               onClick={onOpenPostModal}
               className="px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
@@ -193,7 +221,7 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
 
         {/* Right Col (5 cols): Disciplinary Logger & Student Dossier Access */}
         <div className="lg:col-span-5 space-y-4">
-          {vicePrincipalPermissions.canManageDiscipline && (
+          {activeVicePrincipalPermissions.canLogDisciplinary && (
             <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 shadow-xs">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <Award className="w-5 h-5 text-amber-500" />
@@ -267,7 +295,7 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
           )}
 
           {/* Quick Student Dossier Search */}
-          {vicePrincipalPermissions.canManageGradesAndDossiers && (
+          {activeVicePrincipalPermissions.canViewFullDossier && (
             <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 shadow-xs">
               <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                 <Users className="w-4 h-4 text-teal-600" />

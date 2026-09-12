@@ -14,8 +14,10 @@ import {
   AttendanceStatus,
   GradeItem,
   HomeworkItem,
+  HomeworkSubmission,
   OnlineExam,
   VicePrincipalPermissions,
+  VicePrincipalProfile,
   DisciplinaryRecord,
   PostType
 } from '../types';
@@ -32,9 +34,12 @@ import {
   INITIAL_NOTIFICATIONS,
   INITIAL_GRADES,
   INITIAL_HOMEWORK,
+  INITIAL_HOMEWORK_SUBMISSIONS,
   INITIAL_EXAMS,
-  INITIAL_VICE_PRINCIPAL_PERMISSIONS
+  INITIAL_VICE_PRINCIPAL_PERMISSIONS,
+  INITIAL_VICE_PRINCIPALS
 } from '../data/mockData';
+import { toEnglishDigits } from '../utils/persianUtils';
 
 interface AppContextType {
   currentRole: UserRole;
@@ -54,8 +59,14 @@ interface AppContextType {
   notifications: NotificationLog[];
   grades: GradeItem[];
   homework: HomeworkItem[];
+  homeworkSubmissions: HomeworkSubmission[];
   exams: OnlineExam[];
   vicePrincipalPermissions: VicePrincipalPermissions;
+  vicePrincipals: VicePrincipalProfile[];
+  activeVicePrincipalId: string;
+  setActiveVicePrincipalId: (id: string) => void;
+  updateVicePrincipalProfilePermissions: (vpId: string, perms: Partial<VicePrincipalPermissions>) => void;
+  activeVicePrincipalPermissions: VicePrincipalPermissions;
   selectedStudentForDossier: Student | null;
   setSelectedStudentForDossier: (student: Student | null) => void;
   activeMobileTab: string;
@@ -82,6 +93,9 @@ interface AppContextType {
   updateStudent: (studentId: string, updates: Partial<Student>) => void;
   removeStudent: (studentId: string) => void;
   transferStudentClass: (studentId: string, newClassGroupId: string) => void;
+  markStudentGraduated: (studentId: string, details: { year: string; university?: string; major?: string; rank?: string; notes?: string }) => void;
+  markStudentTransferred: (studentId: string, details: { destinationSchoolName: string; date: string; reason?: string }) => void;
+  markStudentActive: (studentId: string, classGroupId: string) => void;
   addClassGroup: (classData: Omit<ClassGroup, 'id' | 'studentCount'>) => void;
   addScheduleSlot: (slot: Omit<ScheduleSlot, 'id'>) => void;
   updateScheduleSlot: (slot: ScheduleSlot) => void;
@@ -90,6 +104,8 @@ interface AppContextType {
   addDisciplinaryRecord: (studentId: string, record: Omit<DisciplinaryRecord, 'id'>) => void;
   addGradeItem: (grade: Omit<GradeItem, 'id'>) => void;
   addHomework: (hw: Omit<HomeworkItem, 'id' | 'submissionsCount'>) => void;
+  submitHomework: (submission: Omit<HomeworkSubmission, 'id' | 'submissionDate' | 'status'>) => void;
+  gradeHomeworkSubmission: (submissionId: string, score: number, feedback: string) => void;
   addOnlineExam: (exam: Omit<OnlineExam, 'id'>) => void;
   updateParentContact: (studentId: string, data: { address?: string; emergencyPhone?: string; parentPhone?: string; parentBaleAccount?: string }) => void;
   
@@ -171,6 +187,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_VICE_PRINCIPAL_PERMISSIONS;
   });
 
+  const [vicePrincipals, setVicePrincipals] = useState<VicePrincipalProfile[]>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_vice_principals`);
+    return saved ? JSON.parse(saved) : INITIAL_VICE_PRINCIPALS;
+  });
+
+  const [activeVicePrincipalId, setActiveVicePrincipalId] = useState<string>('vp-1');
+
+  const [homeworkSubmissions, setHomeworkSubmissions] = useState<HomeworkSubmission[]>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_homework_subs`);
+    return saved ? JSON.parse(saved) : INITIAL_HOMEWORK_SUBMISSIONS;
+  });
+
   const [activeToast, setActiveToast] = useState<{
     title: string;
     message: string;
@@ -230,8 +258,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(`${STORAGE_KEY}_vp_perms`, JSON.stringify(vicePrincipalPermissions));
   }, [vicePrincipalPermissions]);
 
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY}_vice_principals`, JSON.stringify(vicePrincipals));
+  }, [vicePrincipals]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY}_homework_subs`, JSON.stringify(homeworkSubmissions));
+  }, [homeworkSubmissions]);
+
   const currentSchool = schools.find((s) => s.id === currentSchoolId) || schools[0];
   const currentUser = INITIAL_USERS[currentRole] || INITIAL_USERS.principal;
+
+  const currentVP = vicePrincipals.find((vp) => vp.id === activeVicePrincipalId) || vicePrincipals[0];
+  const activeVicePrincipalPermissions: VicePrincipalPermissions = currentVP?.permissions || vicePrincipalPermissions;
+
+  const updateVicePrincipalProfilePermissions = (vpId: string, perms: Partial<VicePrincipalPermissions>) => {
+    setVicePrincipals((prev) =>
+      prev.map((vp) =>
+        vp.id === vpId
+          ? { ...vp, permissions: { ...vp.permissions, ...perms } }
+          : vp
+      )
+    );
+    // Also keep active vicePrincipalPermissions synced if it's the active one
+    if (vpId === activeVicePrincipalId) {
+      setVicePrincipalPermissions((prev) => ({ ...prev, ...perms }));
+    }
+    setActiveToast({
+      title: 'سطح دسترسی تفکیک‌شده معاونت بروز شد',
+      message: 'تنظیمات اختصاصی این معاون با موفقیت ذخیره گردید.',
+      type: 'success'
+    });
+  };
 
   const clearToast = () => setActiveToast(null);
 
@@ -420,11 +478,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // Student management
+  // Student management with Smart Linking by National Code
   const addStudent = (studentData: Omit<Student, 'id' | 'attendanceStats' | 'disciplinaryRecords' | 'reportCards' | 'pastYearHistory'>) => {
+    const normCode = toEnglishDigits(studentData.nationalCode).trim();
+    const existingStudent = students.find(
+      (s) => toEnglishDigits(s.nationalCode).trim() === normCode
+    );
+
+    if (existingStudent) {
+      // STUDENT ALREADY EXISTS! Do not duplicate entity; link and transfer academic history
+      const prevSchool = schools.find((s) => s.id === existingStudent.schoolId);
+      const prevSchoolName = prevSchool?.name || 'مدرسه قبلی شهرستان';
+      const isFromOtherSchool = existingStudent.schoolId !== studentData.schoolId;
+
+      const updatedPastHistory = [...(existingStudent.pastYearHistory || [])];
+      if (isFromOtherSchool) {
+        updatedPastHistory.unshift({
+          year: '۱۴۰۴-۱۴۰۵',
+          grade: existingStudent.grade || 'پایه قبلی',
+          schoolName: prevSchoolName,
+          gpa: existingStudent.reportCards?.[0]?.gpa || 19.5,
+          disciplineScore: 20,
+          status: 'انتقال پرونده تحصیلی به مدرسه جدید'
+        });
+      }
+
+      // Update student count in old class if needed
+      if (existingStudent.classGroupId && existingStudent.classGroupId !== studentData.classGroupId) {
+        setClasses((prev) =>
+          prev.map((c) =>
+            c.id === existingStudent.classGroupId
+              ? { ...c, studentCount: Math.max(0, c.studentCount - 1) }
+              : c
+          )
+        );
+      }
+
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === existingStudent.id
+            ? {
+                ...s,
+                ...studentData,
+                id: existingStudent.id, // Preserve single entity identity
+                status: 'active',
+                pastYearHistory: updatedPastHistory,
+                attendanceStats: s.attendanceStats || { totalDays: 0, presentDays: 0, absentDays: 0, lateDays: 0, excusedDays: 0 },
+                disciplinaryRecords: s.disciplinaryRecords || [],
+                reportCards: s.reportCards || []
+              }
+            : s
+        )
+      );
+
+      // Update new class student count
+      setClasses((prev) =>
+        prev.map((c) => (c.id === studentData.classGroupId ? { ...c, studentCount: c.studentCount + 1 } : c))
+      );
+
+      setActiveToast({
+        title: 'پرونده یکپارچه دانش‌آموز متصل شد',
+        message: isFromOtherSchool
+          ? `دانش‌آموز با کد ملی ${studentData.nationalCode} قبلاً در "${prevSchoolName}" ثبت بوده و پرونده، کارنامه‌ها و سوابق وی بدون ایجاد موجودیت تکراری به این مدرسه پیوند یافت.`
+          : `پرونده دانش‌آموز با موفقیت به روزرسانی و در کلاس جدید فعال شد.`,
+        type: 'success'
+      });
+      return;
+    }
+
+    // Brand new student creation
     const newStudent: Student = {
       ...studentData,
       id: `std-${Date.now()}`,
+      status: 'active',
       attendanceStats: { totalDays: 0, presentDays: 0, absentDays: 0, lateDays: 0, excusedDays: 0 },
       disciplinaryRecords: [],
       reportCards: [],
@@ -438,6 +564,103 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveToast({
       title: 'دانش‌آموز جدید ثبت شد',
       message: `${studentData.name} با شماره پرونده به مدرسه افزوده گردید.`,
+      type: 'success'
+    });
+  };
+
+  const markStudentGraduated = (
+    studentId: string,
+    details: { year: string; university?: string; major?: string; rank?: string; notes?: string }
+  ) => {
+    const student = students.find((s) => s.id === studentId);
+    if (!student) return;
+
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (s.id === studentId) {
+          return {
+            ...s,
+            status: 'graduated',
+            graduationDetails: details
+          };
+        }
+        return s;
+      })
+    );
+
+    if (student.classGroupId) {
+      setClasses((prev) =>
+        prev.map((c) =>
+          c.id === student.classGroupId
+            ? { ...c, studentCount: Math.max(0, c.studentCount - 1) }
+            : c
+        )
+      );
+    }
+
+    setActiveToast({
+      title: 'انتقال به لیست فارغ‌التحصیلان',
+      message: `${student.name} با موفقیت در لیست فارغ‌التحصیلان ثبت شد${details.university ? ` (قبولی: ${details.university})` : ''}.`,
+      type: 'success'
+    });
+  };
+
+  const markStudentTransferred = (
+    studentId: string,
+    details: { destinationSchoolName: string; date: string; reason?: string }
+  ) => {
+    const student = students.find((s) => s.id === studentId);
+    if (!student) return;
+
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (s.id === studentId) {
+          return {
+            ...s,
+            status: 'transferred',
+            transferDetails: details
+          };
+        }
+        return s;
+      })
+    );
+
+    if (student.classGroupId) {
+      setClasses((prev) =>
+        prev.map((c) =>
+          c.id === student.classGroupId
+            ? { ...c, studentCount: Math.max(0, c.studentCount - 1) }
+            : c
+        )
+      );
+    }
+
+    setActiveToast({
+      title: 'انتقال پرونده تحصیلی',
+      message: `پرونده تحصیلی ${student.name} به "${details.destinationSchoolName}" منتقل گردید. سوابق وی در سامانه جهت ارجاعات بعدی حفظ می‌شود.`,
+      type: 'info'
+    });
+  };
+
+  const markStudentActive = (studentId: string, classGroupId: string) => {
+    const student = students.find((s) => s.id === studentId);
+    if (!student) return;
+
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.id === studentId
+          ? { ...s, status: 'active', classGroupId }
+          : s
+      )
+    );
+
+    setClasses((prev) =>
+      prev.map((c) => (c.id === classGroupId ? { ...c, studentCount: c.studentCount + 1 } : c))
+    );
+
+    setActiveToast({
+      title: 'فعال‌سازی مجدد دانش‌آموز',
+      message: `${student.name} مجدداً در وضعیت فعال تحصیلی قرار گرفت.`,
       type: 'success'
     });
   };
@@ -600,6 +823,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const submitHomework = (submission: Omit<HomeworkSubmission, 'id' | 'submissionDate' | 'status'>) => {
+    const newSub: HomeworkSubmission = {
+      ...submission,
+      id: `sub-${Date.now()}`,
+      submissionDate: '۱۴۰۵/۰۶/۲۳ - ۲۰:۱۵',
+      status: 'submitted'
+    };
+    setHomeworkSubmissions((prev) => [newSub, ...prev]);
+    // increment submissionsCount in homework item
+    setHomework((prev) =>
+      prev.map((h) =>
+        h.id === submission.homeworkId ? { ...h, submissionsCount: h.submissionsCount + 1 } : h
+      )
+    );
+    setActiveToast({
+      title: 'تکلیف با موفقیت ارسال شد',
+      message: 'پاسخ شما با موفقیت برای دبیر ارسال گردید.',
+      type: 'success'
+    });
+  };
+
+  const gradeHomeworkSubmission = (submissionId: string, score: number, feedback: string) => {
+    setHomeworkSubmissions((prev) =>
+      prev.map((sub) =>
+        sub.id === submissionId
+          ? { ...sub, status: 'graded', teacherScore: score, teacherFeedback: feedback }
+          : sub
+      )
+    );
+    setActiveToast({
+      title: 'نمره و بازخورد تکلیف ثبت شد',
+      message: 'ارزیابی تکلیف دانش‌آموز با موفقیت ذخیره شد.',
+      type: 'success'
+    });
+  };
+
   const addOnlineExam = (exam: Omit<OnlineExam, 'id'>) => {
     const newExam: OnlineExam = {
       ...exam,
@@ -652,6 +911,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem(`${STORAGE_KEY}_homework`);
     localStorage.removeItem(`${STORAGE_KEY}_exams`);
     localStorage.removeItem(`${STORAGE_KEY}_vp_perms`);
+    localStorage.removeItem(`${STORAGE_KEY}_vice_principals`);
+    localStorage.removeItem(`${STORAGE_KEY}_homework_subs`);
 
     setSchools(INITIAL_SCHOOLS);
     setClasses(INITIAL_CLASSES);
@@ -664,8 +925,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications(INITIAL_NOTIFICATIONS);
     setGrades(INITIAL_GRADES);
     setHomework(INITIAL_HOMEWORK);
+    setHomeworkSubmissions(INITIAL_HOMEWORK_SUBMISSIONS);
     setExams(INITIAL_EXAMS);
     setVicePrincipalPermissions(INITIAL_VICE_PRINCIPAL_PERMISSIONS);
+    setVicePrincipals(INITIAL_VICE_PRINCIPALS);
     setSelectedStudentForDossier(null);
 
     setActiveToast({
@@ -695,8 +958,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notifications,
         grades,
         homework,
+        homeworkSubmissions,
         exams,
         vicePrincipalPermissions,
+        vicePrincipals,
+        activeVicePrincipalId,
+        setActiveVicePrincipalId,
+        updateVicePrincipalProfilePermissions,
+        activeVicePrincipalPermissions,
         selectedStudentForDossier,
         setSelectedStudentForDossier,
         activeMobileTab,
@@ -715,6 +984,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateStudent,
         removeStudent,
         transferStudentClass,
+        markStudentGraduated,
+        markStudentTransferred,
+        markStudentActive,
         addClassGroup,
         addScheduleSlot,
         updateScheduleSlot,
@@ -723,6 +995,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addDisciplinaryRecord,
         addGradeItem,
         addHomework,
+        submitHomework,
+        gradeHomeworkSubmission,
         addOnlineExam,
         updateParentContact,
         resetAllData

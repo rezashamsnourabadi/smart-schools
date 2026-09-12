@@ -124,7 +124,7 @@ export const Header: React.FC = () => {
               {showNotifications && (
                 <div 
                   id="notifications-flyout"
-                  className="absolute left-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-2"
+                  className="fixed sm:absolute inset-x-3 sm:inset-x-auto sm:left-0 top-16 sm:top-full sm:mt-2 max-w-sm sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50"
                 >
                   <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">

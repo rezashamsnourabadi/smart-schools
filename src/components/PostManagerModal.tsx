@@ -10,10 +10,14 @@ import {
   Send,
   Users,
   Clock,
-  Sparkles
+  Sparkles,
+  Image as ImageIcon,
+  Video,
+  Paperclip,
+  FileText
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Announcement, PostType } from '../types';
+import { Announcement, PostType, PostAttachment } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
 
 interface PostManagerModalProps {
@@ -36,6 +40,9 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
   const [content, setContent] = useState('');
   const [target, setTarget] = useState<'all' | 'teachers' | 'parents' | 'students'>('all');
   const [priority, setPriority] = useState<'normal' | 'urgent'>('normal');
+  const [coverImage, setCoverImage] = useState<string>('');
+  const [attachmentName, setAttachmentName] = useState<string>('');
+  const [attachmentType, setAttachmentType] = useState<'image' | 'video' | 'file'>('file');
 
   const filteredPosts = announcements.filter((a) =>
     activeFilter === 'all' ? true : a.type === activeFilter
@@ -45,6 +52,16 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
+    const attachments: PostAttachment[] = attachmentName.trim()
+      ? [
+          {
+            name: attachmentName.trim(),
+            type: attachmentType,
+            caption: 'پیوست رسمی اطلاعیه'
+          }
+        ]
+      : [];
+
     addAnnouncement({
       schoolId: currentSchoolId,
       type: postType,
@@ -53,11 +70,15 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
       senderRole: currentUser.roleTitle,
       senderName: currentUser.name,
       target,
-      priority
+      priority,
+      coverImage: coverImage.trim() || undefined,
+      attachments: attachments.length > 0 ? attachments : undefined
     });
 
     setTitle('');
     setContent('');
+    setCoverImage('');
+    setAttachmentName('');
     setShowAddForm(false);
   };
 
@@ -216,6 +237,54 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
                 />
               </div>
+
+              {/* Media Attachments Inputs */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  تصویر شاخص یا پوستر خبر (اختیاری):
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="آدرس اینترنتی تصویر یا پوستر (URL)"
+                    value={coverImage}
+                    onChange={(e) => setCoverImage(e.target.value)}
+                    className="w-full text-xs p-2 ps-7 bg-white border border-slate-300 rounded-lg"
+                  />
+                  <ImageIcon className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2.5" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  نوع فایل ضمیمه:
+                </label>
+                <select
+                  value={attachmentType}
+                  onChange={(e) => setAttachmentType(e.target.value as any)}
+                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
+                >
+                  <option value="file">بخشنامه و فایل PDF</option>
+                  <option value="image">عکس و آلبوم گزارش</option>
+                  <option value="video">ویدیو و کلیپ گزارش</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  نام فایل یا عنوان فایل ضمیمه (اختیاری):
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="مثال: bakhshnameh-mosabeghat.pdf یا clip-jashnvareh.mp4"
+                    value={attachmentName}
+                    onChange={(e) => setAttachmentName(e.target.value)}
+                    className="w-full text-xs p-2 ps-7 bg-white border border-slate-300 rounded-lg"
+                  />
+                  <Paperclip className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2.5" />
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2">
@@ -288,6 +357,38 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
                     {post.content}
                   </p>
+
+                  {/* Media Cover Preview */}
+                  {post.coverImage && (
+                    <div className="mb-3 rounded-xl overflow-hidden border border-slate-200 max-h-48 bg-slate-100">
+                      <img
+                        src={post.coverImage}
+                        alt={post.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Attachments List */}
+                  {post.attachments && post.attachments.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mb-3 pt-2 border-t border-slate-100">
+                      <span className="text-[11px] text-slate-400">ضمایم و فایل‌های پیوست:</span>
+                      {post.attachments.map((att, idx) => (
+                        <div
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs transition-colors border border-slate-200"
+                        >
+                          {att.type === 'image' && <ImageIcon className="w-3.5 h-3.5 text-teal-600" />}
+                          {att.type === 'video' && <Video className="w-3.5 h-3.5 text-blue-600" />}
+                          {att.type === 'file' && <FileText className="w-3.5 h-3.5 text-amber-600" />}
+                          <span className="font-mono text-[11px]">{att.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 border-t border-slate-100 pt-2 gap-2">
                     <div className="flex items-center gap-3">

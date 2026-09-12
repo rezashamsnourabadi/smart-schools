@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   Users2,
@@ -13,7 +13,13 @@ import {
   Building2,
   FileText,
   Eye,
-  GraduationCap
+  GraduationCap,
+  Settings,
+  Save,
+  Megaphone,
+  Smartphone,
+  Phone,
+  Check
 } from 'lucide-react';
 import { SponsorBannerCard } from './SponsorBannerCard';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -24,13 +30,52 @@ interface Props {
 }
 
 export const ParentDashboard: React.FC<Props> = ({ onOpenStudentDossier }) => {
-  const { currentSchool, currentUser, notifications, students, setSelectedStudentForDossier } = useApp();
+  const {
+    currentSchool,
+    currentUser,
+    notifications,
+    students,
+    updateStudent,
+    announcements,
+    sendNotification,
+    setSelectedStudentForDossier
+  } = useApp();
 
   // Child info
   const child = students.find((s) => s.id === 'std-1') || students[0];
 
+  // Contact settings state
+  const [baleAccount, setBaleAccount] = useState(child.parentBaleAccount || '@rezaei_parent');
+  const [phone, setPhone] = useState(child.parentPhone || '09123456789');
+  const [emergency, setEmergency] = useState(child.emergencyPhone || '02188776655');
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
   // Check if there is any attendance alert for the child today
   const childNotifications = notifications.filter((n) => n.studentName.includes(child.name));
+
+  // Announcements targeted to parents or all
+  const parentAnnouncements = announcements.filter(
+    (a) => a.target === 'all' || a.target === 'parents'
+  );
+
+  const handleSaveContact = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateStudent(child.id, {
+      parentBaleAccount: baleAccount.trim(),
+      parentPhone: phone.trim(),
+      emergencyPhone: emergency.trim()
+    });
+    setSavedSuccess(true);
+    sendNotification({
+      recipientName: currentUser.name,
+      recipientPhone: phone.trim(),
+      studentName: child.name,
+      message: `ولی محترم؛ مشخصات ارتباطی شما (شناسه بله: ${baleAccount.trim()} و شماره تماس) با موفقیت در سامانه هوشمند آموزشگاه به‌روزرسانی شد.`,
+      type: 'general',
+      platform: 'bale'
+    });
+    setTimeout(() => setSavedSuccess(false), 4000);
+  };
 
   const handleOpenChildDossier = () => {
     if (onOpenStudentDossier) {
@@ -177,6 +222,122 @@ export const ParentDashboard: React.FC<Props> = ({ onOpenStudentDossier }) => {
               </div>
             </div>
           </div>
+
+          {/* Parent Communication & Bale Profile Settings */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-teal-600" />
+                <h3 className="font-bold text-sm text-slate-900">
+                  تنظیمات شناسه بله و تماس اولیا
+                </h3>
+              </div>
+              <span className="text-[11px] text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-md">
+                دریافت اعلانات هوشمند
+              </span>
+            </div>
+
+            <form onSubmit={handleSaveContact} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  شناسه پیام‌رسان بله (Bale ID):
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={baleAccount}
+                    onChange={(e) => setBaleAccount(e.target.value)}
+                    placeholder="@username یا شماره بله"
+                    className="w-full text-xs p-2.5 pe-8 bg-slate-50 border border-slate-300 rounded-xl font-mono text-left outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <Smartphone className="w-4 h-4 text-slate-400 absolute left-2.5 top-3" />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  جهت ارسال خودکار وضعیت ورود، خروج و غیبت فرزند به پیام‌رسان بله شما
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  شماره تلفن همراه (پیامک سراسری):
+                </label>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full text-xs p-2.5 pe-8 bg-slate-50 border border-slate-300 rounded-xl font-mono text-left outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-2.5 top-3" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  تلفن تماس ضروری منزل / محل کار:
+                </label>
+                <input
+                  type="tel"
+                  value={emergency}
+                  onChange={(e) => setEmergency(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-left outline-none"
+                />
+              </div>
+
+              {savedSuccess && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs flex items-center gap-1.5 border border-emerald-200">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  <span>اطلاعات تماس و پیام‌رسان بله با موفقیت ذخیره شد.</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+              >
+                <Save className="w-4 h-4" />
+                <span>ذخیره تنظیمات ارتباطی اولیا</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {/* Announcements for Parents */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <Megaphone className="w-5 h-5 text-teal-600" />
+            <h3 className="font-bold text-sm text-slate-900">
+              اطلاعیه‌ها و اخبار عمومی مدرسه برای اولیا
+            </h3>
+          </div>
+          <span className="text-xs text-slate-500 font-medium">
+            {toPersianDigits(parentAnnouncements.length)} اطلاعیه ثبت‌شده
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {parentAnnouncements.map((ann) => (
+            <div
+              key={ann.id}
+              className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition-colors space-y-2 text-xs"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
+                <span className="text-[10px] text-slate-400 font-mono">{toPersianDigits(ann.date)}</span>
+              </div>
+              <p className="text-slate-600 leading-relaxed text-[11px]">{ann.content}</p>
+              <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400 border-t border-slate-100">
+                <span>مرجع صادرکننده: {ann.sender}</span>
+                {ann.priority === 'urgent' && (
+                  <span className="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded-sm">فوری</span>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

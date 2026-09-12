@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { School, SchoolType } from '../types';
+import { toPersianDigits } from '../utils/persianUtils';
 import {
   Building2,
   Users,
@@ -164,7 +165,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
               className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all flex items-center gap-2"
             >
               <BookOpen className="w-4 h-4 text-teal-300" />
-              <span>بانک سوالات شهرستان ({questionBank.length})</span>
+              <span>بانک سوالات شهرستان ({toPersianDigits(questionBank.length)})</span>
             </button>
 
             <button
@@ -189,7 +190,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
           </div>
           <div>
             <div className="text-xs text-slate-500 font-medium">مدارس تحت پوشش</div>
-            <div className="text-xl font-bold text-slate-900 mt-0.5">{schools.length} مدرسه</div>
+            <div className="text-xl font-bold text-slate-900 mt-0.5">{toPersianDigits(schools.length)} مدرسه</div>
             <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">۱۰۰٪ فعال در سامانه</div>
           </div>
         </div>
@@ -200,7 +201,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
           </div>
           <div>
             <div className="text-xs text-slate-500 font-medium">کل دانش‌آموزان شهرستان</div>
-            <div className="text-xl font-bold text-slate-900 mt-0.5">{totalStudents.toLocaleString('fa-IR')} نفر</div>
+            <div className="text-xl font-bold text-slate-900 mt-0.5">{toPersianDigits(totalStudents.toLocaleString('fa-IR'))} نفر</div>
             <div className="text-[10px] text-slate-400 mt-0.5">پروفایل‌های ثبت‌شده</div>
           </div>
         </div>
@@ -211,7 +212,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
           </div>
           <div>
             <div className="text-xs text-slate-500 font-medium">کادر و معلمان شهرستان</div>
-            <div className="text-xl font-bold text-slate-900 mt-0.5">{totalTeachers} دبیر</div>
+            <div className="text-xl font-bold text-slate-900 mt-0.5">{toPersianDigits(totalTeachers)} دبیر</div>
             <div className="text-[10px] text-blue-600 font-semibold mt-0.5">دسترسی مستقیم کلاسی</div>
           </div>
         </div>
@@ -222,9 +223,9 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
           </div>
           <div>
             <div className="text-xs text-slate-500 font-medium">حضور و غیاب امروز</div>
-            <div className="text-xl font-bold text-slate-900 mt-0.5">{avgAttendance}٪</div>
+            <div className="text-xl font-bold text-slate-900 mt-0.5">{toPersianDigits(avgAttendance)}٪</div>
             <div className="text-[10px] text-emerald-700 font-medium mt-0.5">
-              {totalSubmittedSchools} از {schools.length} مدرسه ثبت کردند
+              {toPersianDigits(totalSubmittedSchools)} از {toPersianDigits(schools.length)} مدرسه ثبت کردند
             </div>
           </div>
         </div>
@@ -242,7 +243,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>پروفایل و مدیریت مدارس ({schools.length})</span>
+          <span>پروفایل و مدیریت مدارس ({toPersianDigits(schools.length)})</span>
         </button>
 
         <button
@@ -255,7 +256,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>تبلیغات و حامیان منطقه ({banners.length})</span>
+          <span>تبلیغات و حامیان منطقه ({toPersianDigits(banners.length)})</span>
         </button>
 
         <button
@@ -302,7 +303,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                      کد واحد: {school.code}
+                      کد واحد: {toPersianDigits(school.code)}
                     </span>
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -327,21 +328,21 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">دانش‌آموزان:</span>
-                      <span className="font-bold text-slate-800">{school.studentCount} نفر</span>
+                      <span className="font-bold text-slate-800">{toPersianDigits(school.studentCount)} نفر</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">تعداد کلاس‌ها:</span>
-                      <span className="font-semibold text-slate-800">{school.classesCount} کلاس</span>
+                      <span className="font-semibold text-slate-800">{toPersianDigits(school.classesCount)} کلاس</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">درصد حضور امروز:</span>
-                      <span className="font-bold text-emerald-700">{school.attendanceRateToday}٪</span>
+                      <span className="font-bold text-emerald-700">{toPersianDigits(school.attendanceRateToday)}٪</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-slate-400 truncate">{school.phone}</span>
+                  <span className="text-[11px] text-slate-400 truncate">{toPersianDigits(school.phone)}</span>
                   <button
                     id={`inspect-school-btn-${school.id}`}
                     onClick={() => handleInspectSchool(school.id)}
@@ -390,7 +391,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-400">
-                      {ban.clicksCount} کلیک / بازدید
+                      {toPersianDigits(ban.clicksCount)} کلیک / بازدید
                     </span>
                     <button
                       onClick={() => toggleBannerStatus(ban.id)}

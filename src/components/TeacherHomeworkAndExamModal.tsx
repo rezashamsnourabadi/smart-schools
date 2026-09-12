@@ -9,7 +9,12 @@ import {
   FileQuestion,
   Send,
   Users,
-  Award
+  Award,
+  ChevronDown,
+  ChevronUp,
+  MessageSquare,
+  Paperclip,
+  Check
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -22,6 +27,8 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
   const {
     classes,
     homework,
+    homeworkSubmissions,
+    gradeHomeworkSubmission,
     exams,
     currentSchoolId,
     currentUser,
@@ -32,6 +39,8 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
   const [activeTab, setActiveTab] = useState<'homework' | 'exams'>('homework');
   const [showAddHw, setShowAddHw] = useState(false);
   const [showAddExam, setShowAddExam] = useState(false);
+  const [expandedGradingHwId, setExpandedGradingHwId] = useState<string | null>(null);
+  const [gradingDrafts, setGradingDrafts] = useState<Record<string, { score: number; feedback: string }>>({});
 
   // Homework form states
   const [hwClassId, setHwClassId] = useState(classes[0]?.id || 'cls-1');
@@ -48,6 +57,12 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
   const [exTime, setExTime] = useState('۱۰:۰۰');
   const [exDuration, setExDuration] = useState(45);
   const [exQuestionsCount, setExQuestionsCount] = useState(10);
+
+  const handleSaveGrade = (submissionId: string) => {
+    const draft = gradingDrafts[submissionId];
+    if (!draft || draft.score === undefined || isNaN(draft.score)) return;
+    gradeHomeworkSubmission(submissionId, draft.score, draft.feedback || '');
+  };
 
   const handleAddHw = (e: React.FormEvent) => {
     e.preventDefault();
@@ -362,13 +377,174 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
                   {hw.description}
                 </p>
 
-                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
                   <span>دبیر: <strong>{hw.teacherName}</strong></span>
-                  <div className="flex items-center gap-1.5 text-teal-700 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>تحویل داده‌شده: {toPersianDigits(hw.submissionsCount)} از {toPersianDigits(hw.totalStudents)} نفر</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-teal-700 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>تحویل داده‌شده: {toPersianDigits(hw.submissionsCount)} از {toPersianDigits(hw.totalStudents)} نفر</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setExpandedGradingHwId(expandedGradingHwId === hw.id ? null : hw.id)}
+                      className="px-3 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs flex items-center gap-1 transition-colors"
+                    >
+                      {expandedGradingHwId === hw.id ? (
+                        <>
+                          <ChevronUp className="w-3.5 h-3.5" />
+                          <span>بستن لیست پاسخ‌ها</span>
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3.5 h-3.5" />
+                          <span>مشاهده و تصحیح پاسخ‌ها</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
+
+                {/* Submissions Grading Drawer */}
+                {expandedGradingHwId === hw.id && (
+                  <div className="mt-4 pt-3 border-t border-teal-100 bg-teal-50/40 rounded-xl p-3 sm:p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h5 className="font-bold text-xs text-teal-900 flex items-center gap-1.5">
+                        <Award className="w-4 h-4 text-teal-700" />
+                        <span>پاسخ‌های ارسال‌شده دانش‌آموزان برای این تکلیف:</span>
+                      </h5>
+                      <span className="text-[11px] text-teal-700 font-semibold">
+                        {toPersianDigits(homeworkSubmissions.filter((s) => s.homeworkId === hw.id).length)} پاسخ ثبت‌شده
+                      </span>
+                    </div>
+
+                    {homeworkSubmissions.filter((s) => s.homeworkId === hw.id).length === 0 ? (
+                      <div className="p-4 rounded-xl bg-white text-center text-xs text-slate-500 border border-slate-200">
+                        تاکنون پاسخی از سوی دانش‌آموزان برای این تکلیف ثبت نگردیده است.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {homeworkSubmissions
+                          .filter((s) => s.homeworkId === hw.id)
+                          .map((sub) => {
+                            const currentDraft = gradingDrafts[sub.id] || {
+                              score: sub.teacherScore ?? 20,
+                              feedback: sub.teacherFeedback || ''
+                            };
+
+                            return (
+                              <div
+                                key={sub.id}
+                                className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-full bg-teal-600 text-white font-bold text-xs flex items-center justify-center">
+                                      {sub.studentName.slice(0, 1)}
+                                    </div>
+                                    <span className="font-bold text-xs text-slate-900">{sub.studentName}</span>
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      تاریخ ارسال: {toPersianDigits(sub.submissionDate)}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    {sub.status === 'graded' ? (
+                                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                        تصحیح شده (نمره: {toPersianDigits(sub.teacherScore ?? 0)} از ۲۰)
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
+                                        در انتظار تصحیح
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs text-slate-700 leading-relaxed">
+                                  <div className="text-[10px] text-slate-400 font-medium mb-1">متن پاسخ دانش‌آموز:</div>
+                                  <p>{sub.textContent}</p>
+                                </div>
+
+                                {sub.attachments && sub.attachments.length > 0 && (
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                                    <span className="text-[10px] text-slate-400">فایل‌های پیوست:</span>
+                                    {sub.attachments.map((att, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[11px]"
+                                      >
+                                        <Paperclip className="w-3 h-3 text-slate-400" />
+                                        <span>{att.name}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Grading Form Controls */}
+                                <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+                                  <div className="sm:col-span-3">
+                                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                                      نمره ارزشیابی (از ۲۰):
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={20}
+                                      step={0.25}
+                                      value={currentDraft.score}
+                                      onChange={(e) =>
+                                        setGradingDrafts({
+                                          ...gradingDrafts,
+                                          [sub.id]: {
+                                            ...currentDraft,
+                                            score: parseFloat(e.target.value) || 0
+                                          }
+                                        })
+                                      }
+                                      className="w-full text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-center font-mono font-bold"
+                                    />
+                                  </div>
+
+                                  <div className="sm:col-span-6">
+                                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                                      بازخورد آموزشی و توصیه دبیر:
+                                    </label>
+                                    <input
+                                      type="text"
+                                      placeholder="مثال: روش حل عالی بود، به نکات صفحه ۴ دقت شود..."
+                                      value={currentDraft.feedback}
+                                      onChange={(e) =>
+                                        setGradingDrafts({
+                                          ...gradingDrafts,
+                                          [sub.id]: {
+                                            ...currentDraft,
+                                            feedback: e.target.value
+                                          }
+                                        })
+                                      }
+                                      className="w-full text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg"
+                                    />
+                                  </div>
+
+                                  <div className="sm:col-span-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveGrade(sub.id)}
+                                      className="w-full px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>ثبت نمره و نظر</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           ) : (

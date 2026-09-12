@@ -36,6 +36,16 @@ export interface VicePrincipalPermissions {
   canLogDisciplinary: boolean;
 }
 
+export interface VicePrincipalProfile {
+  id: string;
+  name: string;
+  roleTitle: string; // e.g. 'معاون آموزشی' | 'معاون پرورشی' | 'معاون اجرایی' | 'معاون فناوری'
+  schoolId: string;
+  phone: string;
+  avatarBg: string;
+  permissions: VicePrincipalPermissions;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -116,6 +126,21 @@ export interface Student {
   studentNumber: string; // شماره دانش‌آموزی
   todayStatus?: 'present' | 'absent' | 'late' | 'excused';
   
+  // Enrollment and Alumni Status
+  status?: 'active' | 'graduated' | 'transferred';
+  graduationDetails?: {
+    year: string; // e.g. ۱۴۰۴
+    university?: string; // e.g. دانشگاه صنعتی شریف
+    major?: string; // e.g. مهندسی کامپیوتر
+    rank?: string; // e.g. رتبه ۱۲ منطقه
+    notes?: string;
+  };
+  transferDetails?: {
+    destinationSchoolName?: string;
+    date?: string;
+    reason?: string;
+  };
+
   // Comprehensive Dossier History
   attendanceStats: AttendanceStats;
   disciplinaryRecords: DisciplinaryRecord[];
@@ -186,6 +211,13 @@ export interface GradeItem {
   scores: { studentId: string; score: number; note?: string }[];
 }
 
+export interface HomeworkAttachment {
+  name: string;
+  type: 'image' | 'pdf' | 'doc';
+  size?: string;
+  url?: string;
+}
+
 export interface HomeworkItem {
   id: string;
   schoolId: string;
@@ -201,6 +233,20 @@ export interface HomeworkItem {
   submissionsCount: number;
   totalStudents: number;
   status: 'active' | 'expired';
+  attachments?: HomeworkAttachment[];
+}
+
+export interface HomeworkSubmission {
+  id: string;
+  homeworkId: string;
+  studentId: string;
+  studentName: string;
+  submissionDate: string;
+  textContent: string;
+  attachments?: { name: string; type: string; url?: string }[];
+  status: 'submitted' | 'graded';
+  teacherScore?: number;
+  teacherFeedback?: string;
 }
 
 export interface OnlineExamQuestion {
@@ -260,6 +306,13 @@ export interface BannerAd {
 
 export type PostType = 'announcement' | 'news' | 'event' | 'event_report';
 
+export interface PostAttachment {
+  name: string;
+  type: 'image' | 'video' | 'file';
+  url?: string;
+  caption?: string;
+}
+
 export interface Announcement {
   id: string;
   schoolId: string | 'all'; // 'all' means platform-wide
@@ -273,6 +326,8 @@ export interface Announcement {
   eventDate?: string;
   eventLocation?: string;
   imageUrl?: string;
+  coverImage?: string;
+  attachments?: PostAttachment[];
   priority: 'normal' | 'important' | 'urgent';
 }
 

@@ -10,8 +10,10 @@ import {
   AttendanceSession,
   NotificationLog,
   HomeworkItem,
+  HomeworkSubmission,
   OnlineExam,
   VicePrincipalPermissions,
+  VicePrincipalProfile,
   ReportCard,
   GradeItem
 } from '../types';
@@ -23,6 +25,54 @@ export const INITIAL_VICE_PRINCIPAL_PERMISSIONS: VicePrincipalPermissions = {
   canViewFullDossier: true,
   canLogDisciplinary: true
 };
+
+export const INITIAL_VICE_PRINCIPALS: VicePrincipalProfile[] = [
+  {
+    id: 'vp-1',
+    name: 'آقای حمید مرادی',
+    roleTitle: 'معاون آموزشی',
+    schoolId: 'school-1',
+    phone: '۰۹۱۸-۳۳۳-۲۰۲۲',
+    avatarBg: 'bg-teal-600',
+    permissions: {
+      canManageAnnouncements: false,
+      canManageSchedule: true,
+      canManageStudentsAndClasses: true,
+      canViewFullDossier: true,
+      canLogDisciplinary: false
+    }
+  },
+  {
+    id: 'vp-2',
+    name: 'آقای صادق بیات',
+    roleTitle: 'معاون پرورشی و فرهنگی',
+    schoolId: 'school-1',
+    phone: '۰۹۱۸-۳۳۳-۵۰۵۵',
+    avatarBg: 'bg-emerald-600',
+    permissions: {
+      canManageAnnouncements: true,
+      canManageSchedule: false,
+      canManageStudentsAndClasses: false,
+      canViewFullDossier: true,
+      canLogDisciplinary: true
+    }
+  },
+  {
+    id: 'vp-3',
+    name: 'آقای بهنام صالحی',
+    roleTitle: 'معاون اجرایی و فناوری',
+    schoolId: 'school-1',
+    phone: '۰۹۱۸-۳۳۳-۸۰۸۸',
+    avatarBg: 'bg-indigo-600',
+    permissions: {
+      canManageAnnouncements: true,
+      canManageSchedule: true,
+      canManageStudentsAndClasses: true,
+      canViewFullDossier: true,
+      canLogDisciplinary: false
+    }
+  }
+];
 
 export const INITIAL_SCHOOLS: School[] = [
   {
@@ -201,6 +251,7 @@ export const INITIAL_STUDENTS: Student[] = [
     grade: 'پایه دهم',
     fieldOfStudy: 'ریاضی و فیزیک',
     studentNumber: '۴۰۲۱۰۸۹۱',
+    status: 'active',
     attendanceStats: {
       totalDays: 142,
       presentDays: 140,
@@ -460,6 +511,105 @@ export const INITIAL_STUDENTS: Student[] = [
     disciplinaryRecords: [],
     reportCards: [],
     pastYearHistory: []
+  },
+  {
+    id: 'std-grad-1',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'مهدی محمدی',
+    nationalCode: '۴۰۲۸۹۱۰۰۹',
+    birthDate: '۱۳۸۵/۰۴/۰۲',
+    fatherName: 'جواد',
+    parentName: 'جواد محمدی',
+    parentPhone: '۰۹۱۸۲۳۴۵۶۷۸',
+    address: 'خیابان شریعتی، کوچه بهار، پلاک ۷',
+    parentBaleAccount: '@j_mohammadi',
+    grade: 'فارغ‌التحصیل',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۱۱۰۳۱۱',
+    status: 'graduated',
+    graduationDetails: {
+      year: '۱۴۰۴',
+      university: 'دانشگاه صنعتی شریف',
+      major: 'مهندسی کامپیوتر',
+      rank: 'رتبه ۴۲ منطقه ۱',
+      notes: 'عضو تیم المپیاد کامپیوتر شهرستان - آمادگی برای هدایت تحصیلی و کارگاه‌های کنکور'
+    },
+    attendanceStats: { totalDays: 180, presentDays: 178, absentDays: 1, lateDays: 1, excusedDays: 0 },
+    disciplinaryRecords: [
+      { id: 'disc-g1', type: 'تشویقی', title: 'کسب مدال برنز المپیاد کامپیوتر کشوری', note: 'تجلیل در همایش نخبگان شهرستان', date: '۱۴۰۳/۱۱/۲۰', recordedBy: 'دکتر حسینی' }
+    ],
+    reportCards: [
+      {
+        term: 'term2',
+        termTitle: 'کارنامه نهایی دیپلم',
+        year: '۱۴۰۳-۱۴۰۴',
+        gpa: 19.92,
+        rankInClass: 1,
+        disciplineScore: 20,
+        subjects: sampleSubjectsTerm2,
+        isPublished: true
+      }
+    ],
+    pastYearHistory: [
+      { year: '۱۴۰۳-۱۴۰۴', grade: 'پایه دوازدهم', schoolName: 'دبیرستان نمونه دولتی امام صادق (ع)', gpa: 19.92, disciplineScore: 20, status: 'قبول با رتبه ممتاز' }
+    ]
+  },
+  {
+    id: 'std-grad-2',
+    schoolId: 'school-1',
+    classGroupId: 'cls-2',
+    name: 'نگار صابری',
+    nationalCode: '۴۰۲۸۹۱۰۱۰',
+    birthDate: '۱۳۸۴/۱۱/۱۵',
+    fatherName: 'رضا',
+    parentName: 'رضا صابری',
+    parentPhone: '۰۹۱۸۳۴۵۶۷۸۹',
+    address: 'بلوار انقلاب، کوچه لاله ۳، پلاک ۱۲',
+    parentBaleAccount: '@r_saberi',
+    grade: 'فارغ‌التحصیل',
+    fieldOfStudy: 'علوم تجربی',
+    studentNumber: '۴۰۰۱۰۱۱۵',
+    status: 'graduated',
+    graduationDetails: {
+      year: '۱۴۰۳',
+      university: 'دانشگاه علوم پزشکی تهران',
+      major: 'دندان‌پزشکی',
+      rank: 'رتبه ۱۱۸ کشوری',
+      notes: 'برگزارکننده وبینار انتقال تجربه و تکنیک‌های تست‌زنی برای دانش‌آموزان سال دوازدهم'
+    },
+    attendanceStats: { totalDays: 180, presentDays: 176, absentDays: 2, lateDays: 2, excusedDays: 0 },
+    disciplinaryRecords: [],
+    reportCards: [],
+    pastYearHistory: []
+  },
+  {
+    id: 'std-trans-1',
+    schoolId: 'school-1',
+    classGroupId: 'cls-1',
+    name: 'علی کاظمی‌نژاد',
+    nationalCode: '۴۰۲۸۹۱۰۱۱',
+    birthDate: '۱۳۸۹/۰۵/۱۸',
+    fatherName: 'سعید',
+    parentName: 'سعید کاظمی‌نژاد',
+    parentPhone: '۰۹۱۲۴۴۴۵۵۶۶',
+    address: 'تهران، منطقه ۶ (محل سکونت سابق: شهرستان، خیابان سعدی)',
+    parentBaleAccount: '@s_kazeminejad',
+    grade: 'پایه دهم',
+    fieldOfStudy: 'ریاضی و فیزیک',
+    studentNumber: '۴۰۲۱۰۸۹۹',
+    status: 'transferred',
+    transferDetails: {
+      destinationSchoolName: 'دبیرستان ماندگار البرز تهران',
+      date: '۱۴۰۴/۰۷/۱۰',
+      reason: 'انتقال محل کار پدر به پایتخت و تغییر نشانی سکونت'
+    },
+    attendanceStats: { totalDays: 20, presentDays: 19, absentDays: 1, lateDays: 0, excusedDays: 0 },
+    disciplinaryRecords: [],
+    reportCards: [],
+    pastYearHistory: [
+      { year: '۱۴۰۳-۱۴۰۴', grade: 'پایه نهم', schoolName: 'دبیرستان امام صادق (ع)', gpa: 19.45, disciplineScore: 20, status: 'قبول خرداد' }
+    ]
   }
 ];
 
@@ -565,7 +715,11 @@ export const INITIAL_HOMEWORK: HomeworkItem[] = [
     dueDate: '۱۴۰۵/۰۶/۲۵',
     submissionsCount: 14,
     totalStudents: 18,
-    status: 'active'
+    status: 'active',
+    attachments: [
+      { name: 'کاربرگ_تمرین_دنباله_حسابی.pdf', type: 'pdf', size: '۱.۲ مگابایت' },
+      { name: 'تصویر_صفحه_۲۴_کتاب.jpg', type: 'image', size: '۸۵۰ کیلوبایت' }
+    ]
   },
   {
     id: 'hw-2',
@@ -581,7 +735,27 @@ export const INITIAL_HOMEWORK: HomeworkItem[] = [
     dueDate: '۱۴۰۵/۰۶/۲۴',
     submissionsCount: 16,
     totalStudents: 18,
-    status: 'active'
+    status: 'active',
+    attachments: [
+      { name: 'راهنمای_تنظیم_جدول_خطا.pdf', type: 'pdf', size: '۶۲۰ کیلوبایت' }
+    ]
+  }
+];
+
+export const INITIAL_HOMEWORK_SUBMISSIONS: HomeworkSubmission[] = [
+  {
+    id: 'sub-1',
+    homeworkId: 'hw-1',
+    studentId: 'std-1',
+    studentName: 'آرین احمدی',
+    submissionDate: '۱۴۰۵/۰۶/۲۳ - ۱۹:۴۰',
+    textContent: 'استاد گرامی تمرینات ۴ تا ۹ حل شد. در سوال ۷ از رابطه جملات متوالی دنباله هندسی استفاده کردم.',
+    attachments: [
+      { name: 'پاسخ_دست‌نویس_آرین_احمدی.jpg', type: 'image' }
+    ],
+    status: 'graded',
+    teacherScore: 20,
+    teacherFeedback: 'بسیار عالی و دقیق حل شده است. استدلال سوال ۷ کاملاً صحیح است.'
   }
 ];
 
@@ -759,7 +933,11 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
     senderName: 'مهندس رضا رضایی',
     target: 'all',
     date: '۱۴۰۵/۰۶/۲۰',
-    priority: 'important'
+    priority: 'important',
+    coverImage: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=60',
+    attachments: [
+      { name: 'شیوه‌نامه_اجرایی_سامانه_مدارس.pdf', type: 'file', caption: 'بخشنامه رسمی اداره آموزش و پرورش شهرستان' }
+    ]
   },
   {
     id: 'anc-2',
@@ -773,7 +951,11 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
     date: '۱۴۰۵/۰۶/۲۱',
     eventDate: 'چهارشنبه ۲۶ شهریور - ساعت ۱۵:۳۰',
     eventLocation: 'سالن همایش‌های دبیرستان امام صادق (ع)',
-    priority: 'normal'
+    priority: 'normal',
+    coverImage: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=60',
+    attachments: [
+      { name: 'دعوت‌نامه_رسمی_مجمع_اولیا.pdf', type: 'file', caption: 'متن دعوتنامه و دستور جلسه' }
+    ]
   },
   {
     id: 'anc-3',
@@ -785,7 +967,10 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
     senderName: 'آقای مرادی',
     target: 'teachers',
     date: '۱۴۰۵/۰۶/۲۲',
-    priority: 'urgent'
+    priority: 'urgent',
+    attachments: [
+      { name: 'راهنمای_سریع_ثبت_غیبت.pdf', type: 'file' }
+    ]
   },
   {
     id: 'anc-4',
@@ -797,7 +982,12 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
     senderName: 'دکتر حسینی',
     target: 'all',
     date: '۱۴۰۵/۰۶/۱۸',
-    priority: 'normal'
+    priority: 'normal',
+    coverImage: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60',
+    attachments: [
+      { name: 'عکس_یادگاری_اهدای_جوایز.jpg', type: 'image', caption: 'مراسم اهدای لوح تقدیر با حضور مسئولین شهرستان' },
+      { name: 'ویدیو_کوتاه_مراسم_تقدیر.mp4', type: 'video', caption: 'کلیپ ۱ دقیقه‌ای لحظه اعلام نتایج المپیاد' }
+    ]
   },
   {
     id: 'anc-5',
@@ -809,7 +999,11 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
     senderName: 'دکتر حسینی',
     target: 'all',
     date: '۱۴۰۵/۰۶/۱۵',
-    priority: 'normal'
+    priority: 'normal',
+    coverImage: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&auto=format&fit=crop&q=60',
+    attachments: [
+      { name: 'تصویر_کارگاه_کامپیوتر_جدید.jpg', type: 'image' }
+    ]
   }
 ];
 

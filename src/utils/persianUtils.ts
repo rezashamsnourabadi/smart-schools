@@ -22,6 +22,12 @@ export function formatPersianScore(score: number | string | undefined | null): s
   return toPersianDigits(formatted);
 }
 
-export function formatPersianCurrency(amount: number): string {
-  return toPersianDigits(amount.toLocaleString('fa-IR')) + ' تومان';
+export function toEnglishDigits(val: string | number | null | undefined): string {
+  if (val === null || val === undefined) return '';
+  let str = String(val);
+  for (let i = 0; i < 10; i++) {
+    str = str.replace(new RegExp(PERSIAN_DIGITS[i], 'g'), i.toString());
+    str = str.replace(new RegExp(ARABIC_DIGITS[i], 'g'), i.toString());
+  }
+  return str;
 }
