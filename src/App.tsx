@@ -65,6 +65,7 @@ const AppContent: React.FC = () => {
       case 'vice_principal':
         return (
           <VicePrincipalDashboard
+            onOpenQuestionBank={() => setIsQuestionBankOpen(true)}
             onOpenScheduleModal={() => setIsScheduleModalOpen(true)}
             onOpenClassModal={() => setIsClassModalOpen(true)}
             onOpenStudentModal={() => setIsStudentModalOpen(true)}

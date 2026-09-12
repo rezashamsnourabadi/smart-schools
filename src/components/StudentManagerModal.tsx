@@ -149,9 +149,9 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
     e.preventDefault();
     if (!graduatingStudent) return;
     markStudentGraduated(graduatingStudent.id, {
-      year: gradYear,
-      university: gradUni.trim() || 'دانشگاه سراسری',
-      major: gradMajor.trim() || 'کارشناسی پیوسته',
+      year: gradYear.trim() || '۱۴۰۴-۱۴۰۵',
+      university: gradUni.trim() || 'نامشخص / آزاد',
+      major: gradMajor.trim() || 'عمومی',
       rank: gradRank.trim() || undefined,
       notes: gradNotes.trim() || undefined
     });
@@ -166,12 +166,13 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
     e.preventDefault();
     if (!transferringSchoolStudent) return;
     markStudentTransferred(transferringSchoolStudent.id, {
-      destinationSchoolName: destSchool.trim() || 'آموزشگاه جدید در شهرستان',
-      date: transferDate,
-      reason: transferReason.trim()
+      destinationSchoolName: destSchool.trim() || 'آموزشگاه جدید / در حال استعلام',
+      date: transferDate.trim() || '۱۴۰۵/۰۶/۲۳',
+      reason: transferReason.trim() || 'انتقال تحصیلی'
     });
     setTransferringSchoolStudent(null);
     setDestSchool('');
+    setTransferReason('تغییر محل سکونت خانواده');
   };
 
   return (
@@ -205,10 +206,10 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
         {/* Tab Selector */}
         <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-2xl">
+          <div className="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-2xl max-w-full overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab('active')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 activeTab === 'active'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -223,14 +224,14 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
             <button
               onClick={() => setActiveTab('graduated')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 activeTab === 'graduated'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
-              <span>فارغ‌التحصیلان و قبولی کنکور</span>
+              <span>فارغ‌التحصیلان</span>
               <span className="font-mono text-[11px] px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-700">
                 {toPersianDigits(students.filter(s => s.status === 'graduated').length)}
               </span>
@@ -238,14 +239,14 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
             <button
               onClick={() => setActiveTab('transferred')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 activeTab === 'transferred'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <LogOut className="w-3.5 h-3.5 text-amber-600" />
-              <span>دانش‌آموزان منتقل‌شده</span>
+              <span>منتقل‌شده</span>
               <span className="font-mono text-[11px] px-1.5 py-0.2 rounded-full bg-amber-50 text-amber-700">
                 {toPersianDigits(students.filter(s => s.status === 'transferred').length)}
               </span>
@@ -255,7 +256,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
           {activeTab === 'active' && (
             <button
               onClick={() => setShowAddStudentModal(true)}
-              className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+              className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
             >
               <UserPlus className="w-4 h-4" />
               <span>ثبت‌نام دانش‌آموز جدید</span>
@@ -265,7 +266,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
         {/* Filter & Search Bar */}
         <div className="p-3 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative flex-1 min-w-[200px]">
             <input
               type="text"
               placeholder="جستجو بر اساس نام، کد ملی، دانشگاه، رشته یا مدرسه مقصد..."
@@ -277,8 +278,8 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
           </div>
 
           {activeTab === 'active' && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">فیلتر کلاس:</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-slate-500">کلاس:</span>
               <select
                 value={selectedClassId}
                 onChange={(e) => setSelectedClassId(e.target.value)}
@@ -297,139 +298,247 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
           )}
         </div>
 
-        {/* Students Table */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50">
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs">
-                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                  <tr>
-                    <th className="p-3">نام و نام خانوادگی</th>
-                    <th className="p-3">کد ملی</th>
-                    <th className="p-3">پایه / کلاس</th>
-                    {activeTab === 'graduated' && (
-                      <>
-                        <th className="p-3">قبولی دانشگاه</th>
-                        <th className="p-3">رشته و رتبه</th>
-                      </>
-                    )}
-                    {activeTab === 'transferred' && (
-                      <>
-                        <th className="p-3">مدرسه مقصد</th>
-                        <th className="p-3">تاریخ و علت</th>
-                      </>
-                    )}
-                    <th className="p-3">تلفن ولی</th>
-                    <th className="p-3 text-center">عملیات پرونده</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredStudents.map((std) => {
-                    const stdClass = classes.find((c) => c.id === std.classGroupId);
+        {/* Students List / Table */}
+        <div className="p-3 sm:p-6 overflow-y-auto flex-1 bg-slate-50">
+          {/* Mobile View: Clean responsive cards with zero horizontal overflow */}
+          <div className="block md:hidden space-y-2.5">
+            {filteredStudents.map((std) => {
+              const stdClass = classes.find((c) => c.id === std.classGroupId);
 
-                    return (
-                      <tr key={std.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="p-3 font-bold text-slate-800">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-xs">
-                              {std.name.charAt(0)}
-                            </div>
-                            <span>{std.name}</span>
-                          </div>
-                        </td>
-                        <td className="p-3 font-mono text-slate-600">
-                          {toPersianDigits(std.nationalCode)}
-                        </td>
-                        <td className="p-3 text-slate-700">
-                          {stdClass?.name || std.grade}
-                        </td>
+              return (
+                <div
+                  key={std.id}
+                  className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2.5 text-right"
+                >
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => onOpenDossier(std)}
+                      className="flex items-center gap-2 hover:text-teal-700 transition-colors text-right group"
+                      title="مشاهده پرونده کامل"
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-xs group-hover:bg-teal-100">
+                        {std.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:underline">
+                          {std.name}
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          کد ملی: {toPersianDigits(std.nationalCode)}
+                        </div>
+                      </div>
+                    </button>
 
-                        {activeTab === 'graduated' && (
-                          <>
-                            <td className="p-3 text-indigo-700 font-semibold">
-                              {std.graduationDetails?.university || 'دانشگاه سراسری'}
-                            </td>
-                            <td className="p-3 text-slate-600">
-                              {std.graduationDetails?.major || 'مهندسی'}
-                              {std.graduationDetails?.rank && (
-                                <span className="mr-1 text-[10px] text-amber-700 font-mono font-bold bg-amber-50 px-1 py-0.5 rounded">
-                                  رتبه: {toPersianDigits(std.graduationDetails.rank)}
-                                </span>
-                              )}
-                            </td>
-                          </>
+                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg">
+                      {stdClass?.name || std.grade}
+                    </span>
+                  </div>
+
+                  {activeTab === 'graduated' && (
+                    <div className="p-2 rounded-xl bg-indigo-50/70 border border-indigo-100 text-[11px] text-indigo-900 space-y-0.5">
+                      <div className="font-bold">
+                        {std.graduationDetails?.university || 'دانشگاه سراسری'}
+                      </div>
+                      <div className="text-indigo-700">
+                        رشته: {std.graduationDetails?.major || 'عمومی'}
+                        {std.graduationDetails?.rank && (
+                          <span className="mr-2 font-mono">
+                            • رتبه: {toPersianDigits(std.graduationDetails.rank)}
+                          </span>
                         )}
+                      </div>
+                    </div>
+                  )}
 
-                        {activeTab === 'transferred' && (
-                          <>
-                            <td className="p-3 text-amber-700 font-semibold">
-                              {std.transferDetails?.destinationSchoolName || 'دبیرستان مقصد'}
-                            </td>
-                            <td className="p-3 text-slate-500 text-[11px]">
-                              {toPersianDigits(std.transferDetails?.date || '۱۴۰۵/۰۶/۲۳')}
-                            </td>
-                          </>
-                        )}
+                  {activeTab === 'transferred' && (
+                    <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-100 text-[11px] text-amber-900 space-y-0.5">
+                      <div className="font-bold">
+                        مقصد: {std.transferDetails?.destinationSchoolName || 'آموزشگاه جدید'}
+                      </div>
+                      <div className="text-amber-700 flex items-center justify-between text-[10px]">
+                        <span>علت: {std.transferDetails?.reason || 'جابجایی'}</span>
+                        <span className="font-mono">{toPersianDigits(std.transferDetails?.date || '۱۴۰۵/۰۶/۲۳')}</span>
+                      </div>
+                    </div>
+                  )}
 
-                        <td className="p-3 font-mono text-slate-600">
-                          {toPersianDigits(std.parentPhone)}
-                        </td>
+                  {/* Actions Bar */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                    <button
+                      onClick={() => onOpenDossier(std)}
+                      className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl font-bold text-xs flex items-center gap-1 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>مشاهده پرونده</span>
+                    </button>
 
-                        <td className="p-3 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              onClick={() => onOpenDossier(std)}
-                              className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg font-bold text-xs flex items-center gap-1 transition-colors"
-                              title="مشاهده پرونده کامل"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              <span>پرونده</span>
-                            </button>
+                    <div className="flex items-center gap-1.5">
+                      {activeTab === 'active' && (
+                        <>
+                          <button
+                            onClick={() => setGraduatingStudent(std)}
+                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                            title="ثبت فارغ‌التحصیلی و قبولی کنکور"
+                          >
+                            <GraduationCap className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setTransferringSchoolStudent(std)}
+                            className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
+                            title="انتقال به مدرسه دیگر"
+                          >
+                            <LogOut className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
 
-                            {activeTab === 'active' && (
-                              <>
-                                <button
-                                  onClick={() => setGraduatingStudent(std)}
-                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                  title="ثبت فارغ‌التحصیلی و قبولی کنکور"
-                                >
-                                  <GraduationCap className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => setTransferringSchoolStudent(std)}
-                                  className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                  title="انتقال به مدرسه دیگر"
-                                >
-                                  <LogOut className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
-
-                            {(activeTab === 'graduated' || activeTab === 'transferred') && (
-                              <button
-                                onClick={() => markStudentActive(std.id, currentSchoolId, std.classGroupId)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-lg text-xs font-semibold flex items-center gap-1"
-                                title="بازگردانی به دانش‌آموز فعال"
-                              >
-                                <RotateCcw className="w-3 h-3" />
-                                <span>فعال‌سازی</span>
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {filteredStudents.length === 0 && (
-              <div className="p-10 text-center text-slate-400 text-xs">
-                دانش‌آموزی با این مشخصات یافت نشد.
-              </div>
-            )}
+                      {(activeTab === 'graduated' || activeTab === 'transferred') && (
+                        <button
+                          onClick={() => markStudentActive(std.id, currentSchoolId, std.classGroupId)}
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-xl text-xs font-semibold flex items-center gap-1"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>فعال‌سازی مجدد</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          {/* Desktop/Tablet Table View (No parent phone, clickable name) */}
+          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <table className="w-full text-right text-xs">
+              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                <tr>
+                  <th className="p-3">نام و نام خانوادگی</th>
+                  <th className="p-3">کد ملی</th>
+                  <th className="p-3">پایه / کلاس</th>
+                  {activeTab === 'graduated' && (
+                    <>
+                      <th className="p-3">قبولی دانشگاه</th>
+                      <th className="p-3">رشته و رتبه</th>
+                    </>
+                  )}
+                  {activeTab === 'transferred' && (
+                    <>
+                      <th className="p-3">مدرسه مقصد</th>
+                      <th className="p-3">تاریخ و علت</th>
+                    </>
+                  )}
+                  <th className="p-3 text-center">عملیات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredStudents.map((std) => {
+                  const stdClass = classes.find((c) => c.id === std.classGroupId);
+
+                  return (
+                    <tr key={std.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => onOpenDossier(std)}
+                          className="flex items-center gap-2 text-right hover:text-teal-700 transition-colors group"
+                          title="کلیک جهت مشاهده پرونده کامل"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-xs group-hover:bg-teal-100">
+                            {std.name.charAt(0)}
+                          </div>
+                          <span className="group-hover:underline underline-offset-2">{std.name}</span>
+                        </button>
+                      </td>
+                      <td className="p-3 font-mono text-slate-600">
+                        {toPersianDigits(std.nationalCode)}
+                      </td>
+                      <td className="p-3 text-slate-700">
+                        {stdClass?.name || std.grade}
+                      </td>
+
+                      {activeTab === 'graduated' && (
+                        <>
+                          <td className="p-3 text-indigo-700 font-semibold">
+                            {std.graduationDetails?.university || 'دانشگاه سراسری'}
+                          </td>
+                          <td className="p-3 text-slate-600">
+                            {std.graduationDetails?.major || 'مهندسی'}
+                            {std.graduationDetails?.rank && (
+                              <span className="mr-1 text-[10px] text-amber-700 font-mono font-bold bg-amber-50 px-1 py-0.5 rounded">
+                                رتبه: {toPersianDigits(std.graduationDetails.rank)}
+                              </span>
+                            )}
+                          </td>
+                        </>
+                      )}
+
+                      {activeTab === 'transferred' && (
+                        <>
+                          <td className="p-3 text-amber-700 font-semibold">
+                            {std.transferDetails?.destinationSchoolName || 'دبیرستان مقصد'}
+                          </td>
+                          <td className="p-3 text-slate-500 text-[11px]">
+                            {toPersianDigits(std.transferDetails?.date || '۱۴۰۵/۰۶/۲۳')}
+                          </td>
+                        </>
+                      )}
+
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => onOpenDossier(std)}
+                            className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg font-bold text-xs flex items-center gap-1 transition-colors"
+                            title="مشاهده پرونده کامل"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>پرونده</span>
+                          </button>
+
+                          {activeTab === 'active' && (
+                            <>
+                              <button
+                                onClick={() => setGraduatingStudent(std)}
+                                className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                title="ثبت فارغ‌التحصیلی و قبولی کنکور"
+                              >
+                                <GraduationCap className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setTransferringSchoolStudent(std)}
+                                className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                title="انتقال به مدرسه دیگر"
+                              >
+                                <LogOut className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+
+                          {(activeTab === 'graduated' || activeTab === 'transferred') && (
+                            <button
+                              onClick={() => markStudentActive(std.id, currentSchoolId, std.classGroupId)}
+                              className="px-2 py-1 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-lg text-xs font-semibold flex items-center gap-1"
+                              title="بازگردانی به دانش‌آموز فعال"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>فعال‌سازی</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredStudents.length === 0 && (
+            <div className="p-10 text-center text-slate-400 text-xs">
+              دانش‌آموزی با این مشخصات یافت نشد.
+            </div>
+          )}
         </div>
 
         {/* Add Student Submodal with Smart Matching */}
@@ -565,11 +674,10 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
               <form onSubmit={handleConfirmGraduation} className="space-y-3 text-xs">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">دانشگاه پذیرفته‌شده:</label>
+                  <label className="block text-slate-700 font-bold mb-1">دانشگاه پذیرفته‌شده (اختیاری):</label>
                   <input
                     type="text"
-                    required
-                    placeholder="مثال: دانشگاه صنعتی شریف / دانشگاه تهران"
+                    placeholder="مثال: دانشگاه صنعتی شریف / دانشگاه تهران یا نامشخص"
                     value={gradUni}
                     onChange={(e) => setGradUni(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"
@@ -578,11 +686,10 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-700 font-bold mb-1">رشته قبولی:</label>
+                    <label className="block text-slate-700 font-bold mb-1">رشته قبولی (اختیاری):</label>
                     <input
                       type="text"
-                      required
-                      placeholder="مهندسی کامپیوتر"
+                      placeholder="مثال: مهندسی یا تجربی"
                       value={gradMajor}
                       onChange={(e) => setGradMajor(e.target.value)}
                       className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"
@@ -641,11 +748,10 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
               <form onSubmit={handleConfirmTransferSchool} className="space-y-3 text-xs">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">آموزشگاه مقصد:</label>
+                  <label className="block text-slate-700 font-bold mb-1">آموزشگاه مقصد (اختیاری):</label>
                   <input
                     type="text"
-                    required
-                    placeholder="نام دبیرستان یا هنرستان مقصد"
+                    placeholder="نام دبیرستان یا هنرستان مقصد (اختیاری)"
                     value={destSchool}
                     onChange={(e) => setDestSchool(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"
@@ -653,9 +759,10 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">علت جابجایی:</label>
+                  <label className="block text-slate-700 font-bold mb-1">علت جابجایی (اختیاری):</label>
                   <input
                     type="text"
+                    placeholder="مثال: تغییر محل سکونت یا جابجایی تحصیلی"
                     value={transferReason}
                     onChange={(e) => setTransferReason(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"

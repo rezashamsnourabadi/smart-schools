@@ -21,7 +21,8 @@ import {
   X,
   MessageSquare,
   UploadCloud,
-  Trash2
+  Trash2,
+  Pin
 } from 'lucide-react';
 import { SponsorBannerCard } from './SponsorBannerCard';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -113,16 +114,17 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenSt
     setActiveHwForSubmit(null);
   };
 
-  // Filter announcements for students
-  const studentAnnouncements = announcements.filter(
-    (a) => a.target === 'all' || a.target === 'students'
-  );
+  // Filter announcements for students (pinned first)
+  const studentAnnouncements = announcements
+    .filter((a) => a.target === 'all' || a.target === 'students')
+    .sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
 
   return (
     <div className="space-y-4 sm:space-y-6" id="student-dashboard-view">
-      {/* Top High-Visibility Sponsor Ribbon */}
-      <SponsorBannerCard audienceFilter="students" variant="compact" />
-
       {/* Top Greeting Card */}
       <div className="bg-gradient-to-r from-teal-800 to-cyan-900 text-white p-6 rounded-3xl shadow-md relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -160,6 +162,9 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenSt
           </div>
         </div>
       </div>
+
+      {/* Second Position Sponsor Ribbon */}
+      <SponsorBannerCard audienceFilter="students" variant="compact" />
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -345,10 +350,22 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenSt
               {studentAnnouncements.map((ann) => (
                 <div
                   key={ann.id}
-                  className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition-colors space-y-2 text-xs"
+                  className={`p-3.5 rounded-xl border transition-colors space-y-2 text-xs ${
+                    ann.isPinned
+                      ? 'border-amber-400 bg-amber-50/30 ring-1 ring-amber-400/30'
+                      : 'border-slate-200 bg-slate-50/60 hover:bg-slate-50'
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
+                    <div className="flex items-center gap-1.5">
+                      {ann.isPinned && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                          <Pin className="w-2.5 h-2.5 fill-amber-600 text-amber-600" />
+                          <span>پین</span>
+                        </span>
+                      )}
+                      <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
+                    </div>
                     <span className="text-[10px] text-slate-400 font-mono">{toPersianDigits(ann.date)}</span>
                   </div>
                   <p className="text-slate-600 leading-relaxed text-[11px]">{ann.content}</p>

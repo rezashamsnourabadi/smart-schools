@@ -76,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal }) => {
                   <span>{selectedBrandName}</span>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                 </button>
-                <span className="text-[11px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/80">
+                <span className="hidden sm:inline-block text-[11px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/80">
                   سامانه هوشمند مدارس
                 </span>
               </div>

@@ -13,7 +13,8 @@ import {
   Megaphone,
   Settings,
   ChevronLeft,
-  GraduationCap
+  GraduationCap,
+  Pin
 } from 'lucide-react';
 import { SponsorBannerCard } from './SponsorBannerCard';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -43,10 +44,14 @@ export const ParentDashboard: React.FC<Props> = ({
   // Check if there is any attendance alert for the child today
   const childNotifications = notifications.filter((n) => n.studentName.includes(child.name));
 
-  // Announcements targeted to parents or all
-  const parentAnnouncements = announcements.filter(
-    (a) => a.target === 'all' || a.target === 'parents'
-  );
+  // Announcements targeted to parents or all (pinned first)
+  const parentAnnouncements = announcements
+    .filter((a) => a.target === 'all' || a.target === 'parents')
+    .sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
 
   const handleOpenChildDossier = () => {
     if (onOpenStudentDossier) {
@@ -58,9 +63,6 @@ export const ParentDashboard: React.FC<Props> = ({
 
   return (
     <div className="space-y-4 sm:space-y-5" id="parent-dashboard-view">
-      {/* Top High-Visibility Sponsor Ribbon */}
-      <SponsorBannerCard audienceFilter="parents" variant="compact" />
-
       {/* Top Banner & Child Summary */}
       <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -86,18 +88,11 @@ export const ParentDashboard: React.FC<Props> = ({
             <FileText className="w-4 h-4" />
             <span>مشاهده پرونده تحصیلی و کارنامه</span>
           </button>
-
-          {onOpenProfileModal && (
-            <button
-              onClick={onOpenProfileModal}
-              className="px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200"
-            >
-              <Smartphone className="w-4 h-4 text-teal-700" />
-              <span>تنظیمات بله و شماره اولیا</span>
-            </button>
-          )}
         </div>
       </div>
+
+      {/* Second Position Sponsor Ribbon */}
+      <SponsorBannerCard audienceFilter="parents" variant="compact" />
 
       {/* Quick Status Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -263,10 +258,22 @@ export const ParentDashboard: React.FC<Props> = ({
           {parentAnnouncements.map((ann) => (
             <div
               key={ann.id}
-              className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors space-y-2 text-xs"
+              className={`p-3.5 rounded-2xl border transition-colors space-y-2 text-xs ${
+                ann.isPinned
+                  ? 'border-amber-400 bg-amber-50/40 ring-1 ring-amber-400/30'
+                  : 'border-slate-200 bg-slate-50/70 hover:bg-slate-50'
+              }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
+                <div className="flex items-center gap-1.5">
+                  {ann.isPinned && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                      <Pin className="w-2.5 h-2.5 fill-amber-600 text-amber-600" />
+                      <span>پین</span>
+                    </span>
+                  )}
+                  <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
+                </div>
                 <span className="text-[10px] text-slate-400 font-mono">{toPersianDigits(ann.date)}</span>
               </div>
               <p className="text-slate-600 leading-relaxed text-[11px]">{ann.content}</p>

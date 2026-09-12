@@ -26,7 +26,6 @@ import {
   Activity,
   MessageSquare
 } from 'lucide-react';
-import { SponsorBannerCard } from './SponsorBannerCard';
 import { toPersianDigits } from '../utils/persianUtils';
 import { Student } from '../types';
 
@@ -108,9 +107,6 @@ export const PrincipalDashboard: React.FC<Props> = ({
 
   return (
     <div className="space-y-4 sm:space-y-5" id="principal-dashboard-view">
-      {/* Top High-Visibility Compact Sponsor Banner */}
-      <SponsorBannerCard audienceFilter="all" variant="compact" />
-
       {/* Modern School Administrative Header & Pulse Bar */}
       <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">

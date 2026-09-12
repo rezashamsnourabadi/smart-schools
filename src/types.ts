@@ -329,6 +329,7 @@ export interface Announcement {
   coverImage?: string;
   attachments?: PostAttachment[];
   priority: 'normal' | 'important' | 'urgent';
+  isPinned?: boolean;
 }
 
 export interface NotificationLog {

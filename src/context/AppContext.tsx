@@ -85,7 +85,9 @@ interface AppContextType {
   toggleBannerStatus: (bannerId: string) => void;
   clickBanner: (bannerId: string) => void;
   addAnnouncement: (announcement: Omit<Announcement, 'id' | 'date'>) => void;
+  updateAnnouncement: (id: string, updates: Partial<Announcement>) => void;
   deleteAnnouncement: (id: string) => void;
+  togglePinAnnouncement: (id: string) => void;
   addSchool: (school: Omit<School, 'id' | 'todayAttendanceSubmitted' | 'attendanceRateToday'>) => void;
   
   // Management Actions
@@ -454,11 +456,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const updateAnnouncement = (id: string, updates: Partial<Announcement>) => {
+    setAnnouncements((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...updates } : a))
+    );
+    setActiveToast({
+      title: 'اطلاعیه ویرایش شد',
+      message: 'تغییرات با موفقیت ذخیره گردید.',
+      type: 'success'
+    });
+  };
+
   const deleteAnnouncement = (id: string) => {
     setAnnouncements((prev) => prev.filter((a) => a.id !== id));
     setActiveToast({
       title: 'مورد حذف شد',
       message: 'مطلب از تابلوی اعلانات و اخبار برداشته شد.',
+      type: 'info'
+    });
+  };
+
+  const togglePinAnnouncement = (id: string) => {
+    setAnnouncements((prev) => {
+      const target = prev.find((a) => a.id === id);
+      const willPin = !target?.isPinned;
+      return prev.map((a) => {
+        if (a.id === id) {
+          return { ...a, isPinned: willPin };
+        }
+        // only one announcement can be pinned
+        return { ...a, isPinned: false };
+      });
+    });
+    setActiveToast({
+      title: 'وضعیت سنجاق بروزرسانی شد',
+      message: 'تنها یک اطلاعیه در بالاترین جایگاه تابلوی اعلانات پین می‌شود.',
       type: 'info'
     });
   };
@@ -978,7 +1010,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleBannerStatus,
         clickBanner,
         addAnnouncement,
+        updateAnnouncement,
         deleteAnnouncement,
+        togglePinAnnouncement,
         addSchool,
         addStudent,
         updateStudent,
