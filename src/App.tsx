@@ -16,6 +16,7 @@ import { ClassManagerModal } from './components/ClassManagerModal';
 import { StudentManagerModal } from './components/StudentManagerModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { PostManagerModal } from './components/PostManagerModal';
+import { StaffManagerModal } from './components/StaffManagerModal';
 import { VicePrincipalPermissionsModal } from './components/VicePrincipalPermissionsModal';
 import { TeacherGradeEntryModal } from './components/TeacherGradeEntryModal';
 import { TeacherHomeworkAndExamModal } from './components/TeacherHomeworkAndExamModal';
@@ -185,9 +186,9 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* Vice Principal Permissions Settings Modal */}
+      {/* Comprehensive Staff Manager Modal (Vice Principals & Teachers) */}
       {isVpPermsModalOpen && (
-        <VicePrincipalPermissionsModal
+        <StaffManagerModal
           onClose={() => setIsVpPermsModalOpen(false)}
         />
       )}

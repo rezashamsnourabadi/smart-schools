@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { QuestionBankItem } from '../types';
+import { toPersianDigits } from '../utils/persianUtils';
 import {
   BookOpen,
   Search,

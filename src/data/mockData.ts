@@ -14,6 +14,7 @@ import {
   OnlineExam,
   VicePrincipalPermissions,
   VicePrincipalProfile,
+  TeacherProfile,
   ReportCard,
   GradeItem
 } from '../types';
@@ -71,6 +72,49 @@ export const INITIAL_VICE_PRINCIPALS: VicePrincipalProfile[] = [
       canViewFullDossier: true,
       canLogDisciplinary: false
     }
+  }
+];
+
+export const INITIAL_TEACHERS: TeacherProfile[] = [
+  {
+    id: 'teacher-1',
+    name: 'استاد علیرضا احمدی',
+    phone: '۰۹۱۲-۱۱۱-۲۲۳۳',
+    avatarBg: 'bg-teal-600',
+    schoolId: 'school-1',
+    teachingSubjects: ['دینی', 'عربی'],
+    assignedClassIds: ['cls-1', 'cls-2'],
+    roleTitle: 'دبیر رسمی'
+  },
+  {
+    id: 'teacher-2',
+    name: 'مهندس جواد باقری',
+    phone: '۰۹۱۲-۴۴۴-۵۵۶۶',
+    avatarBg: 'bg-indigo-600',
+    schoolId: 'school-1',
+    teachingSubjects: ['فیزیک', 'هندسه'],
+    assignedClassIds: ['cls-1', 'cls-3'],
+    roleTitle: 'دبیر تخصصی'
+  },
+  {
+    id: 'teacher-3',
+    name: 'دکتر مجید اسدی',
+    phone: '۰۹۱۲-۷۷۷-۸۸۹۹',
+    avatarBg: 'bg-emerald-600',
+    schoolId: 'school-1',
+    teachingSubjects: ['شیمی', 'آزمایشگاه علوم'],
+    assignedClassIds: ['cls-2', 'cls-3'],
+    roleTitle: 'دبیر رسمی'
+  },
+  {
+    id: 'teacher-4',
+    name: 'استاد رضا حسینی',
+    phone: '۰۹۱۲-۳۳۳-۹۹۰۰',
+    avatarBg: 'bg-amber-600',
+    schoolId: 'school-1',
+    teachingSubjects: ['ریاضی', 'حسابان'],
+    assignedClassIds: ['cls-1'],
+    roleTitle: 'دبیر رسمی'
   }
 ];
 

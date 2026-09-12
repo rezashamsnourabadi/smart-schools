@@ -216,7 +216,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
               }`}
             >
               <Users className="w-3.5 h-3.5 text-teal-600" />
-              <span>دانش‌آموزان فعال</span>
+              <span>فعال</span>
               <span className="font-mono text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700">
                 {toPersianDigits(students.filter(s => s.schoolId === currentSchoolId && (s.status === 'active' || !s.status)).length)}
               </span>

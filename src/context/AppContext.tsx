@@ -18,6 +18,7 @@ import {
   OnlineExam,
   VicePrincipalPermissions,
   VicePrincipalProfile,
+  TeacherProfile,
   DisciplinaryRecord,
   PostType
 } from '../types';
@@ -37,7 +38,8 @@ import {
   INITIAL_HOMEWORK_SUBMISSIONS,
   INITIAL_EXAMS,
   INITIAL_VICE_PRINCIPAL_PERMISSIONS,
-  INITIAL_VICE_PRINCIPALS
+  INITIAL_VICE_PRINCIPALS,
+  INITIAL_TEACHERS
 } from '../data/mockData';
 import { toEnglishDigits } from '../utils/persianUtils';
 
@@ -63,10 +65,22 @@ interface AppContextType {
   exams: OnlineExam[];
   vicePrincipalPermissions: VicePrincipalPermissions;
   vicePrincipals: VicePrincipalProfile[];
+  teachers: TeacherProfile[];
   activeVicePrincipalId: string;
   setActiveVicePrincipalId: (id: string) => void;
   updateVicePrincipalProfilePermissions: (vpId: string, perms: Partial<VicePrincipalPermissions>) => void;
   activeVicePrincipalPermissions: VicePrincipalPermissions;
+  
+  // Staff Management (Vice Principals & Teachers)
+  addTeacher: (teacher: Omit<TeacherProfile, 'id'>) => void;
+  updateTeacher: (id: string, updates: Partial<TeacherProfile>) => void;
+  deleteTeacher: (id: string) => void;
+  addVicePrincipal: (vp: Omit<VicePrincipalProfile, 'id'>) => void;
+  updateVicePrincipal: (id: string, updates: Partial<VicePrincipalProfile>) => void;
+  deleteVicePrincipal: (id: string) => void;
+  convertTeacherToVicePrincipal: (teacherId: string, roleTitle: string, permissions?: Partial<VicePrincipalPermissions>) => void;
+  convertVicePrincipalToTeacher: (vpId: string, teachingSubjects: string[], assignedClassIds: string[]) => void;
+
   selectedStudentForDossier: Student | null;
   setSelectedStudentForDossier: (student: Student | null) => void;
   activeMobileTab: string;
@@ -194,6 +208,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_VICE_PRINCIPALS;
   });
 
+  const [teachers, setTeachers] = useState<TeacherProfile[]>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_teachers`);
+    return saved ? JSON.parse(saved) : INITIAL_TEACHERS;
+  });
+
   const [activeVicePrincipalId, setActiveVicePrincipalId] = useState<string>('vp-1');
 
   const [homeworkSubmissions, setHomeworkSubmissions] = useState<HomeworkSubmission[]>(() => {
@@ -263,6 +282,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY}_vice_principals`, JSON.stringify(vicePrincipals));
   }, [vicePrincipals]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY}_teachers`, JSON.stringify(teachers));
+  }, [teachers]);
 
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY}_homework_subs`, JSON.stringify(homeworkSubmissions));
@@ -929,6 +952,145 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  // Staff Management Actions
+  const addTeacher = (teacherData: Omit<TeacherProfile, 'id'>) => {
+    const newTeacher: TeacherProfile = {
+      ...teacherData,
+      id: `teacher-${Date.now()}`
+    };
+    setTeachers((prev) => [...prev, newTeacher]);
+    setActiveToast({
+      title: 'دبیر جدید ثبت شد',
+      message: `${newTeacher.name} با دروس و کلاس‌های مشخص شده به کادر مدرسه اضافه گردید.`,
+      type: 'success'
+    });
+  };
+
+  const updateTeacher = (id: string, updates: Partial<TeacherProfile>) => {
+    setTeachers((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+    );
+    setActiveToast({
+      title: 'اطلاعات دبیر بروز شد',
+      message: 'تغییرات در مشخصات و دروس تدریسی ذخیره گردید.',
+      type: 'success'
+    });
+  };
+
+  const deleteTeacher = (id: string) => {
+    const teacher = teachers.find((t) => t.id === id);
+    setTeachers((prev) => prev.filter((t) => t.id !== id));
+    setActiveToast({
+      title: 'حذف دبیر از کادر آموزشگاه',
+      message: `${teacher?.name || 'دبیر'} از لیست معلمان مدرسه حذف شد.`,
+      type: 'info'
+    });
+  };
+
+  const addVicePrincipal = (vpData: Omit<VicePrincipalProfile, 'id'>) => {
+    const newVP: VicePrincipalProfile = {
+      ...vpData,
+      id: `vp-${Date.now()}`
+    };
+    setVicePrincipals((prev) => [...prev, newVP]);
+    setActiveToast({
+      title: 'معاون جدید ثبت شد',
+      message: `${newVP.name} به عنوان ${newVP.roleTitle} به کادر مدرسه افزوده شد.`,
+      type: 'success'
+    });
+  };
+
+  const updateVicePrincipal = (id: string, updates: Partial<VicePrincipalProfile>) => {
+    setVicePrincipals((prev) =>
+      prev.map((vp) => (vp.id === id ? { ...vp, ...updates } : vp))
+    );
+    setActiveToast({
+      title: 'اطلاعات معاون بروز شد',
+      message: 'مشخصات یا عنوان سازمانی معاون با موفقیت ویرایش گردید.',
+      type: 'success'
+    });
+  };
+
+  const deleteVicePrincipal = (id: string) => {
+    const vp = vicePrincipals.find((v) => v.id === id);
+    setVicePrincipals((prev) => prev.filter((v) => v.id !== id));
+    if (activeVicePrincipalId === id) {
+      const remaining = vicePrincipals.filter((v) => v.id !== id);
+      if (remaining.length > 0) {
+        setActiveVicePrincipalId(remaining[0].id);
+      }
+    }
+    setActiveToast({
+      title: 'معاون حذف شد',
+      message: `${vp?.name || 'معاون'} از کادر مدیریتی آموزشگاه حذف گردید.`,
+      type: 'info'
+    });
+  };
+
+  const convertTeacherToVicePrincipal = (
+    teacherId: string,
+    roleTitle: string,
+    permissions?: Partial<VicePrincipalPermissions>
+  ) => {
+    const teacher = teachers.find((t) => t.id === teacherId);
+    if (!teacher) return;
+    const newVP: VicePrincipalProfile = {
+      id: `vp-${Date.now()}`,
+      name: teacher.name,
+      phone: teacher.phone,
+      schoolId: teacher.schoolId,
+      avatarBg: teacher.avatarBg || 'bg-teal-600',
+      roleTitle,
+      permissions: {
+        canManageAnnouncements: true,
+        canManageSchedule: true,
+        canManageStudentsAndClasses: true,
+        canViewFullDossier: true,
+        canLogDisciplinary: true,
+        ...permissions
+      }
+    };
+    setTeachers((prev) => prev.filter((t) => t.id !== teacherId));
+    setVicePrincipals((prev) => [...prev, newVP]);
+    setActiveToast({
+      title: 'تغییر نقش به معاونت',
+      message: `${teacher.name} به عنوان ${roleTitle} در کادر اجرایی منصوب شد.`,
+      type: 'success'
+    });
+  };
+
+  const convertVicePrincipalToTeacher = (
+    vpId: string,
+    teachingSubjects: string[],
+    assignedClassIds: string[]
+  ) => {
+    const vp = vicePrincipals.find((v) => v.id === vpId);
+    if (!vp) return;
+    const newTeacher: TeacherProfile = {
+      id: `teacher-${Date.now()}`,
+      name: vp.name,
+      phone: vp.phone,
+      schoolId: vp.schoolId,
+      avatarBg: vp.avatarBg || 'bg-indigo-600',
+      teachingSubjects,
+      assignedClassIds,
+      roleTitle: 'دبیر رسمی'
+    };
+    setVicePrincipals((prev) => prev.filter((v) => v.id !== vpId));
+    setTeachers((prev) => [...prev, newTeacher]);
+    if (activeVicePrincipalId === vpId) {
+      const remaining = vicePrincipals.filter((v) => v.id !== vpId);
+      if (remaining.length > 0) {
+        setActiveVicePrincipalId(remaining[0].id);
+      }
+    }
+    setActiveToast({
+      title: 'تغییر نقش به تدریس',
+      message: `${vp.name} به کادر دبیران و اساتید آموزشگاه انتقال یافت.`,
+      type: 'success'
+    });
+  };
+
   const resetAllData = () => {
     localStorage.removeItem(`${STORAGE_KEY}_schools`);
     localStorage.removeItem(`${STORAGE_KEY}_classes`);
@@ -944,6 +1106,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem(`${STORAGE_KEY}_exams`);
     localStorage.removeItem(`${STORAGE_KEY}_vp_perms`);
     localStorage.removeItem(`${STORAGE_KEY}_vice_principals`);
+    localStorage.removeItem(`${STORAGE_KEY}_teachers`);
     localStorage.removeItem(`${STORAGE_KEY}_homework_subs`);
 
     setSchools(INITIAL_SCHOOLS);
@@ -961,6 +1124,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setExams(INITIAL_EXAMS);
     setVicePrincipalPermissions(INITIAL_VICE_PRINCIPAL_PERMISSIONS);
     setVicePrincipals(INITIAL_VICE_PRINCIPALS);
+    setTeachers(INITIAL_TEACHERS);
     setSelectedStudentForDossier(null);
 
     setActiveToast({
@@ -994,10 +1158,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         exams,
         vicePrincipalPermissions,
         vicePrincipals,
+        teachers,
         activeVicePrincipalId,
         setActiveVicePrincipalId,
         updateVicePrincipalProfilePermissions,
         activeVicePrincipalPermissions,
+        addTeacher,
+        updateTeacher,
+        deleteTeacher,
+        addVicePrincipal,
+        updateVicePrincipal,
+        deleteVicePrincipal,
+        convertTeacherToVicePrincipal,
+        convertVicePrincipalToTeacher,
         selectedStudentForDossier,
         setSelectedStudentForDossier,
         activeMobileTab,

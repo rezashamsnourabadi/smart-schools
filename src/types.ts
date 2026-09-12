@@ -46,6 +46,17 @@ export interface VicePrincipalProfile {
   permissions: VicePrincipalPermissions;
 }
 
+export interface TeacherProfile {
+  id: string;
+  name: string;
+  phone: string;
+  avatarBg: string;
+  schoolId: string;
+  teachingSubjects: string[]; // e.g. ['دینی', 'عربی']
+  assignedClassIds: string[]; // e.g. ['cls-1', 'cls-2']
+  roleTitle?: string; // e.g. 'دبیر رسمی'
+}
+
 export interface UserProfile {
   id: string;
   name: string;

@@ -275,21 +275,21 @@ export const PrincipalDashboard: React.FC<Props> = ({
             </div>
           </button>
 
-          {/* 5. Vice Principal Permissions */}
+          {/* 5. Staff Management (Vice Principals & Teachers) */}
           <button
-            id="btn-manage-vp-perms"
+            id="btn-manage-staff"
             onClick={onOpenVpPermsModal}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-purple-50/60 border border-slate-200 hover:border-purple-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
+            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-teal-50/60 border border-slate-200 hover:border-teal-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
           >
-            <div className="w-9 h-9 rounded-xl bg-purple-50 group-hover:bg-purple-700 text-purple-700 group-hover:text-white flex items-center justify-center transition-colors">
+            <div className="w-9 h-9 rounded-xl bg-teal-50 group-hover:bg-teal-700 text-teal-700 group-hover:text-white flex items-center justify-center transition-colors">
               <Shield className="w-4 h-4" />
             </div>
             <div className="mt-3">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-purple-950">
-                تفویض به معاونین
+              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-teal-950">
+                مدیریت کادر مدرسه
               </div>
               <div className="text-[10px] text-slate-500 mt-0.5">
-                دسترسی‌های معاونان مدرسه
+                معاونین، دبیران، دروس و اختیارات
               </div>
             </div>
           </button>
