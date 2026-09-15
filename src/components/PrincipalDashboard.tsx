@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits } from '../utils/persianUtils';
 import { Student } from '../types';
+import { CalendarRange } from 'lucide-react';
 
 interface Props {
   onOpenQuestionBank: () => void;
@@ -38,6 +39,7 @@ interface Props {
   onOpenPostModal?: () => void;
   onOpenVpPermsModal?: () => void;
   onOpenStudentDossier?: (student: Student) => void;
+  onOpenAcademicYearModal?: () => void;
 }
 
 export const PrincipalDashboard: React.FC<Props> = ({
@@ -48,7 +50,8 @@ export const PrincipalDashboard: React.FC<Props> = ({
   onOpenClassStudentModal,
   onOpenPostModal,
   onOpenVpPermsModal,
-  onOpenStudentDossier
+  onOpenStudentDossier,
+  onOpenAcademicYearModal
 }) => {
   const {
     currentSchool,
@@ -56,7 +59,11 @@ export const PrincipalDashboard: React.FC<Props> = ({
     students,
     attendanceSessions,
     announcements,
-    setSelectedStudentForDossier
+    setSelectedStudentForDossier,
+    activeAcademicYear,
+    activeTerm,
+    isViewingArchivedYear,
+    returnToCurrentAcademicYear
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'absents' | 'live_classes' | 'recent_posts'>('absents');
@@ -122,9 +129,22 @@ export const PrincipalDashboard: React.FC<Props> = ({
                 کد سازمانی: {toPersianDigits(currentSchool?.code || '')}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              مدیر آموزشگاه: <strong>{currentSchool?.principalName}</strong> • سال تحصیلی {toPersianDigits('۱۴۰۵-۱۴۰۴')}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className="text-xs text-slate-500">
+                مدیر آموزشگاه: <strong>{currentSchool?.principalName}</strong>
+              </span>
+              <span className="text-slate-300">•</span>
+              <button
+                id="btn-header-academic-year"
+                onClick={onOpenAcademicYearModal}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 transition-colors font-bold text-xs shadow-2xs"
+                title="مدیریت سال و نوبت تحصیلی"
+              >
+                <CalendarRange className="w-3.5 h-3.5 text-teal-700" />
+                <span>سال تحصیلی {toPersianDigits(activeAcademicYear?.title || '')}</span>
+                <span className="text-teal-600 font-normal">({activeTerm?.title.split(' ')[0]} {activeTerm?.title.split(' ')[1] || ''})</span>
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 text-xs bg-slate-50 p-2 rounded-2xl border border-slate-200 text-slate-600">
@@ -192,13 +212,52 @@ export const PrincipalDashboard: React.FC<Props> = ({
         </div>
       </div>
 
+      {/* Warning banner when viewing past archived academic year */}
+      {isViewingArchivedYear && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <span className="font-bold">حالت مرور سوابق: </span>
+              <span>
+                شما در حال حاضر سوابق سال تحصیلی بایگانی‌شده ({toPersianDigits(activeAcademicYear?.title || '')}) را مشاهده می‌کنید.
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={returnToCurrentAcademicYear}
+            className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors shrink-0 self-end sm:self-auto shadow-2xs"
+          >
+            بازگشت به سال تحصیلی جاری
+          </button>
+        </div>
+      )}
+
       {/* Operational Hub: Thumb-Friendly Action Cards (Separated Class & Student) */}
       <div className="space-y-2">
         <h2 className="text-xs font-bold text-slate-500 px-1">
           بخش‌های اجرایی و مدیریت آموزشگاه
         </h2>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 sm:gap-3">
+          {/* 1. Academic Year & Calendar Management */}
+          <button
+            id="btn-manage-academic-year"
+            onClick={onOpenAcademicYearModal}
+            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-teal-50/60 border border-teal-200/80 hover:border-teal-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
+          >
+            <div className="w-9 h-9 rounded-xl bg-teal-50 group-hover:bg-teal-700 text-teal-700 group-hover:text-white flex items-center justify-center transition-colors">
+              <CalendarRange className="w-4 h-4" />
+            </div>
+            <div className="mt-3">
+              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-teal-950">
+                سال و تقویم تحصیلی
+              </div>
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                سال‌بندی، نوبت‌ها و ارتقای پایه
+              </div>
+            </div>
+          </button>
           {/* 1. Student Management (Separated) */}
           <button
             id="btn-manage-students"

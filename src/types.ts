@@ -355,3 +355,37 @@ export interface NotificationLog {
   schoolName: string;
 }
 
+export type AcademicTermId = 'term1' | 'term2' | 'summer';
+
+export interface AcademicTerm {
+  id: AcademicTermId;
+  title: string; // e.g. 'نوبت اول (مهر تا دی)', 'نوبت دوم (بهمن تا خرداد)', 'دوره تابستان'
+  startDate: string;
+  endDate: string;
+  isCurrent: boolean;
+}
+
+export type AcademicYearStatus = 'active' | 'archived' | 'planned';
+
+export interface AcademicYear {
+  id: string; // e.g. 'ay-1403-1404', 'ay-1404-1405', 'ay-1405-1406'
+  title: string; // e.g. '۱۴۰۴-۱۴۰۵'
+  startDate: string; // '۱۴۰۴/۰۷/۰۱'
+  endDate: string; // '۱۴۰۵/۰۶/۳۱'
+  status: AcademicYearStatus; // 'active' | 'archived' | 'planned'
+  isCurrent: boolean;
+  currentTermId: AcademicTermId;
+  terms: AcademicTerm[];
+  description?: string;
+  studentsCount?: number;
+  classesCount?: number;
+}
+
+export interface YearRolloverOptions {
+  newYearTitle: string; // e.g. '۱۴۰۵-۱۴۰۶'
+  promoteStudents: boolean; // دهم -> یازدهم، یازدهم -> دوازدهم
+  graduateTwelfthGraders: boolean; // دوازدهم -> فارغ‌التحصیل
+  archiveCurrentGrades: boolean; // ثبت در سوابق تحصیلی گذشته (pastYearHistory)
+  resetAttendanceLogs: boolean; // شروع دوره حضور و غیاب نو
+}
+

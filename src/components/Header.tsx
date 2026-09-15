@@ -28,7 +28,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal }) => {
     setCurrentSchoolId,
     currentUser,
     notifications,
-    resetAllData
+    resetAllData,
+    activeAcademicYear,
+    activeTerm,
+    isViewingArchivedYear
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -138,6 +141,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal }) => {
 
           {/* Left Actions: Date, SMS/Bale Bell, Profile, Reset */}
           <div className="flex items-center space-x-reverse space-x-2 sm:space-x-3">
+            {/* Academic Year Badge */}
+            <div
+              className={`hidden lg:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl border font-bold ${
+                isViewingArchivedYear
+                  ? 'bg-amber-50 text-amber-900 border-amber-300'
+                  : 'bg-teal-50/80 text-teal-900 border-teal-200'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5 text-teal-700" />
+              <span>سال {toPersianDigits(activeAcademicYear?.title || '')}</span>
+              <span className="text-[10px] font-normal text-slate-500">
+                ({activeTerm?.title.split(' ')[0]} {activeTerm?.title.split(' ')[1] || ''})
+              </span>
+            </div>
+
             {/* Live Date display */}
             <div className="hidden xl:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />

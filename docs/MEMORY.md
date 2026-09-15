@@ -31,6 +31,10 @@ This document preserves the institutional memory, technical decisions, component
 - **Decision:** Outbound Bale/SMS messages trigger both a temporary floating animated notification (`NotificationToast.tsx`) and an append-only log in `Header.tsx`.
 - **Rationale:** Gives instant visual confirmation to staff that parents were alerted, while allowing parents and auditors to review past logs.
 
+### ADR-005: Academic Year Lifecycle & Rollover Engine (`AcademicYearManagerModal.tsx`)
+- **Decision:** Model the school year as a multi-term lifecycle (`active`, `planned`, `archived`) with an interactive rollover wizard.
+- **Rationale:** Schools operate on discrete calendar years. Transitioning to a new year involves atomic operations: advancing 10th & 11th graders to the next grade, graduating 12th graders, freezing prior report cards into `student.pastYearHistory`, and zeroing out current attendance counters. The system also supports safe, read-only viewing of archived years with an immediate return banner.
+
 ---
 
 ## 3. Component & Modal Registry
@@ -41,6 +45,7 @@ This document preserves the institutional memory, technical decisions, component
 | `RoleQuickSwitch.tsx` | Dev Utility | Allows instant switching between all 6 roles | Root `App.tsx` |
 | `MobileBottomNav.tsx` | Mobile UX | Bottom floating navigation bar for small screens (<768px) | Root `App.tsx` |
 | `NotificationToast.tsx` | Toast Alert | Floating animated notification simulating SMS & Bale delivery | Triggered by `sendNotification` in `AppContext` |
+| `AcademicYearManagerModal.tsx` | Modal | Manage school years, switch terms, create new years, and run rollover | Triggered from PrincipalDashboard & Header |
 | `PlatformAdminDashboard.tsx` | Dashboard | County-wide analytics, sponsor ads manager, schools overview | `currentRole === 'platform_admin'` |
 | `PrincipalDashboard.tsx` | Dashboard | School KPI overview, quick access to all school modals | `currentRole === 'principal'` |
 | `VicePrincipalDashboard.tsx` | Dashboard | Fast daily attendance, discipline, permitted task links | `currentRole === 'vice_principal'` |

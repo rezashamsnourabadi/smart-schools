@@ -20,6 +20,7 @@ import { StaffManagerModal } from './components/StaffManagerModal';
 import { VicePrincipalPermissionsModal } from './components/VicePrincipalPermissionsModal';
 import { TeacherGradeEntryModal } from './components/TeacherGradeEntryModal';
 import { TeacherHomeworkAndExamModal } from './components/TeacherHomeworkAndExamModal';
+import { AcademicYearManagerModal } from './components/AcademicYearManagerModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { GraduationCap } from 'lucide-react';
 import { Student } from './types';
@@ -42,6 +43,7 @@ const AppContent: React.FC = () => {
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false);
   const [isHomeworkExamModalOpen, setIsHomeworkExamModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isAcademicYearModalOpen, setIsAcademicYearModalOpen] = useState(false);
 
   const handleOpenStudentDossier = (student: Student) => {
     setSelectedStudentForDossier(student);
@@ -61,6 +63,7 @@ const AppContent: React.FC = () => {
             onOpenPostModal={() => setIsPostModalOpen(true)}
             onOpenVpPermsModal={() => setIsVpPermsModalOpen(true)}
             onOpenStudentDossier={handleOpenStudentDossier}
+            onOpenAcademicYearModal={() => setIsAcademicYearModalOpen(true)}
           />
         );
       case 'vice_principal':
@@ -211,6 +214,12 @@ const AppContent: React.FC = () => {
       <QuestionBankModal
         isOpen={isQuestionBankOpen}
         onClose={() => setIsQuestionBankOpen(false)}
+      />
+
+      {/* Academic Year Management Modal */}
+      <AcademicYearManagerModal
+        isOpen={isAcademicYearModalOpen}
+        onClose={() => setIsAcademicYearModalOpen(false)}
       />
 
       {/* Floating System Toasts (Bale / SMS delivery) */}

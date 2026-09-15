@@ -20,7 +20,12 @@ import {
   VicePrincipalProfile,
   TeacherProfile,
   DisciplinaryRecord,
-  PostType
+  PostType,
+  AcademicYear,
+  AcademicTerm,
+  AcademicTermId,
+  YearRolloverOptions,
+  AcademicYearStatus
 } from '../types';
 import {
   INITIAL_SCHOOLS,
@@ -39,7 +44,8 @@ import {
   INITIAL_EXAMS,
   INITIAL_VICE_PRINCIPAL_PERMISSIONS,
   INITIAL_VICE_PRINCIPALS,
-  INITIAL_TEACHERS
+  INITIAL_TEACHERS,
+  INITIAL_ACADEMIC_YEARS
 } from '../data/mockData';
 import { toEnglishDigits } from '../utils/persianUtils';
 
@@ -125,6 +131,19 @@ interface AppContextType {
   addOnlineExam: (exam: Omit<OnlineExam, 'id'>) => void;
   updateParentContact: (studentId: string, data: { address?: string; emergencyPhone?: string; parentPhone?: string; parentBaleAccount?: string }) => void;
   
+  // Academic Year Management
+  academicYears: AcademicYear[];
+  activeAcademicYearId: string;
+  activeAcademicYear: AcademicYear;
+  activeTerm: AcademicTerm | undefined;
+  isViewingArchivedYear: boolean;
+  setActiveAcademicYearId: (id: string) => void;
+  setActiveTermId: (termId: AcademicTermId) => void;
+  addAcademicYear: (year: Omit<AcademicYear, 'id' | 'isCurrent'>) => void;
+  updateAcademicYear: (id: string, updates: Partial<AcademicYear>) => void;
+  rolloverAcademicYear: (options: YearRolloverOptions) => void;
+  returnToCurrentAcademicYear: () => void;
+
   resetAllData: () => void;
 }
 
@@ -220,6 +239,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_HOMEWORK_SUBMISSIONS;
   });
 
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_academic_years`);
+    return saved ? JSON.parse(saved) : INITIAL_ACADEMIC_YEARS;
+  });
+
+  const [activeAcademicYearId, setActiveAcademicYearId] = useState<string>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_active_year_id`);
+    return saved || 'ay-1404-1405';
+  });
+
   const [activeToast, setActiveToast] = useState<{
     title: string;
     message: string;
@@ -290,6 +319,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY}_homework_subs`, JSON.stringify(homeworkSubmissions));
   }, [homeworkSubmissions]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY}_academic_years`, JSON.stringify(academicYears));
+  }, [academicYears]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY}_active_year_id`, activeAcademicYearId);
+  }, [activeAcademicYearId]);
+
+  const activeAcademicYear = academicYears.find((y) => y.id === activeAcademicYearId) || academicYears.find((y) => y.isCurrent) || academicYears[0];
+  const activeTerm = activeAcademicYear?.terms.find((t) => t.id === activeAcademicYear?.currentTermId) || activeAcademicYear?.terms[0];
+  const isViewingArchivedYear = !activeAcademicYear?.isCurrent;
 
   const currentSchool = schools.find((s) => s.id === currentSchoolId) || schools[0];
   const currentUser = INITIAL_USERS[currentRole] || INITIAL_USERS.principal;
@@ -1091,6 +1132,185 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const setActiveTermId = (termId: AcademicTermId) => {
+    setAcademicYears((prev) =>
+      prev.map((y) => {
+        if (y.id === activeAcademicYearId) {
+          return {
+            ...y,
+            currentTermId: termId,
+            terms: y.terms.map((t) => ({
+              ...t,
+              isCurrent: t.id === termId
+            }))
+          };
+        }
+        return y;
+      })
+    );
+    const termNames: Record<AcademicTermId, string> = {
+      term1: 'نوبت اول (مهر تا دی)',
+      term2: 'نوبت دوم (بهمن تا خرداد)',
+      summer: 'دوره تابستان'
+    };
+    setActiveToast({
+      title: 'تغییر نوبت تحصیلی',
+      message: `نوبت رسمی آموزشگاه به «${termNames[termId] || termId}» تغییر یافت.`,
+      type: 'success'
+    });
+  };
+
+  const addAcademicYear = (newYearData: Omit<AcademicYear, 'id' | 'isCurrent'>) => {
+    const newId = `ay-${Date.now()}`;
+    const newYear: AcademicYear = {
+      ...newYearData,
+      id: newId,
+      isCurrent: false
+    };
+    setAcademicYears((prev) => [...prev, newYear]);
+    setActiveToast({
+      title: 'ثبت سال تحصیلی جدید',
+      message: `سال تحصیلی ${newYear.title} با موفقیت در تقویم آموزشی آموزشگاه تعریف شد.`,
+      type: 'success'
+    });
+  };
+
+  const updateAcademicYear = (yearId: string, updates: Partial<AcademicYear>) => {
+    setAcademicYears((prev) => prev.map((y) => (y.id === yearId ? { ...y, ...updates } : y)));
+    setActiveToast({
+      title: 'ویرایش سال تحصیلی',
+      message: 'مشخصات سال تحصیلی به‌روزرسانی شد.',
+      type: 'success'
+    });
+  };
+
+  const rolloverAcademicYear = (options: YearRolloverOptions) => {
+    const prevYearTitle = activeAcademicYear?.title || '۱۴۰۴-۱۴۰۵';
+    const newYearId = `ay-${Date.now()}`;
+
+    // 1. Archive active year
+    const updatedYears = academicYears.map((y) => ({
+      ...y,
+      isCurrent: false,
+      status: (y.isCurrent ? 'archived' : y.status) as AcademicYearStatus
+    }));
+
+    // 2. Create and set new active year
+    const startYearPart = options.newYearTitle.split('-')[0] || '۱۴۰۵';
+    const endYearPart = options.newYearTitle.split('-')[1] || '۱۴۰۶';
+
+    const newYear: AcademicYear = {
+      id: newYearId,
+      title: options.newYearTitle,
+      startDate: `${startYearPart}/۰۷/۰۱`,
+      endDate: `${endYearPart}/۰۶/۳۱`,
+      status: 'active',
+      isCurrent: true,
+      currentTermId: 'term1',
+      terms: [
+        { id: 'term1', title: 'نوبت اول (مهر تا دی)', startDate: `${startYearPart}/۰۷/۰۱`, endDate: `${startYearPart}/۱۰/۳۰`, isCurrent: true },
+        { id: 'term2', title: 'نوبت دوم (بهمن تا خرداد)', startDate: `${startYearPart}/۱۱/۰۱`, endDate: `${endYearPart}/۰۳/۳۱`, isCurrent: false },
+        { id: 'summer', title: 'دوره تابستان', startDate: `${endYearPart}/۰۴/۰۱`, endDate: `${endYearPart}/۰۶/۳۱`, isCurrent: false }
+      ],
+      description: `سال تحصیلی جاری آموزشگاه (${options.newYearTitle})`
+    };
+
+    setAcademicYears([...updatedYears, newYear]);
+    setActiveAcademicYearId(newYearId);
+
+    // 3. Process students: Promotion, Graduation, GPA archiving, Attendance reset
+    setStudents((prev) =>
+      prev.map((student) => {
+        if (student.status && student.status !== 'active') return student;
+
+        let updatedGrade = student.grade;
+        let updatedStatus = student.status || 'active';
+        let graduationDetails = student.graduationDetails;
+        const updatedPastHistory = [...(student.pastYearHistory || [])];
+
+        // Archive GPA & report card to pastYearHistory
+        if (options.archiveCurrentGrades) {
+          const latestGpa =
+            student.reportCards && student.reportCards.length > 0
+              ? student.reportCards[student.reportCards.length - 1].gpa
+              : 19.25;
+
+          updatedPastHistory.unshift({
+            year: prevYearTitle,
+            grade: student.grade,
+            schoolName: currentSchool?.name || 'دبیرستان هوشمند',
+            gpa: latestGpa,
+            disciplineScore: 20,
+            status: 'قبول خرداد'
+          });
+        }
+
+        // Graduation of 12th graders
+        if (options.graduateTwelfthGraders && (student.grade.includes('دوازدهم') || student.grade.includes('12'))) {
+          updatedStatus = 'graduated';
+          graduationDetails = {
+            year: endYearPart,
+            notes: `فارغ‌التحصیل رسمی دوره دوم متوسطه در پایان سال تحصیلی ${prevYearTitle}`
+          };
+        } else if (options.promoteStudents) {
+          // Promotion: 10th -> 11th, 11th -> 12th
+          if (student.grade.includes('دهم') || student.grade.includes('10')) {
+            updatedGrade = 'پایه یازدهم';
+          } else if (student.grade.includes('یازدهم') || student.grade.includes('11')) {
+            updatedGrade = 'پایه دوازدهم';
+          }
+        }
+
+        // Reset attendance stats for the new fresh school year
+        const updatedAttendance = options.resetAttendanceLogs
+          ? { totalDays: 0, presentDays: 0, absentDays: 0, lateDays: 0, excusedDays: 0 }
+          : student.attendanceStats;
+
+        return {
+          ...student,
+          grade: updatedGrade,
+          status: updatedStatus,
+          graduationDetails,
+          pastYearHistory: updatedPastHistory,
+          attendanceStats: updatedAttendance,
+          todayStatus: undefined
+        };
+      })
+    );
+
+    // 4. Log notification for Bale & SMS
+    const notifLog: NotificationLog = {
+      id: `notif-${Date.now()}`,
+      studentName: 'تمام دانش‌آموزان',
+      recipientName: 'اولیا و دانش‌آموزان',
+      recipientPhone: 'سراسری',
+      platform: 'بله',
+      status: 'delivered',
+      message: `سال تحصیلی جدید (${options.newYearTitle}) آغاز شد. پایه‌های تحصیلی ارتقا یافتند و سوابق سال تحصیلی ${prevYearTitle} بایگانی گردید.`,
+      timestamp: 'همین الان',
+      schoolName: currentSchool?.name || 'آموزشگاه'
+    };
+    setNotifications((prev) => [notifLog, ...prev]);
+
+    setActiveToast({
+      title: 'سال تحصیلی نو آغاز شد',
+      message: `سال تحصیلی ${options.newYearTitle} با موفقیت فعال و فرآیند سال‌بندی با موفقیت اعمال شد.`,
+      type: 'success'
+    });
+  };
+
+  const returnToCurrentAcademicYear = () => {
+    const curr = academicYears.find((y) => y.isCurrent) || academicYears[0];
+    if (curr) {
+      setActiveAcademicYearId(curr.id);
+      setActiveToast({
+        title: 'بازگشت به سال جاری',
+        message: `سامانه به سال تحصیلی فعال (${curr.title}) منتقل شد.`,
+        type: 'info'
+      });
+    }
+  };
+
   const resetAllData = () => {
     localStorage.removeItem(`${STORAGE_KEY}_schools`);
     localStorage.removeItem(`${STORAGE_KEY}_classes`);
@@ -1108,6 +1328,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem(`${STORAGE_KEY}_vice_principals`);
     localStorage.removeItem(`${STORAGE_KEY}_teachers`);
     localStorage.removeItem(`${STORAGE_KEY}_homework_subs`);
+    localStorage.removeItem(`${STORAGE_KEY}_academic_years`);
+    localStorage.removeItem(`${STORAGE_KEY}_active_year_id`);
 
     setSchools(INITIAL_SCHOOLS);
     setClasses(INITIAL_CLASSES);
@@ -1125,6 +1347,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setVicePrincipalPermissions(INITIAL_VICE_PRINCIPAL_PERMISSIONS);
     setVicePrincipals(INITIAL_VICE_PRINCIPALS);
     setTeachers(INITIAL_TEACHERS);
+    setAcademicYears(INITIAL_ACADEMIC_YEARS);
+    setActiveAcademicYearId('ay-1404-1405');
     setSelectedStudentForDossier(null);
 
     setActiveToast({
@@ -1206,6 +1430,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         gradeHomeworkSubmission,
         addOnlineExam,
         updateParentContact,
+        academicYears,
+        activeAcademicYearId,
+        activeAcademicYear,
+        activeTerm,
+        isViewingArchivedYear,
+        setActiveAcademicYearId,
+        setActiveTermId,
+        addAcademicYear,
+        updateAcademicYear,
+        rolloverAcademicYear,
+        returnToCurrentAcademicYear,
         resetAllData
       }}
     >

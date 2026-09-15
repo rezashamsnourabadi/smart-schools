@@ -16,7 +16,9 @@ import {
   VicePrincipalProfile,
   TeacherProfile,
   ReportCard,
-  GradeItem
+  GradeItem,
+  AcademicYear,
+  AcademicTerm
 } from '../types';
 
 export const INITIAL_VICE_PRINCIPAL_PERMISSIONS: VicePrincipalPermissions = {
@@ -1146,5 +1148,54 @@ export const INITIAL_GRADES: GradeItem[] = [
     ]
   }
 ];
+
+export const INITIAL_ACADEMIC_YEARS: AcademicYear[] = [
+  {
+    id: 'ay-1403-1404',
+    title: '۱۴۰۳-۱۴۰۴',
+    startDate: '۱۴۰۳/۰۷/۰۱',
+    endDate: '۱۴۰۴/۰۶/۳۱',
+    status: 'archived',
+    isCurrent: false,
+    currentTermId: 'term2',
+    terms: [
+      { id: 'term1', title: 'نوبت اول (مهر تا دی)', startDate: '۱۴۰۳/۰۷/۰۱', endDate: '۱۴۰۳/۱۰/۳۰', isCurrent: false },
+      { id: 'term2', title: 'نوبت دوم (بهمن تا خرداد)', startDate: '۱۴۰۳/۱۱/۰۱', endDate: '۱۴۰۴/۰۳/۳۱', isCurrent: false },
+      { id: 'summer', title: 'دوره تابستان', startDate: '۱۴۰۴/۰۴/۰۱', endDate: '۱۴۰۴/۰۶/۳۱', isCurrent: false }
+    ],
+    description: 'سال تحصیلی گذشته - بایگانی نمرات و کارنامه‌ها'
+  },
+  {
+    id: 'ay-1404-1405',
+    title: '۱۴۰۴-۱۴۰۵',
+    startDate: '۱۴۰۴/۰۷/۰۱',
+    endDate: '۱۴۰۵/۰۶/۳۱',
+    status: 'active',
+    isCurrent: true,
+    currentTermId: 'term2',
+    terms: [
+      { id: 'term1', title: 'نوبت اول (مهر تا دی)', startDate: '۱۴۰۴/۰۷/۰۱', endDate: '۱۴۰۴/۱۰/۳۰', isCurrent: false },
+      { id: 'term2', title: 'نوبت دوم (بهمن تا خرداد)', startDate: '۱۴۰۴/۱۱/۰۱', endDate: '۱۴۰۵/۰۳/۳۱', isCurrent: true },
+      { id: 'summer', title: 'دوره تابستان', startDate: '۱۴۰۵/۰۴/۰۱', endDate: '۱۴۰۵/۰۶/۳۱', isCurrent: false }
+    ],
+    description: 'سال تحصیلی جاری و فعال آموزشگاه'
+  },
+  {
+    id: 'ay-1405-1406',
+    title: '۱۴۰۵-۱۴۰۶',
+    startDate: '۱۴۰۵/۰۷/۰۱',
+    endDate: '۱۴۰۶/۰۶/۳۱',
+    status: 'planned',
+    isCurrent: false,
+    currentTermId: 'term1',
+    terms: [
+      { id: 'term1', title: 'نوبت اول (مهر تا دی)', startDate: '۱۴۰۵/۰۷/۰۱', endDate: '۱۴۰۵/۱۰/۳۰', isCurrent: true },
+      { id: 'term2', title: 'نوبت دوم (بهمن تا خرداد)', startDate: '۱۴۰۵/۱۱/۰۱', endDate: '۱۴۰۶/۰۳/۳۱', isCurrent: false },
+      { id: 'summer', title: 'دوره تابستان', startDate: '۱۴۰۶/۰۴/۰۱', endDate: '۱۴۰۶/۰۶/۳۱', isCurrent: false }
+    ],
+    description: 'سال تحصیلی آینده - در حال برنامه‌ریزی و پیش‌ثبت‌نام'
+  }
+];
+
 
 
