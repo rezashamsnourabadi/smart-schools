@@ -55,7 +55,14 @@ This document preserves the institutional memory, technical decisions, component
 | `TeacherGradeEntryModal.tsx` | Modal | Batch grade entry for continuous evaluation & exams | Triggered by Teacher |
 | `TeacherHomeworkAndExamModal.tsx` | Modal | Assign homework and schedule online timed quizzes | Triggered by Teacher |
 | `QuestionBankModal.tsx` | Modal | County-wide test question sharing repository | Triggered by Principal, Teacher, Student |
+| `AddQuestionModal.tsx` | Modal | Unified standardized modal for designing test/descriptive questions | Triggered from QuestionBankModal and TeacherDashboard |
+| `StudentManagerModal.tsx` | Modal | Dedicated tabbed student manager (Active, Graduated, Transferred) | Triggered by Principal or permitted VP |
+| `ClassManagerModal.tsx` | Modal | Add/remove and inspect class cohorts & capacities | Triggered by Principal or permitted VP |
+| `StaffManagerModal.tsx` | Modal | School personnel registry (teachers, deputies, counselors) | Triggered by Principal |
+| `UserProfileModal.tsx` | Modal | Detailed user identity card and profile inspection | Triggered from Header user badge |
 | `SponsorBannerCard.tsx` | Widget | Culturally appropriate educational sponsor banners | Embedded in Dashboards |
+
+> **Comprehensive Feature Catalog:** See [`docs/PRODUCT_FEATURES.md`](./PRODUCT_FEATURES.md) for the complete, structured inventory of all capabilities, workflows, and monetization models for stakeholders and investors.
 
 ---
 

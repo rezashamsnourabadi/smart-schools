@@ -2,6 +2,9 @@
 
 This document details the architectural blueprint, data flow, entity relationships, and cloud integration roadmap for the **Smart School Cluster Management System** (سامانه هوشمند قطب مدارس شهرستان).
 
+> 📌 **Looking for the complete Feature Catalog & Investor Deck?**
+> Refer to [`docs/PRODUCT_FEATURES.md`](./PRODUCT_FEATURES.md) for the structured breakdown of all system capabilities, workflows, and business models.
+
 ---
 
 ## 1. High-Level Architectural Diagram

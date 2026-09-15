@@ -21,6 +21,7 @@ import {
   FileQuestion
 } from 'lucide-react';
 import { SponsorBannerCard } from './SponsorBannerCard';
+import { AddQuestionModal } from './AddQuestionModal';
 import { toPersianDigits, formatPersianScore } from '../utils/persianUtils';
 
 interface Props {
@@ -43,7 +44,6 @@ export const TeacherDashboard: React.FC<Props> = ({
     schedule,
     submitAttendance,
     attendanceSessions,
-    addQuestionBankItem,
     setSelectedStudentForDossier
   } = useApp();
 
@@ -75,19 +75,8 @@ export const TeacherDashboard: React.FC<Props> = ({
   const [notifyBale, setNotifyBale] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'attendance' | 'schedule'>('attendance');
 
-  // Quick Add Question modal/state
+  // Quick Add Question modal state
   const [showAddQuestion, setShowAddQuestion] = useState<boolean>(false);
-  const [qTitle, setQTitle] = useState('');
-  const [qContent, setQContent] = useState('');
-  const [qSubject, setQSubject] = useState(currentUser.teachingSubjects?.[0] || 'ریاضی ۱');
-  const [qGrade, setQGrade] = useState('پایه دهم');
-  const [qDifficulty, setQDifficulty] = useState<'آسان' | 'متوسط' | 'دشوار'>('متوسط');
-  const [qType, setQType] = useState<'تستی' | 'تشریحی'>('تستی');
-  const [qOption1, setQOption1] = useState('');
-  const [qOption2, setQOption2] = useState('');
-  const [qOption3, setQOption3] = useState('');
-  const [qOption4, setQOption4] = useState('');
-  const [qCorrect, setQCorrect] = useState('');
 
   // Cycle status on student card click
   const toggleStudentStatus = (studentId: string) => {
@@ -118,35 +107,6 @@ export const TeacherDashboard: React.FC<Props> = ({
       status: attendanceMap[st.id] || 'present'
     }));
     submitAttendance(currentSlot.classGroupId, records, notifyBale);
-  };
-
-  const handleCreateQuestion = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!qTitle.trim() || !qContent.trim()) return;
-
-    addQuestionBankItem({
-      title: qTitle,
-      content: qContent,
-      subject: qSubject,
-      grade: qGrade,
-      difficulty: qDifficulty,
-      type: qType,
-      options: qType === 'تستی' ? [qOption1, qOption2, qOption3, qOption4].filter(Boolean) : undefined,
-      correctAnswer: qCorrect,
-      authorName: currentUser.name,
-      authorSchool: currentSchool?.name || 'مدرسه هوشمند',
-      isSharedRegional: true,
-      tags: [qSubject, qGrade, 'امتحان کلاسی']
-    });
-
-    setShowAddQuestion(false);
-    setQTitle('');
-    setQContent('');
-    setQOption1('');
-    setQOption2('');
-    setQOption3('');
-    setQOption4('');
-    setQCorrect('');
   };
 
   const handleViewDossier = (student: Student, e: React.MouseEvent) => {
@@ -467,163 +427,11 @@ export const TeacherDashboard: React.FC<Props> = ({
       <SponsorBannerCard audienceFilter="teachers" />
 
       {/* Modal: Quick Add Question to Regional Question Bank */}
-      {showAddQuestion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-right animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-teal-600" />
-                <h3 className="font-bold text-sm text-slate-900">
-                  افزودن سوال به بانک سوالات مشترک شهرستان
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowAddQuestion(false)}
-                className="text-slate-400 hover:text-slate-600 text-xs font-bold"
-              >
-                انصراف
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateQuestion} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">عنوان سوال یا مبحث</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="مثال: ریشه‌های معادله درجه دو و تعیین علامت"
-                  value={qTitle}
-                  onChange={(e) => setQTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">متن صورت سوال</label>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="متن کامل سوال را بنویسید..."
-                  value={qContent}
-                  onChange={(e) => setQContent(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div>
-                  <label className="block font-medium text-slate-600 mb-1">درس</label>
-                  <input
-                    type="text"
-                    value={qSubject}
-                    onChange={(e) => setQSubject(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium text-slate-600 mb-1">پایه</label>
-                  <select
-                    value={qGrade}
-                    onChange={(e) => setQGrade(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white"
-                  >
-                    <option value="پایه دهم">پایه دهم</option>
-                    <option value="پایه یازدهم">پایه یازدهم</option>
-                    <option value="پایه دوازدهم">پایه دوازدهم</option>
-                    <option value="پایه نهم">پایه نهم</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-medium text-slate-600 mb-1">سطح سختی</label>
-                  <select
-                    value={qDifficulty}
-                    onChange={(e) => setQDifficulty(e.target.value as any)}
-                    className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white"
-                  >
-                    <option value="آسان">آسان</option>
-                    <option value="متوسط">متوسط</option>
-                    <option value="دشوار">دشوار</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-medium text-slate-600 mb-1">نوع سوال</label>
-                  <select
-                    value={qType}
-                    onChange={(e) => setQType(e.target.value as any)}
-                    className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white"
-                  >
-                    <option value="تستی">تستی چهارگزینه‌ای</option>
-                    <option value="تشریحی">تشریحی / حل مسئله</option>
-                  </select>
-                </div>
-              </div>
-
-              {qType === 'تستی' && (
-                <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <span className="font-semibold text-slate-700 block">گزینه‌های سوال:</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      placeholder="گزینه ۱"
-                      value={qOption1}
-                      onChange={(e) => setQOption1(e.target.value)}
-                      className="px-2 py-1.5 border border-slate-200 rounded-md bg-white"
-                    />
-                    <input
-                      type="text"
-                      placeholder="گزینه ۲"
-                      value={qOption2}
-                      onChange={(e) => setQOption2(e.target.value)}
-                      className="px-2 py-1.5 border border-slate-200 rounded-md bg-white"
-                    />
-                    <input
-                      type="text"
-                      placeholder="گزینه ۳"
-                      value={qOption3}
-                      onChange={(e) => setQOption3(e.target.value)}
-                      className="px-2 py-1.5 border border-slate-200 rounded-md bg-white"
-                    />
-                    <input
-                      type="text"
-                      placeholder="گزینه ۴"
-                      value={qOption4}
-                      onChange={(e) => setQOption4(e.target.value)}
-                      className="px-2 py-1.5 border border-slate-200 rounded-md bg-white"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">پاسخ صحیح یا کلید تشریحی</label>
-                <input
-                  type="text"
-                  placeholder="پاسخ صحیح یا گزینه درست را بنویسید..."
-                  value={qCorrect}
-                  onChange={(e) => setQCorrect(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                />
-              </div>
-
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowAddQuestion(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-semibold"
-                >
-                  انصراف
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold transition-all shadow-xs"
-                >
-                  ثبت در بانک سوالات شهرستان
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AddQuestionModal
+        isOpen={showAddQuestion}
+        onClose={() => setShowAddQuestion(false)}
+        defaultSubject={currentUser.teachingSubjects?.[0] || 'ریاضی ۱'}
+      />
     </div>
   );
 };

@@ -256,7 +256,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
             }`}
           >
             <Users className="w-4 h-4 text-teal-600" />
-            <span>دانش‌آموزان در حال تحصیل</span>
+            <span>فعال</span>
             <span className="px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 text-[10px] font-mono font-bold">
               {toPersianDigits(activeStudents.length)}
             </span>
