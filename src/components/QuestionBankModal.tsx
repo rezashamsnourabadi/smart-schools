@@ -71,8 +71,8 @@ export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-6 overflow-y-auto">
-      <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl my-auto h-full max-h-[96vh] sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-6 overflow-y-auto w-full max-w-full">
+      <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl m-auto h-full max-h-[96vh] sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
         {/* Modal Top Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bg-slate-50/80 rounded-t-3xl shrink-0">
           <div className="flex items-center gap-3 min-w-0">

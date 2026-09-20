@@ -260,9 +260,9 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-3 overflow-y-auto" dir="rtl">
+    <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-3 overflow-y-auto w-full max-w-full" dir="rtl">
       <div
-        className="bg-slate-50 w-full max-w-5xl rounded-none sm:rounded-3xl shadow-2xl my-auto h-full sm:h-auto sm:max-h-[96vh] max-h-screen flex flex-col overflow-hidden border border-slate-200"
+        className="bg-slate-50 w-full max-w-5xl rounded-none sm:rounded-3xl shadow-2xl m-auto h-full sm:h-auto sm:max-h-[96vh] max-h-screen flex flex-col overflow-hidden border border-slate-200"
         id="finance-manager-modal"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1091,8 +1091,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 
       {/* Modal: New Fee Item */}
       {isNewFeeModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 my-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto w-full max-w-full">
+          <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 m-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-emerald-600" />
@@ -1240,8 +1240,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 
       {/* Modal: Record Payment for Any Student */}
       {isRecordPaymentModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 my-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto w-full max-w-full">
+          <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 m-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-emerald-600" />
@@ -1378,8 +1378,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 
       {/* Modal: Batch Reminders to all overdue */}
       {isBatchReminderModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 my-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto w-full max-w-full">
+          <div className="bg-white w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 m-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2 text-rose-600">
                 <Send className="w-5 h-5" />

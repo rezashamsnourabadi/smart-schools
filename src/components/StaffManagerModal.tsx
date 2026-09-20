@@ -288,9 +288,9 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto w-full max-w-full">
       <div
-        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh]"
+        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh] m-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -672,8 +672,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
 
       {/* SUB-MODAL: Add / Edit Vice Principal */}
       {showAddVPModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 text-right">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto w-full max-w-full">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 text-right m-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h4 className="font-bold text-sm text-slate-900">
                 {editingVP ? 'ویرایش مشخصات معاون' : 'افزودن معاون جدید به آموزشگاه'}
@@ -758,8 +758,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
 
       {/* SUB-MODAL: Add / Edit Teacher (Multiple Subjects & Multiple Classes) */}
       {showAddTeacherModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 text-right max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto w-full max-w-full">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 text-right max-h-[90vh] overflow-y-auto m-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h4 className="font-bold text-sm text-slate-900">
                 {editingTeacher ? 'ویرایش مشخصات و دروس دبیر' : 'افزودن دبیر جدید به آموزشگاه'}
@@ -937,8 +937,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
 
       {/* SUB-MODAL: Promote Teacher to Vice Principal */}
       {convertingTeacher && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 text-right">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto w-full max-w-full">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 text-right m-auto">
             <div className="flex items-center gap-2 text-amber-600">
               <ArrowLeftRight className="w-5 h-5" />
               <h4 className="font-bold text-sm text-slate-900">ارتقای نقش به معاونت مدرسه</h4>
@@ -983,8 +983,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
 
       {/* SUB-MODAL: Convert Vice Principal to Teacher */}
       {convertingVP && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 text-right">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto w-full max-w-full">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 text-right m-auto">
             <div className="flex items-center gap-2 text-indigo-600">
               <ArrowLeftRight className="w-5 h-5" />
               <h4 className="font-bold text-sm text-slate-900">انتقال معاون به کادر تدریس</h4>

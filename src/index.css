@@ -6,12 +6,23 @@
     font-feature-settings: "ss01" on, "ss02" on;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
   
   /* Ensure Persian numbers and smooth ligatures */
   body {
     direction: rtl;
     text-align: right;
+    overflow-x: hidden;
+    max-width: 100vw;
+    width: 100%;
+  }
+
+  #root {
+    overflow-x: hidden;
+    max-width: 100%;
+    width: 100%;
   }
 }
 

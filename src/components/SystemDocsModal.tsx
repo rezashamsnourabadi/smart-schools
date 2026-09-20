@@ -261,10 +261,10 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto w-full max-w-full"
       id="system-docs-modal"
     >
-      <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95">
+      <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 m-auto">
         {/* Modal Top Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-teal-800 via-teal-700 to-slate-800 text-white flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-3">

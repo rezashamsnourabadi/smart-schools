@@ -123,11 +123,11 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto w-full max-w-full"
       id="teacher-grade-entry-overlay"
     >
       <div 
-        className="bg-white w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl my-auto flex flex-col max-h-[96vh] sm:max-h-[92vh] overflow-hidden border border-slate-200"
+        className="bg-white w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl m-auto flex flex-col max-h-[96vh] sm:max-h-[92vh] overflow-hidden border border-slate-200"
         onClick={(e) => e.stopPropagation()}
         id="teacher-grade-entry-dialog"
       >

@@ -108,6 +108,11 @@ This document preserves the institutional memory, technical decisions, component
 5. **Mobile Table Clipping Prevention:**
    - Always avoid wide unconstrained `<table>` elements without horizontal wrappers or mobile card alternatives. Complex tables must render responsive card stacks on small viewports (`hidden md:table` and `block md:hidden`).
 
+6. **Mobile Landscape RTL Centering Invariant:**
+   - In mobile landscape mode (`orientation: landscape`), horizontal overflows cause RTL containers to shift, creating blank margins on one side and inverted alignment on dialogs.
+   - Always enforce `overflow-x: hidden` and `max-width: 100vw` on root elements (`html`, `body`, `#root`, and main app wrappers).
+   - For all modal dialogs, use `w-full max-w-full overflow-y-auto` on the fixed backdrop overlay and `m-auto` on the modal dialog card to guarantee perfect bidirectional centering regardless of screen aspect ratio.
+
 ---
 
 ## 5. Next Iteration Backlog (Roadmap for Future Agents)

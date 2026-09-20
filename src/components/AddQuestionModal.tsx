@@ -68,10 +68,10 @@ export const AddQuestionModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto w-full max-w-full">
       <div
         id="add-question-modal-card"
-        className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-4 text-right animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto border border-slate-200"
+        className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-4 text-right animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto border border-slate-200 m-auto"
       >
         <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
           <div className="flex items-center gap-2.5">

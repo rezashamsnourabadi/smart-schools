@@ -119,7 +119,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100/70 text-slate-800 antialiased selection:bg-teal-200" dir="rtl">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-slate-100/70 text-slate-800 antialiased selection:bg-teal-200" dir="rtl">
       {/* Top Header with Profile Modal trigger and Brand Switcher */}
       <Header
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
@@ -130,7 +130,7 @@ const AppContent: React.FC = () => {
       <RoleQuickSwitch />
 
       {/* Main Content Area (extra bottom padding for mobile navigation bar, compact for landscape) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 pb-20 landscape:pb-14 md:pb-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 pb-20 landscape:pb-14 md:pb-6 overflow-x-hidden">
         {renderDashboardByRole()}
       </main>
 

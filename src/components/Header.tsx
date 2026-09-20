@@ -122,8 +122,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
             </div>
           </div>
 
-          {/* Center: School Switcher */}
-          <div className="hidden md:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+          {/* Center: School Switcher - visible on large screens */}
+          <div className="hidden lg:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
             <Building2 className="w-3.5 h-3.5 text-slate-500" />
             <span className="text-xs text-slate-600 font-medium">مدرسه فعال:</span>
             <select
@@ -239,25 +239,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
             <button
               id="header-docs-modal-btn"
               onClick={onOpenDocsModal}
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200/80 transition-all font-bold text-xs shadow-2xs cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200/80 transition-all font-bold text-xs shadow-2xs cursor-pointer"
               title="مشاهده مستندات جامع، کاتالوگ فیچرها و مشخصات فنی"
             >
               <BookOpen className="w-3.5 h-3.5 text-teal-700" />
               <span>مستندات و کاتالوگ</span>
             </button>
 
-            {/* Mobile Docs Icon Button */}
+            {/* Mobile/Compact Docs Icon Button */}
             <button
               id="header-docs-modal-btn-mobile"
               onClick={onOpenDocsModal}
-              className="md:hidden p-2 text-teal-700 hover:bg-teal-50 rounded-xl transition-colors"
+              className="lg:hidden p-2 text-teal-700 hover:bg-teal-50 rounded-xl transition-colors"
               title="مستندات و کاتالوگ امکانات"
             >
               <BookOpen className="w-4 h-4" />
             </button>
 
-            {/* Current Role badge */}
-            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${roleInfo.color}`}>
+            {/* Current Role badge - shown on wide screens */}
+            <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${roleInfo.color}`}>
               {currentRole === 'platform_admin' ? (
                 <ShieldCheck className="w-3.5 h-3.5" />
               ) : (
