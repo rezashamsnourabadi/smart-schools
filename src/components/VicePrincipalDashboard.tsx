@@ -20,7 +20,8 @@ import {
   Award,
   BookOpen,
   Shield,
-  FileText
+  FileText,
+  CreditCard
 } from 'lucide-react';
 import { toPersianDigits } from '../utils/persianUtils';
 import { Student } from '../types';
@@ -33,6 +34,7 @@ interface Props {
   onOpenPostModal?: () => void;
   onOpenQuestionBank?: () => void;
   onOpenStudentDossier?: (student: Student) => void;
+  onOpenFinanceModal?: () => void;
 }
 
 export const VicePrincipalDashboard: React.FC<Props> = ({
@@ -42,7 +44,8 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
   onOpenStudentModal,
   onOpenPostModal,
   onOpenQuestionBank,
-  onOpenStudentDossier
+  onOpenStudentDossier,
+  onOpenFinanceModal
 }) => {
   const {
     currentSchool,
@@ -419,6 +422,37 @@ export const VicePrincipalDashboard: React.FC<Props> = ({
                 </div>
               </div>
             </button>
+          )}
+
+          {/* 7. Financial Management with Permission check */}
+          {activeVicePrincipalPermissions.canManageFinances && onOpenFinanceModal ? (
+            <button
+              id="vp-btn-manage-finances"
+              onClick={onOpenFinanceModal}
+              className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-emerald-50/60 border border-emerald-200 hover:border-emerald-500 transition-all text-right shadow-2xs group flex flex-col justify-between"
+            >
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 group-hover:bg-emerald-700 text-emerald-700 group-hover:text-white flex items-center justify-center transition-colors">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div className="mt-3">
+                <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-950">
+                  امور مالی و شهریه
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">
+                  بدهکاران، اقساط و ثبت اسناد
+                </div>
+              </div>
+            </button>
+          ) : (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/70 text-right opacity-60 flex flex-col justify-between cursor-not-allowed">
+              <div className="w-9 h-9 rounded-xl bg-slate-200 text-slate-400 flex items-center justify-center">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div className="mt-3">
+                <div className="font-bold text-xs text-slate-600">امور مالی و شهریه</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">نیازمند تفویض مدیر</div>
+              </div>
+            </div>
           )}
         </div>
       </div>

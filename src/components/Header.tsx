@@ -12,15 +12,17 @@ import {
   MessageSquare,
   ChevronDown,
   Sparkles,
-  Settings
+  Settings,
+  BookOpen
 } from 'lucide-react';
 import { toPersianDigits } from '../utils/persianUtils';
 
 interface HeaderProps {
   onOpenProfileModal?: () => void;
+  onOpenDocsModal?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsModal }) => {
   const {
     currentRole,
     currentSchool,
@@ -231,6 +233,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal }) => {
               title="بازگردانی داده‌های پیش‌فرض نمونه"
             >
               <RotateCcw className="w-4 h-4" />
+            </button>
+
+            {/* System Docs & Feature Catalog Button */}
+            <button
+              id="header-docs-modal-btn"
+              onClick={onOpenDocsModal}
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200/80 transition-all font-bold text-xs shadow-2xs cursor-pointer"
+              title="مشاهده مستندات جامع، کاتالوگ فیچرها و مشخصات فنی"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-teal-700" />
+              <span>مستندات و کاتالوگ</span>
+            </button>
+
+            {/* Mobile Docs Icon Button */}
+            <button
+              id="header-docs-modal-btn-mobile"
+              onClick={onOpenDocsModal}
+              className="md:hidden p-2 text-teal-700 hover:bg-teal-50 rounded-xl transition-colors"
+              title="مستندات و کاتالوگ امکانات"
+            >
+              <BookOpen className="w-4 h-4" />
             </button>
 
             {/* Current Role badge */}

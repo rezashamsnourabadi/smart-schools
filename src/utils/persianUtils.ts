@@ -31,3 +31,12 @@ export function toEnglishDigits(val: string | number | null | undefined): string
   }
   return str;
 }
+
+export function formatPersianCurrency(amount: number | string | undefined | null, includeUnit = true): string {
+  if (amount === undefined || amount === null) return includeUnit ? '۰ تومان' : '۰';
+  const num = typeof amount === 'number' ? amount : parseFloat(amount);
+  if (isNaN(num)) return includeUnit ? '۰ تومان' : '۰';
+  const parts = Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return includeUnit ? `${toPersianDigits(parts)} تومان` : toPersianDigits(parts);
+}
+

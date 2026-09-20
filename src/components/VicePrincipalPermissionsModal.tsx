@@ -67,6 +67,11 @@ export const VicePrincipalPermissionsModal: React.FC<VicePrincipalPermissionsMod
       key: 'canLogDisciplinary',
       title: 'ثبت موارد انضباطی، تشویقی و غیبت‌ها',
       desc: 'امکان درج تشویقی‌های علمی، مسابقات، تذکرات انضباطی و ارسال خودکار پیامک و پیام بله به ولی'
+    },
+    {
+      key: 'canManageFinances',
+      title: 'امور مالی، شهریه و حسابداری آموزشگاه',
+      desc: 'امکان مشاهده وضعیت بدهکاران، ثبت فیش و واریزی، اعمال تخفیف و ارسال پیامک یادآوری تسویه'
     }
   ];
 

@@ -116,4 +116,13 @@ Before concluding any work, the agent MUST run:
 1. `lint_applet`: Ensures no TypeScript compiler errors or unresolved imports.
 2. `compile_applet`: Ensures the Vite production bundle compiles cleanly with no esbuild syntax violations.
 
+---
+
+## 8. Continuous Documentation Invariant (`/docs` Directory)
+
+The documentation files in `/docs` MUST ALWAYS be kept synchronized and up-to-date whenever features, domain models, components, or workflows are added or modified:
+- `docs/ARCHITECTURE.md`: Architecture diagrams, domain entities (`src/types.ts`), RBAC matrix, and backend/cloud roadmap.
+- `docs/MEMORY.md`: Architectural Decision Records (ADRs), component & modal registry, known pitfalls, and backlog milestones.
+- `docs/PRODUCT_FEATURES.md`: Full product feature catalog, module details, investor highlights, and persona workflows.
+
 DO NOT output self-praising or marketing buzzwords. Summarize technical and design outcomes concisely and professionally.

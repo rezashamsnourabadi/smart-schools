@@ -25,7 +25,12 @@ import {
   AcademicTerm,
   AcademicTermId,
   YearRolloverOptions,
-  AcademicYearStatus
+  AcademicYearStatus,
+  SchoolFeeItem,
+  StudentFinancialSummary,
+  PaymentTransaction,
+  StudentFeeAssignment,
+  PaymentInstallment
 } from '../types';
 import {
   INITIAL_SCHOOLS,
@@ -45,9 +50,11 @@ import {
   INITIAL_VICE_PRINCIPAL_PERMISSIONS,
   INITIAL_VICE_PRINCIPALS,
   INITIAL_TEACHERS,
-  INITIAL_ACADEMIC_YEARS
+  INITIAL_ACADEMIC_YEARS,
+  INITIAL_FEE_ITEMS
 } from '../data/mockData';
-import { toEnglishDigits } from '../utils/persianUtils';
+import { createInitialStudentFinancialSummary } from '../data/mockFinanceData';
+import { toEnglishDigits, toPersianDigits, formatPersianCurrency } from '../utils/persianUtils';
 
 interface AppContextType {
   currentRole: UserRole;
@@ -89,6 +96,9 @@ interface AppContextType {
 
   selectedStudentForDossier: Student | null;
   setSelectedStudentForDossier: (student: Student | null) => void;
+  dossierInitialTab: 'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances';
+  setDossierInitialTab: (tab: 'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances') => void;
+  openStudentDossier: (student: Student, tab?: 'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances') => void;
   activeMobileTab: string;
   setActiveMobileTab: (tab: string) => void;
   activeToast: { title: string; message: string; type: 'success' | 'info' | 'warning' } | null;
@@ -144,6 +154,17 @@ interface AppContextType {
   rolloverAcademicYear: (options: YearRolloverOptions) => void;
   returnToCurrentAcademicYear: () => void;
 
+  // School Financial & Student Accounting
+  feeItems: SchoolFeeItem[];
+  addFeeItem: (feeItem: Omit<SchoolFeeItem, 'id' | 'createdAt'>) => void;
+  updateFeeItem: (id: string, updates: Partial<SchoolFeeItem>) => void;
+  deleteFeeItem: (id: string) => void;
+  assignFeeItemToStudents: (feeItemId: string, targetScope: string, classGroupId?: string) => void;
+  recordStudentPayment: (payment: Omit<PaymentTransaction, 'id' | 'date'>) => void;
+  updatePaymentTransactionStatus: (studentId: string, transactionId: string, status: 'confirmed' | 'rejected') => void;
+  sendPaymentReminder: (studentId: string, customMessage?: string) => void;
+  applyStudentDiscount: (studentId: string, feeItemId: string, discountAmount: number, reason?: string) => void;
+
   resetAllData: () => void;
 }
 
@@ -155,7 +176,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentRole, setCurrentRole] = useState<UserRole>('principal');
   const [currentSchoolId, setCurrentSchoolId] = useState<string>('school-1');
   const [selectedStudentForDossier, setSelectedStudentForDossier] = useState<Student | null>(null);
+  const [dossierInitialTab, setDossierInitialTab] = useState<'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances'>('profile');
   const [activeMobileTab, setActiveMobileTab] = useState<string>('dashboard');
+
+  const openStudentDossier = (student: Student, tab: 'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances' = 'profile') => {
+    setDossierInitialTab(tab);
+    setSelectedStudentForDossier(student);
+  };
 
   const [schools, setSchools] = useState<School[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_schools`);
@@ -169,7 +196,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [students, setStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_students`);
-    return saved ? JSON.parse(saved) : INITIAL_STUDENTS;
+    const list: Student[] = saved ? JSON.parse(saved) : INITIAL_STUDENTS;
+    return list.map((st) => {
+      if (!st.financialSummary) {
+        return {
+          ...st,
+          financialSummary: createInitialStudentFinancialSummary(st.id, st.name, st.grade, 'normal_partial')
+        };
+      }
+      return st;
+    });
   });
 
   const [schedule, setSchedule] = useState<ScheduleSlot[]>(() => {
@@ -247,6 +283,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeAcademicYearId, setActiveAcademicYearId] = useState<string>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_active_year_id`);
     return saved || 'ay-1404-1405';
+  });
+
+  const [feeItems, setFeeItems] = useState<SchoolFeeItem[]>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_fee_items`);
+    return saved ? JSON.parse(saved) : INITIAL_FEE_ITEMS;
   });
 
   const [activeToast, setActiveToast] = useState<{
@@ -327,6 +368,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY}_active_year_id`, activeAcademicYearId);
   }, [activeAcademicYearId]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY}_fee_items`, JSON.stringify(feeItems));
+  }, [feeItems]);
 
   const activeAcademicYear = academicYears.find((y) => y.id === activeAcademicYearId) || academicYears.find((y) => y.isCurrent) || academicYears[0];
   const activeTerm = activeAcademicYear?.terms.find((t) => t.id === activeAcademicYear?.currentTermId) || activeAcademicYear?.terms[0];
@@ -1311,6 +1356,330 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // --- Financial Management Operations ---
+  const addFeeItem = (feeItemData: Omit<SchoolFeeItem, 'id' | 'createdAt'>) => {
+    const newItem: SchoolFeeItem = {
+      ...feeItemData,
+      id: `fee-${Date.now()}`,
+      createdAt: '۱۴۰۴/۰۸/۱۵'
+    };
+
+    setFeeItems((prev) => [newItem, ...prev]);
+
+    // Automatically assign to students if mandatory or targetScope is 'all'
+    if (newItem.isMandatory || newItem.targetScope === 'all') {
+      setStudents((prev) =>
+        prev.map((st) => {
+          if (st.status === 'graduated' || st.status === 'transferred') return st;
+          const summary = st.financialSummary || createInitialStudentFinancialSummary(st.id, st.name, st.grade, 'normal_partial');
+          if (summary.assignedFees.some((f) => f.feeItemId === newItem.id)) return st;
+
+          const newAssignment: StudentFeeAssignment = {
+            id: `asg-${st.id}-${Date.now()}`,
+            feeItemId: newItem.id,
+            feeTitle: newItem.title,
+            category: newItem.category,
+            originalAmount: newItem.amount,
+            discountAmount: 0,
+            finalAmount: newItem.amount,
+            paidAmount: 0,
+            status: 'unpaid',
+            dueDate: newItem.dueDate
+          };
+
+          const newTotalBilled = summary.totalBilled + newItem.amount;
+          const newRemainingDebt = Math.max(0, newTotalBilled - summary.totalDiscount - summary.totalPaid);
+
+          return {
+            ...st,
+            financialSummary: {
+              ...summary,
+              totalBilled: newTotalBilled,
+              remainingDebt: newRemainingDebt,
+              status: newRemainingDebt === 0 ? 'settled' : 'has_debt',
+              assignedFees: [...summary.assignedFees, newAssignment]
+            }
+          };
+        })
+      );
+    }
+
+    setActiveToast({
+      title: 'عنوان تعرفه مالی تعریف شد',
+      message: `سرفصل «${newItem.title}» با مبلغ ${formatPersianCurrency(newItem.amount)} با موفقیت افزوده گردید.`,
+      type: 'success'
+    });
+  };
+
+  const updateFeeItem = (id: string, updates: Partial<SchoolFeeItem>) => {
+    setFeeItems((prev) => prev.map((f) => (f.id === id ? { ...f, ...updates } : f)));
+    setActiveToast({
+      title: 'ویرایش تعرفه مالی',
+      message: 'تغییرات سرفصل مالی با موفقیت ذخیره گردید.',
+      type: 'success'
+    });
+  };
+
+  const deleteFeeItem = (id: string) => {
+    setFeeItems((prev) => prev.filter((f) => f.id !== id));
+    setActiveToast({
+      title: 'حذف سرفصل مالی',
+      message: 'عنوان مالی مورد نظر از فهرست تعرفه‌های آموزشگاه حذف شد.',
+      type: 'info'
+    });
+  };
+
+  const assignFeeItemToStudents = (feeItemId: string, targetScope: string, classGroupId?: string) => {
+    const fee = feeItems.find((f) => f.id === feeItemId);
+    if (!fee) return;
+    let assignedCount = 0;
+
+    setStudents((prev) =>
+      prev.map((st) => {
+        if (st.status === 'graduated' || st.status === 'transferred') return st;
+        if (classGroupId && st.classGroupId !== classGroupId) return st;
+        if (targetScope === 'grade_10' && !st.grade.includes('دهم')) return st;
+        if (targetScope === 'grade_11' && !st.grade.includes('یازدهم')) return st;
+        if (targetScope === 'grade_12' && !st.grade.includes('دوازدهم')) return st;
+
+        const summary = st.financialSummary || createInitialStudentFinancialSummary(st.id, st.name, st.grade, 'normal_partial');
+        if (summary.assignedFees.some((f) => f.feeItemId === fee.id)) return st;
+
+        assignedCount++;
+        const newAssignment: StudentFeeAssignment = {
+          id: `asg-${st.id}-${Date.now()}`,
+          feeItemId: fee.id,
+          feeTitle: fee.title,
+          category: fee.category,
+          originalAmount: fee.amount,
+          discountAmount: 0,
+          finalAmount: fee.amount,
+          paidAmount: 0,
+          status: 'unpaid',
+          dueDate: fee.dueDate
+        };
+
+        const newTotalBilled = summary.totalBilled + fee.amount;
+        const newRemainingDebt = Math.max(0, newTotalBilled - summary.totalDiscount - summary.totalPaid);
+
+        return {
+          ...st,
+          financialSummary: {
+            ...summary,
+            totalBilled: newTotalBilled,
+            remainingDebt: newRemainingDebt,
+            status: newRemainingDebt === 0 ? 'settled' : 'has_debt',
+            assignedFees: [...summary.assignedFees, newAssignment]
+          }
+        };
+      })
+    );
+
+    setActiveToast({
+      title: 'تخصیص سرفصل مالی انجام شد',
+      message: `سرفصل «${fee.title}» به ${toPersianDigits(assignedCount)} دانش‌آموز تخصیص یافت.`,
+      type: 'success'
+    });
+  };
+
+  const recordStudentPayment = (paymentData: Omit<PaymentTransaction, 'id' | 'date'>) => {
+    const newTxnId = `txn-${Date.now()}`;
+    const newDate = '۱۴۰۴/۰۸/۲۵';
+    const newTxn: PaymentTransaction = {
+      ...paymentData,
+      id: newTxnId,
+      date: newDate,
+      status: paymentData.status || 'confirmed'
+    };
+
+    let targetStudent: Student | undefined;
+
+    setStudents((prev) =>
+      prev.map((st) => {
+        if (st.id !== paymentData.studentId) return st;
+        targetStudent = st;
+        const summary = st.financialSummary || createInitialStudentFinancialSummary(st.id, st.name, st.grade, 'normal_partial');
+
+        const newTotalPaid = summary.totalPaid + paymentData.amount;
+        const newRemainingDebt = Math.max(0, summary.totalBilled - summary.totalDiscount - newTotalPaid);
+        const newStatus = newRemainingDebt === 0 ? 'settled' : 'has_debt';
+
+        // Distribute payment to installments
+        let remainingToCredit = paymentData.amount;
+        const updatedInstallments = summary.installments.map((inst) => {
+          if (inst.status === 'paid' || remainingToCredit <= 0) return inst;
+          const unpaid = inst.amount - inst.paidAmount;
+          if (remainingToCredit >= unpaid) {
+            remainingToCredit -= unpaid;
+            return {
+              ...inst,
+              paidAmount: inst.amount,
+              status: 'paid' as const,
+              paidDate: newDate,
+              trackingCode: paymentData.trackingCode
+            };
+          } else {
+            const partial = inst.paidAmount + remainingToCredit;
+            remainingToCredit = 0;
+            return {
+              ...inst,
+              paidAmount: partial,
+              status: 'partially_paid' as const
+            };
+          }
+        });
+
+        // Also update assigned fees
+        let feeCredit = paymentData.amount;
+        const updatedFees = summary.assignedFees.map((fee) => {
+          if (paymentData.feeItemId && fee.feeItemId === paymentData.feeItemId) {
+            const need = fee.finalAmount - fee.paidAmount;
+            const toAdd = Math.min(feeCredit, need);
+            feeCredit -= toAdd;
+            const newPaid = fee.paidAmount + toAdd;
+            return {
+              ...fee,
+              paidAmount: newPaid,
+              status: newPaid >= fee.finalAmount ? ('paid' as const) : newPaid > 0 ? ('partial' as const) : ('unpaid' as const)
+            };
+          }
+          return fee;
+        });
+
+        return {
+          ...st,
+          financialSummary: {
+            ...summary,
+            totalPaid: newTotalPaid,
+            remainingDebt: newRemainingDebt,
+            status: newStatus,
+            transactions: [newTxn, ...summary.transactions],
+            installments: updatedInstallments,
+            assignedFees: updatedFees
+          }
+        };
+      })
+    );
+
+    // Send automatic Bale notification to parent
+    if (targetStudent) {
+      const msg = `ولی محترم دانش‌آموز ${targetStudent.name}؛ با سلام، واریز مبلغ ${formatPersianCurrency(paymentData.amount)} بابت ${paymentData.feeTitle || 'شهریه/خدمات آموزشی'} در امور مالی آموزشگاه ثبت و تایید گردید. شماره پیگیری پرداخت: ${toPersianDigits(paymentData.trackingCode)}`;
+      const notif: NotificationLog = {
+        id: `notif-pay-${Date.now()}`,
+        studentName: targetStudent.name,
+        recipientName: targetStudent.parentName,
+        recipientPhone: targetStudent.parentPhone,
+        platform: 'بله',
+        status: 'delivered',
+        message: msg,
+        timestamp: 'هم‌اکنون',
+        schoolName: currentSchool?.name || 'مدرسه هوشمند'
+      };
+      setNotifications((prev) => [notif, ...prev]);
+    }
+
+    setActiveToast({
+      title: 'پرداخت با موفقیت در سامانه ثبت شد',
+      message: `مبلغ ${formatPersianCurrency(paymentData.amount)} در پرونده دانش‌آموز ثبت و رسید پیام‌رسان صادر گردید.`,
+      type: 'success'
+    });
+  };
+
+  const updatePaymentTransactionStatus = (studentId: string, transactionId: string, status: 'confirmed' | 'rejected') => {
+    setStudents((prev) =>
+      prev.map((st) => {
+        if (st.id !== studentId) return st;
+        const summary = st.financialSummary;
+        if (!summary) return st;
+        const updatedTxns = summary.transactions.map((t) => (t.id === transactionId ? { ...t, status } : t));
+        return {
+          ...st,
+          financialSummary: {
+            ...summary,
+            transactions: updatedTxns
+          }
+        };
+      })
+    );
+
+    setActiveToast({
+      title: status === 'confirmed' ? 'تایید تراکنش مالی' : 'عدم تایید تراکنش',
+      message: status === 'confirmed' ? 'سند بانکی تایید گردید.' : 'سند واریزی جهت بررسی مجدد اولیا رد شد.',
+      type: status === 'confirmed' ? 'success' : 'warning'
+    });
+  };
+
+  const sendPaymentReminder = (studentId: string, customMessage?: string) => {
+    const student = students.find((s) => s.id === studentId);
+    if (!student) return;
+
+    const debt = student.financialSummary?.remainingDebt || 0;
+    const msg =
+      customMessage ||
+      `ولی محترم دانش‌آموز ${student.name}؛ با سلام و احترام، طبق پرونده مالی آموزشگاه، مانده شهریه و هزینه‌های تحصیلی معوق مبلغ ${formatPersianCurrency(debt)} می‌باشد. خواهشمند است جهت تسویه حساب یا تمدید دفترچه اقساط به دفتر آموزشگاه یا پنل اولیا مراجعه فرمایید.`;
+
+    const notif: NotificationLog = {
+      id: `notif-remind-${Date.now()}`,
+      studentName: student.name,
+      recipientName: student.parentName,
+      recipientPhone: student.parentPhone,
+      platform: 'بله',
+      status: 'delivered',
+      message: msg,
+      timestamp: 'هم‌اکنون',
+      schoolName: currentSchool?.name || 'مدرسه هوشمند'
+    };
+
+    setNotifications((prev) => [notif, ...prev]);
+
+    setActiveToast({
+      title: 'پیام یادآوری پرداخت ارسال شد',
+      message: `اعلان تسویه شهریه برای ولی محترم دانش‌آموز (${student.parentName}) از طریق پیام‌رسان بله و پیامک ارسال شد.`,
+      type: 'info'
+    });
+  };
+
+  const applyStudentDiscount = (studentId: string, feeItemId: string, discountAmount: number, reason?: string) => {
+    setStudents((prev) =>
+      prev.map((st) => {
+        if (st.id !== studentId) return st;
+        const summary = st.financialSummary || createInitialStudentFinancialSummary(st.id, st.name, st.grade, 'normal_partial');
+
+        const updatedAssigned = summary.assignedFees.map((asg) => {
+          if (asg.feeItemId !== feeItemId) return asg;
+          const newDiscount = asg.discountAmount + discountAmount;
+          const newFinal = Math.max(0, asg.originalAmount - newDiscount);
+          return {
+            ...asg,
+            discountAmount: newDiscount,
+            finalAmount: newFinal,
+            status: asg.paidAmount >= newFinal ? ('paid' as const) : asg.paidAmount > 0 ? ('partial' as const) : ('unpaid' as const)
+          };
+        });
+
+        const newTotalDiscount = summary.totalDiscount + discountAmount;
+        const newRemaining = Math.max(0, summary.totalBilled - newTotalDiscount - summary.totalPaid);
+
+        return {
+          ...st,
+          financialSummary: {
+            ...summary,
+            totalDiscount: newTotalDiscount,
+            remainingDebt: newRemaining,
+            status: newRemaining === 0 ? 'settled' : 'has_debt',
+            assignedFees: updatedAssigned
+          }
+        };
+      })
+    );
+
+    setActiveToast({
+      title: 'تخفیف / بورسیه تحصیلی ثبت شد',
+      message: `مبلغ ${formatPersianCurrency(discountAmount)} تخفیف ویژه در پرونده اعمال گردید.${reason ? ` (${reason})` : ''}`,
+      type: 'success'
+    });
+  };
+
   const resetAllData = () => {
     localStorage.removeItem(`${STORAGE_KEY}_schools`);
     localStorage.removeItem(`${STORAGE_KEY}_classes`);
@@ -1330,6 +1699,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem(`${STORAGE_KEY}_homework_subs`);
     localStorage.removeItem(`${STORAGE_KEY}_academic_years`);
     localStorage.removeItem(`${STORAGE_KEY}_active_year_id`);
+    localStorage.removeItem(`${STORAGE_KEY}_fee_items`);
 
     setSchools(INITIAL_SCHOOLS);
     setClasses(INITIAL_CLASSES);
@@ -1349,6 +1719,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTeachers(INITIAL_TEACHERS);
     setAcademicYears(INITIAL_ACADEMIC_YEARS);
     setActiveAcademicYearId('ay-1404-1405');
+    setFeeItems(INITIAL_FEE_ITEMS);
     setSelectedStudentForDossier(null);
 
     setActiveToast({
@@ -1397,6 +1768,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         convertVicePrincipalToTeacher,
         selectedStudentForDossier,
         setSelectedStudentForDossier,
+        dossierInitialTab,
+        setDossierInitialTab,
+        openStudentDossier,
         activeMobileTab,
         setActiveMobileTab,
         activeToast,
@@ -1441,6 +1815,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateAcademicYear,
         rolloverAcademicYear,
         returnToCurrentAcademicYear,
+        feeItems,
+        addFeeItem,
+        updateFeeItem,
+        deleteFeeItem,
+        assignFeeItemToStudents,
+        recordStudentPayment,
+        updatePaymentTransactionStatus,
+        sendPaymentReminder,
+        applyStudentDiscount,
         resetAllData
       }}
     >

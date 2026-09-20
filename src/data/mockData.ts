@@ -18,15 +18,20 @@ import {
   ReportCard,
   GradeItem,
   AcademicYear,
-  AcademicTerm
+  AcademicTerm,
+  SchoolFeeItem
 } from '../types';
+import { INITIAL_FEE_ITEMS, createInitialStudentFinancialSummary } from './mockFinanceData';
+
+export { INITIAL_FEE_ITEMS };
 
 export const INITIAL_VICE_PRINCIPAL_PERMISSIONS: VicePrincipalPermissions = {
   canManageAnnouncements: true,
   canManageSchedule: true,
   canManageStudentsAndClasses: true,
   canViewFullDossier: true,
-  canLogDisciplinary: true
+  canLogDisciplinary: true,
+  canManageFinances: true
 };
 
 export const INITIAL_VICE_PRINCIPALS: VicePrincipalProfile[] = [
@@ -42,7 +47,8 @@ export const INITIAL_VICE_PRINCIPALS: VicePrincipalProfile[] = [
       canManageSchedule: true,
       canManageStudentsAndClasses: true,
       canViewFullDossier: true,
-      canLogDisciplinary: false
+      canLogDisciplinary: false,
+      canManageFinances: true
     }
   },
   {
@@ -362,7 +368,8 @@ export const INITIAL_STUDENTS: Student[] = [
         disciplineScore: 20,
         status: 'قبول با رتبه ممتاز'
       }
-    ]
+    ],
+    financialSummary: createInitialStudentFinancialSummary('std-1', 'آرین احمدی', 'پایه دهم', 'scholarship')
   },
   {
     id: 'std-2',
@@ -397,7 +404,8 @@ export const INITIAL_STUDENTS: Student[] = [
     ],
     pastYearHistory: [
       { year: '۱۴۰۳-۱۴۰۴', grade: 'پایه نهم', schoolName: 'دبیرستان امام صادق (ع)', gpa: 19.10, disciplineScore: 20, status: 'قبول خرداد' }
-    ]
+    ],
+    financialSummary: createInitialStudentFinancialSummary('std-2', 'امیرعلی رضایی', 'پایه دهم', 'fully_paid')
   },
   {
     id: 'std-3',
@@ -432,7 +440,8 @@ export const INITIAL_STUDENTS: Student[] = [
     ],
     pastYearHistory: [
       { year: '۱۴۰۳-۱۴۰۴', grade: 'پایه نهم', schoolName: 'مدرسه شهید فهمیده', gpa: 18.40, disciplineScore: 19, status: 'قبول خرداد' }
-    ]
+    ],
+    financialSummary: createInitialStudentFinancialSummary('std-3', 'پارسا قاسمی', 'پایه دهم', 'overdue_debtor')
   },
   {
     id: 'std-4',
@@ -465,7 +474,8 @@ export const INITIAL_STUDENTS: Student[] = [
     ],
     pastYearHistory: [
       { year: '۱۴۰۳-۱۴۰۴', grade: 'پایه نهم', schoolName: 'دبیرستان امام صادق (ع)', gpa: 19.30, disciplineScore: 20, status: 'قبول با رتبه ممتاز' }
-    ]
+    ],
+    financialSummary: createInitialStudentFinancialSummary('std-4', 'سینا محمدی', 'پایه دهم', 'normal_partial')
   },
   {
     id: 'std-5',

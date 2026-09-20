@@ -37,6 +37,7 @@ This document details the architectural blueprint, data flow, entity relationshi
 |  - Students State        - Classes & Schedule      - Question Bank Repository     |
 |  - Attendance Engine     - Announcements & Posts   - Outbound Bale/SMS Dispatcher |
 |  - VP Permissions State  - Active School Profile   - Sponsor Advertisement Engine |
+|  - Financial Ledger      - Installment Schedules   - Multi-Gateway Payment Engine |
 +-----------------------------------------------------------------------------------+
                                          │
                    ┌─────────────────────┴─────────────────────┐
@@ -100,6 +101,14 @@ Outbound message log:
 - `recipientName: string`, `recipientPhone: string`, `studentName: string`
 - `message: string`, `timestamp: string`, `status: 'delivered' | 'pending'`
 
+### 7. `SchoolFeeItem`, `StudentFinancialSummary` & `PaymentTransaction`
+Tuition, service, extracurricular fees, and installment accounting engine:
+- `SchoolFeeItem`: `id`, `schoolId`, `title`, `category` (`tuition` | `bus` | `extracurricular` | `insurance` | `books` | `other`), `grade`, `amount`, `isMandatory`, `installmentsCount`, `academicYear`
+- `InstallmentItem`: `id`, `feeId`, `title`, `amount`, `dueDate`, `paidAmount`, `status` (`paid` | `pending` | `overdue` | `partially_paid`), `trackingCode`
+- `PaymentTransaction`: `id`, `studentId`, `studentName`, `schoolId`, `amount`, `date`, `trackingCode`, `method` (`online_gateway` | `card_to_card` | `pos_machine` | `cash_deposit` | `cheque`), `status` (`confirmed` | `pending_verification` | `rejected`), `recordedBy`
+- `DiscountItem`: `id`, `title`, `percentage`, `fixedAmount`, `reason`, `approvedBy`
+- `StudentFinancialSummary`: `studentId`, `totalBilled`, `totalDiscount`, `totalPaid`, `remainingDebt`, `status` (`settled` | `has_debt` | `overdue`), `installments`, `transactions`, `discounts`
+
 ---
 
 ## 3. Role-Based Access Control (RBAC) Matrix
@@ -109,6 +118,7 @@ Outbound message log:
 | Regional Schools Analytics | ✅ Full | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Manage Regional Sponsors | ✅ Full | ❌ | ❌ | ❌ | ❌ | ❌ |
 | VP Permission Delegation | ❌ | ✅ Full | ❌ | ❌ | ❌ | ❌ |
+| School Finances, Fees & Ledger | ❌ | ✅ Full | 🔑 Permitted | ❌ | 👁️ Summary | ✅ Pay & Slips |
 | Class Grouping & Student Reg. | ❌ | ✅ Full | 🔑 Permitted | ❌ | ❌ | ❌ |
 | Weekly Timetable Editing | ❌ | ✅ Full | 🔑 Permitted | ❌ | ❌ | ❌ |
 | School News & Announcements | ❌ | ✅ Full | 🔑 Permitted | ❌ | ❌ | ❌ |
@@ -142,10 +152,13 @@ When migrating from in-memory state to a production database:
 
 ### Collection Mapping for Firestore:
 - `/schools/{schoolId}`
+- `/schools/{schoolId}/fees/{feeId}`
+- `/schools/{schoolId}/transactions/{transactionId}`
 - `/schools/{schoolId}/classes/{classId}`
 - `/schools/{schoolId}/students/{studentId}`
   - Sub-collection: `reportCards/{termId}`
   - Sub-collection: `disciplineLogs/{logId}`
+  - Sub-collection: `financialDossier/summary` (with `installments` and `transactions`)
 - `/schools/{schoolId}/schedule/{scheduleId}`
 - `/schools/{schoolId}/posts/{postId}`
 - `/questionBank/{questionId}` (shared across all schools in county)

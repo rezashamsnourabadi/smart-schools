@@ -34,6 +34,7 @@ export interface VicePrincipalPermissions {
   canManageStudentsAndClasses: boolean;
   canViewFullDossier: boolean;
   canLogDisciplinary: boolean;
+  canManageFinances?: boolean;
 }
 
 export interface VicePrincipalProfile {
@@ -157,6 +158,7 @@ export interface Student {
   disciplinaryRecords: DisciplinaryRecord[];
   reportCards: ReportCard[];
   pastYearHistory: PastYearAcademicHistory[];
+  financialSummary?: StudentFinancialSummary;
 }
 
 export interface ClassGroup {
@@ -388,4 +390,102 @@ export interface YearRolloverOptions {
   archiveCurrentGrades: boolean; // ثبت در سوابق تحصیلی گذشته (pastYearHistory)
   resetAttendanceLogs: boolean; // شروع دوره حضور و غیاب نو
 }
+
+// -------------------------------------------------------------
+// School Financial & Student Accounting Types
+// -------------------------------------------------------------
+
+export type FeeCategory = 
+  | 'tuition'                 // شهریه مصوب آموزش و پرورش
+  | 'registration_insurance'  // حق‌الثبت، بیمه حوادث و کتب درسی
+  | 'extracurricular'         // کلاس‌های فوق‌برنامه، تقویتی و کنکور
+  | 'transportation'          // سرویس ایاب و ذهاب دانش‌آموزی
+  | 'catering'                // تغذیه، ناهار و بوفه
+  | 'uniform_supplies'        // لباس فرم و لوازم کمک‌آموزشی
+  | 'camp_event'              // اردوها، همایش‌ها و آزمون‌های هماهنگ
+  | 'custom';                 // سایر عناوین مصوب مدرسه
+
+export type PaymentMethod = 
+  | 'pos'                     // کارت‌خوان مدرسه (POS)
+  | 'bank_receipt'            // فیش واریزی / پایا / ساتنا / کارت به کارت
+  | 'cheque'                  // چک بانکی صیادی
+  | 'online'                  // درگاه پرداخت اینترنتی
+  | 'cash';                   // پرداخت نقدی در دفتر مدرسه
+
+export type TargetAudienceScope = 'all' | 'grade_10' | 'grade_11' | 'grade_12' | 'selective';
+
+export interface SchoolFeeItem {
+  id: string;
+  schoolId: string;
+  academicYearId: string;     // e.g. 'ay-1404-1405'
+  title: string;              // e.g. 'شهریه پایه و خدمات مصوب'
+  category: FeeCategory;
+  amount: number;             // Amount in Tomans (ASCII integer)
+  isMandatory: boolean;       // اجباری یا اختیاری
+  targetScope: TargetAudienceScope;
+  description?: string;
+  dueDate?: string;           // e.g. '۱۴۰۴/۰۸/۳۰'
+  defaultInstallmentsCount?: number;
+  createdAt: string;
+}
+
+export interface StudentFeeAssignment {
+  id: string;
+  feeItemId: string;
+  feeTitle: string;
+  category: FeeCategory;
+  originalAmount: number;     // مبلغ پایه
+  discountAmount: number;     // تخفیف، بورسیه، سهمیه فرهنگیان و...
+  finalAmount: number;        // مبلغ قابل پرداخت
+  paidAmount: number;         // مبلغ پرداختی تا کنون
+  status: 'paid' | 'partial' | 'unpaid';
+  dueDate?: string;
+}
+
+export interface PaymentInstallment {
+  id: string;
+  title: string;              // e.g. 'قسط اول (هنگام ثبت‌نام)'
+  amount: number;
+  dueDate: string;            // تاریخ سررسید
+  paidAmount: number;
+  status: 'paid' | 'partially_paid' | 'pending' | 'overdue';
+  paidDate?: string;
+  trackingCode?: string;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  studentId: string;
+  studentName: string;
+  schoolId: string;
+  amount: number;
+  date: string;               // e.g. '۱۴۰۴/۰۷/۱۸'
+  trackingCode: string;       // شماره پیگیری فیش یا شناسه پرداخت
+  method: PaymentMethod;
+  methodDetails?: {
+    bankName?: string;
+    chequeNumber?: string;
+    chequeDueDate?: string;
+    receiptImageUrl?: string;
+    payerName?: string;
+    accountTail?: string;
+  };
+  note?: string;
+  feeItemId?: string;
+  feeTitle?: string;
+  recordedBy: string;         // 'مدیر آموزشگاه' | 'معاون اجرایی' | 'ثبت فیش توسط اولیا'
+  status: 'confirmed' | 'pending_verification' | 'rejected';
+}
+
+export interface StudentFinancialSummary {
+  totalBilled: number;        // مجموع صورتحساب مصوب
+  totalDiscount: number;      // کل تخفیف‌های اعمال‌شده
+  totalPaid: number;          // مجموع مبالغ وصول‌شده
+  remainingDebt: number;      // مانده بدهی معوق
+  status: 'settled' | 'has_debt' | 'overdue';
+  assignedFees: StudentFeeAssignment[];
+  installments: PaymentInstallment[];
+  transactions: PaymentTransaction[];
+}
+
 

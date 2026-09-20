@@ -35,6 +35,10 @@ This document preserves the institutional memory, technical decisions, component
 - **Decision:** Model the school year as a multi-term lifecycle (`active`, `planned`, `archived`) with an interactive rollover wizard.
 - **Rationale:** Schools operate on discrete calendar years. Transitioning to a new year involves atomic operations: advancing 10th & 11th graders to the next grade, graduating 12th graders, freezing prior report cards into `student.pastYearHistory`, and zeroing out current attendance counters. The system also supports safe, read-only viewing of archived years with an immediate return banner.
 
+### ADR-006: Transactional Financial Ledger & Multi-Method Tuition Payments
+- **Decision:** Implement a dual-level financial management system: an institutional ledger for the Principal/VP (`FinanceManagerModal.tsx`), integrated tab in the student dossier (`StudentFinancialTab.tsx`), and a dedicated 3-step payment flow for parents (`ParentPaymentModal.tsx`).
+- **Rationale:** Tuition, bus service, extracurriculars, insurance, and books represent critical cash-flow operations for Iranian schools. Storing granular installments (`InstallmentItem`), discounts/scholarships (`DiscountItem`), and transactional receipts (`PaymentTransaction`) provides complete auditability with tracking codes, while the parent modal supports simulated Shaparak online gateway, card-to-card, and bank slip uploads.
+
 ---
 
 ## 3. Component & Modal Registry
@@ -46,12 +50,15 @@ This document preserves the institutional memory, technical decisions, component
 | `MobileBottomNav.tsx` | Mobile UX | Bottom floating navigation bar for small screens (<768px) | Root `App.tsx` |
 | `NotificationToast.tsx` | Toast Alert | Floating animated notification simulating SMS & Bale delivery | Triggered by `sendNotification` in `AppContext` |
 | `AcademicYearManagerModal.tsx` | Modal | Manage school years, switch terms, create new years, and run rollover | Triggered from PrincipalDashboard & Header |
+| `FinanceManagerModal.tsx` | Modal | Comprehensive school finance, approved fee definitions, installment scheduling, revenue analytics & debtor reminders | Triggered from PrincipalDashboard & VicePrincipalDashboard |
+| `StudentFinancialTab.tsx` | Component | Embedded financial dossier tab: student ledger, installments, payments log, discount grant | Sub-component inside `StudentDossierModal.tsx` |
+| `ParentPaymentModal.tsx` | Modal | Dedicated 3-step parent payment gateway (Shaparak online simulation, card-to-card, bank deposit slip) | Triggered from `ParentDashboard.tsx` & `StudentFinancialTab.tsx` |
 | `PlatformAdminDashboard.tsx` | Dashboard | County-wide analytics, sponsor ads manager, schools overview | `currentRole === 'platform_admin'` |
 | `PrincipalDashboard.tsx` | Dashboard | School KPI overview, quick access to all school modals | `currentRole === 'principal'` |
 | `VicePrincipalDashboard.tsx` | Dashboard | Fast daily attendance, discipline, permitted task links | `currentRole === 'vice_principal'` |
 | `TeacherDashboard.tsx` | Dashboard | Live classroom attendance, fast grading, homework links | `currentRole === 'teacher'` |
 | `StudentDashboard.tsx` | Dashboard | Daily timetable, active homework, daily test question | `currentRole === 'student'` |
-| `ParentDashboard.tsx` | Dashboard | Child attendance status, Bale message log, report card link | `currentRole === 'parent'` |
+| `ParentDashboard.tsx` | Dashboard | Child attendance status, tuition summary, direct pay modal, Bale message log | `currentRole === 'parent'` |
 | `StudentDossierModal.tsx` | Modal | Comprehensive academic record, discipline logs, past GPAs | Triggered from student lists across dashboards |
 | `SchedulePlannerModal.tsx` | Modal | Weekly timetable schedule matrix (Saturday to Wednesday) | Triggered by Principal or permitted VP |
 | `ClassAndStudentManagerModal.tsx` | Modal | Class cohorts definition, student enrollment & transfers | Triggered by Principal or permitted VP |
@@ -65,6 +72,7 @@ This document preserves the institutional memory, technical decisions, component
 | `ClassManagerModal.tsx` | Modal | Add/remove and inspect class cohorts & capacities | Triggered by Principal or permitted VP |
 | `StaffManagerModal.tsx` | Modal | School personnel registry (teachers, deputies, counselors) | Triggered by Principal |
 | `UserProfileModal.tsx` | Modal | Detailed user identity card and profile inspection | Triggered from Header user badge |
+| `SystemDocsModal.tsx` | Modal | In-app interactive feature catalog, RBAC matrix, tech architecture & investor pitch | Triggered from Header and Footer |
 | `SponsorBannerCard.tsx` | Widget | Culturally appropriate educational sponsor banners | Embedded in Dashboards |
 
 > **Comprehensive Feature Catalog:** See [`docs/PRODUCT_FEATURES.md`](./PRODUCT_FEATURES.md) for the complete, structured inventory of all capabilities, workflows, and monetization models for stakeholders and investors.
@@ -92,8 +100,8 @@ This document preserves the institutional memory, technical decisions, component
 ## 5. Next Iteration Backlog (Roadmap for Future Agents)
 
 If asked by the user to implement further capabilities:
+- [x] **Tuition & Finance Module (COMPLETED):** School fee tracking, installment schedules, transactions ledger, debtor reminders via Bale/SMS, student financial dossier tab (`StudentFinancialTab`), and dedicated parent online payment gateway (`ParentPaymentModal`).
 - [ ] **Real PDF Export:** Add printable PDF report card generation for student dossiers (using `html2canvas` / `jspdf` or server-side puppeteer).
 - [ ] **Live Online Exam Solver:** Allow students to open a timed quiz modal and submit answers directly, auto-calculating score percentages.
-- [ ] **Tuition & Finance Module:** School fee tracking, installment payments, and tuition ledger for the Principal and Parents.
 - [ ] **Bale Messenger Webhook Bot:** Connect `sendNotification()` to a real Bale Bot Token via an Express server-side proxy (`/api/bale-send`).
 - [ ] **Cloud Persistence:** Wire up Firebase Firestore using `firebase-integration` skill or Cloud SQL with Drizzle ORM.

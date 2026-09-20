@@ -21,8 +21,10 @@ import { VicePrincipalPermissionsModal } from './components/VicePrincipalPermiss
 import { TeacherGradeEntryModal } from './components/TeacherGradeEntryModal';
 import { TeacherHomeworkAndExamModal } from './components/TeacherHomeworkAndExamModal';
 import { AcademicYearManagerModal } from './components/AcademicYearManagerModal';
+import { FinanceManagerModal } from './components/FinanceManagerModal';
+import { SystemDocsModal } from './components/SystemDocsModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, BookOpen } from 'lucide-react';
 import { Student } from './types';
 
 const AppContent: React.FC = () => {
@@ -31,6 +33,7 @@ const AppContent: React.FC = () => {
     students,
     selectedStudentForDossier,
     setSelectedStudentForDossier,
+    dossierInitialTab,
     vicePrincipalPermissions
   } = useApp();
 
@@ -44,6 +47,8 @@ const AppContent: React.FC = () => {
   const [isHomeworkExamModalOpen, setIsHomeworkExamModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAcademicYearModalOpen, setIsAcademicYearModalOpen] = useState(false);
+  const [isFinanceModalOpen, setIsFinanceModalOpen] = useState(false);
+  const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
 
   const handleOpenStudentDossier = (student: Student) => {
     setSelectedStudentForDossier(student);
@@ -64,6 +69,7 @@ const AppContent: React.FC = () => {
             onOpenVpPermsModal={() => setIsVpPermsModalOpen(true)}
             onOpenStudentDossier={handleOpenStudentDossier}
             onOpenAcademicYearModal={() => setIsAcademicYearModalOpen(true)}
+            onOpenFinanceModal={() => setIsFinanceModalOpen(true)}
           />
         );
       case 'vice_principal':
@@ -75,6 +81,7 @@ const AppContent: React.FC = () => {
             onOpenStudentModal={() => setIsStudentModalOpen(true)}
             onOpenPostModal={() => setIsPostModalOpen(true)}
             onOpenStudentDossier={handleOpenStudentDossier}
+            onOpenFinanceModal={() => setIsFinanceModalOpen(true)}
           />
         );
       case 'teacher':
@@ -114,7 +121,10 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-100/70 text-slate-800 antialiased selection:bg-teal-200" dir="rtl">
       {/* Top Header with Profile Modal trigger and Brand Switcher */}
-      <Header onOpenProfileModal={() => setIsProfileModalOpen(true)} />
+      <Header
+        onOpenProfileModal={() => setIsProfileModalOpen(true)}
+        onOpenDocsModal={() => setIsDocsModalOpen(true)}
+      />
 
       {/* Role Quick Switcher bar */}
       <RoleQuickSwitch />
@@ -150,6 +160,7 @@ const AppContent: React.FC = () => {
             currentRole === 'principal' ||
             (currentRole === 'vice_principal' && vicePrincipalPermissions.canManageDiscipline)
           }
+          initialTab={dossierInitialTab}
         />
       )}
 
@@ -222,6 +233,18 @@ const AppContent: React.FC = () => {
         onClose={() => setIsAcademicYearModalOpen(false)}
       />
 
+      {/* School Financial & Tuition Management Modal */}
+      <FinanceManagerModal
+        isOpen={isFinanceModalOpen}
+        onClose={() => setIsFinanceModalOpen(false)}
+      />
+
+      {/* System Docs & Feature Catalog Modal */}
+      <SystemDocsModal
+        isOpen={isDocsModalOpen}
+        onClose={() => setIsDocsModalOpen(false)}
+      />
+
       {/* Floating System Toasts (Bale / SMS delivery) */}
       <NotificationToast />
 
@@ -238,10 +261,17 @@ const AppContent: React.FC = () => {
             <span>— پلتفرم یکپارچه آموزشی، انضباطی و ارتباطی مدارس</span>
           </div>
 
-          <div className="flex items-center gap-4 text-slate-400">
-            <span>طراحی متناسب با نیازهای بومی مدارس ایران و بستر تلفن همراه</span>
-            <span>•</span>
-            <span>اتصال خودکار به پیام‌رسان بله و سامانه پیامک ملی</span>
+          <div className="flex items-center gap-4 text-slate-500">
+            <button
+              id="footer-open-docs-btn"
+              onClick={() => setIsDocsModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-800 border border-slate-200 hover:border-teal-300 transition-colors font-bold text-xs cursor-pointer"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+              <span>مستندات و کاتالوگ جامع امکانات</span>
+            </button>
+            <span className="text-slate-300">•</span>
+            <span>اتصال خودکار به پیام‌رسان بله و پیامک کشوری</span>
           </div>
         </div>
       </footer>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   CheckCircle2,
@@ -14,11 +14,17 @@ import {
   Settings,
   ChevronLeft,
   GraduationCap,
-  Pin
+  Pin,
+  CreditCard,
+  Clock,
+  Send,
+  Lock
 } from 'lucide-react';
 import { SponsorBannerCard } from './SponsorBannerCard';
-import { toPersianDigits } from '../utils/persianUtils';
+import { toPersianDigits, formatPersianCurrency } from '../utils/persianUtils';
+import { createInitialStudentFinancialSummary } from '../data/mockFinanceData';
 import { Student } from '../types';
+import { ParentPaymentModal } from './ParentPaymentModal';
 
 interface Props {
   onOpenStudentDossier?: (student: Student) => void;
@@ -35,8 +41,11 @@ export const ParentDashboard: React.FC<Props> = ({
     notifications,
     students,
     announcements,
-    setSelectedStudentForDossier
+    setSelectedStudentForDossier,
+    openStudentDossier
   } = useApp();
+
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Child info
   const child = students.find((s) => s.id === 'std-1') || students[0];
@@ -53,8 +62,10 @@ export const ParentDashboard: React.FC<Props> = ({
       return 0;
     });
 
-  const handleOpenChildDossier = () => {
-    if (onOpenStudentDossier) {
+  const handleOpenChildDossier = (tab: 'profile' | 'finances' = 'profile') => {
+    if (openStudentDossier) {
+      openStudentDossier(child, tab);
+    } else if (onOpenStudentDossier) {
       onOpenStudentDossier(child);
     } else {
       setSelectedStudentForDossier(child);
@@ -146,6 +157,81 @@ export const ParentDashboard: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      {/* Student Financial & Tuition Status Card */}
+      {(() => {
+        const childSummary = child.financialSummary || createInitialStudentFinancialSummary(child.id, child.name, child.grade, 'normal_partial');
+        const isSettled = childSummary.remainingDebt <= 0;
+        const isOverdue = childSummary.status === 'overdue';
+
+        return (
+          <div className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100">
+                <CreditCard className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-800">
+                    وضعیت حساب شهریه و خدمات مدرسه فرزند شما
+                  </h3>
+                  {isSettled ? (
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      تسویه کامل
+                    </span>
+                  ) : isOverdue ? (
+                    <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-bold flex items-center gap-1 animate-pulse">
+                      <AlertCircle className="w-3 h-3 text-rose-600" />
+                      دارای قسط معوقه
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-600" />
+                      مانده بدهی جاری
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
+                  <span>کل صورتحساب: <strong>{formatPersianCurrency(childSummary.totalBilled)}</strong></span>
+                  <span>•</span>
+                  <span>پرداختی: <strong className="text-emerald-700">{formatPersianCurrency(childSummary.totalPaid)}</strong></span>
+                  <span>•</span>
+                  <span>
+                    مانده بدهی: <strong className={isSettled ? 'text-emerald-700' : 'text-rose-700'}>
+                      {formatPersianCurrency(childSummary.remainingDebt)}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto">
+              <button
+                type="button"
+                id="btn-parent-view-installments"
+                onClick={() => handleOpenChildDossier('finances')}
+                className="px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors flex-1 sm:flex-initial cursor-pointer"
+              >
+                <FileText className="w-4 h-4" />
+                <span>مشاهده ریز اقساط و پرونده</span>
+              </button>
+
+              {!isSettled && (
+                <button
+                  type="button"
+                  id="btn-parent-direct-pay"
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all flex-1 sm:flex-initial cursor-pointer"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>پرداخت آنلاین شهریه</span>
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Grid: 2 columns */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
@@ -287,6 +373,13 @@ export const ParentDashboard: React.FC<Props> = ({
           ))}
         </div>
       </div>
+
+      {/* Direct Parent Payment Modal */}
+      <ParentPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        student={child}
+      />
     </div>
   );
 };

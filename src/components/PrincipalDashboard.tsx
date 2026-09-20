@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits } from '../utils/persianUtils';
 import { Student } from '../types';
-import { CalendarRange } from 'lucide-react';
+import { CalendarRange, CreditCard } from 'lucide-react';
 
 interface Props {
   onOpenQuestionBank: () => void;
@@ -40,6 +40,7 @@ interface Props {
   onOpenVpPermsModal?: () => void;
   onOpenStudentDossier?: (student: Student) => void;
   onOpenAcademicYearModal?: () => void;
+  onOpenFinanceModal?: () => void;
 }
 
 export const PrincipalDashboard: React.FC<Props> = ({
@@ -51,7 +52,8 @@ export const PrincipalDashboard: React.FC<Props> = ({
   onOpenPostModal,
   onOpenVpPermsModal,
   onOpenStudentDossier,
-  onOpenAcademicYearModal
+  onOpenAcademicYearModal,
+  onOpenFinanceModal
 }) => {
   const {
     currentSchool,
@@ -368,6 +370,25 @@ export const PrincipalDashboard: React.FC<Props> = ({
               </div>
               <div className="text-[10px] text-slate-500 mt-0.5">
                 مخزن نمونه‌سوالات امتحانی
+              </div>
+            </div>
+          </button>
+
+          {/* 7. Financial & Tuition Management */}
+          <button
+            id="btn-manage-finances"
+            onClick={onOpenFinanceModal}
+            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-emerald-50/60 border border-emerald-200 hover:border-emerald-500 transition-all text-right shadow-2xs group flex flex-col justify-between"
+          >
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 group-hover:bg-emerald-700 text-emerald-700 group-hover:text-white flex items-center justify-center transition-colors">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <div className="mt-3">
+              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-950">
+                امور مالی و شهریه
+              </div>
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                بدهکاران، اقساط و اسناد
               </div>
             </div>
           </button>

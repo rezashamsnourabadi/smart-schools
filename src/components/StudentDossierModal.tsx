@@ -17,27 +17,31 @@ import {
   Save,
   Plus,
   ShieldAlert,
-  Send
+  Send,
+  CreditCard
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Student, DisciplinaryRecord } from '../types';
 import { toPersianDigits, formatPersianScore } from '../utils/persianUtils';
+import { StudentFinancialTab } from './StudentFinancialTab';
 
 interface StudentDossierModalProps {
   student: Student;
   onClose: () => void;
   canEditContact?: boolean;
   canManageDiscipline?: boolean;
+  initialTab?: 'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances';
 }
 
 export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   student,
   onClose,
   canEditContact = false,
-  canManageDiscipline = true
+  canManageDiscipline = true,
+  initialTab = 'profile'
 }) => {
   const { classes, updateParentContact, addDisciplinaryRecord, currentUser } = useApp();
-  const [activeTab, setActiveTab] = useState<'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances'>(initialTab);
   
   // Edit contact state
   const [isEditingContact, setIsEditingContact] = useState(false);
@@ -177,6 +181,17 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
             >
               <GraduationCap className="w-3.5 h-3.5" />
               سوابق سال‌های گذشته
+            </button>
+            <button
+              onClick={() => setActiveTab('finances')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                activeTab === 'finances'
+                  ? 'bg-white text-teal-900 shadow-sm font-bold'
+                  : 'text-teal-100 hover:bg-white/10'
+              }`}
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              امور مالی و شهریه
             </button>
           </div>
         </div>
@@ -630,6 +645,11 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                 </div>
               )}
             </div>
+          )}
+
+          {/* TAB 6: Financial and Tuition */}
+          {activeTab === 'finances' && (
+            <StudentFinancialTab student={student} />
           )}
         </div>
 
