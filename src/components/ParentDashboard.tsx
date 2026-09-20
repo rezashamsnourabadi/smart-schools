@@ -165,34 +165,58 @@ export const ParentDashboard: React.FC<Props> = ({
         const isOverdue = childSummary.status === 'overdue';
 
         return (
-          <div className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-start sm:items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100">
-                <CreditCard className="w-6 h-6" />
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-3.5 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3.5 sm:gap-4 overflow-hidden" id="parent-tuition-summary-card">
+            <div className="flex items-start gap-3 sm:gap-3.5 min-w-0">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100 mt-0.5 sm:mt-0 shadow-2xs">
+                <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-slate-800">
-                    وضعیت حساب شهریه و خدمات مدرسه فرزند شما
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-800 break-words">
+                    وضعیت شهریه و خدمات {child.name}
                   </h3>
                   {isSettled ? (
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold flex items-center gap-1">
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shrink-0">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                       تسویه کامل
                     </span>
                   ) : isOverdue ? (
-                    <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-bold flex items-center gap-1 animate-pulse">
+                    <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shrink-0 animate-pulse">
                       <AlertCircle className="w-3 h-3 text-rose-600" />
                       دارای قسط معوقه
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold flex items-center gap-1">
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shrink-0">
                       <Clock className="w-3 h-3 text-amber-600" />
                       مانده بدهی جاری
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
+
+                {/* Mobile-optimized 3-box summary */}
+                <div className="grid grid-cols-3 gap-2 mt-2.5 sm:hidden">
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 text-center">
+                    <span className="text-[10px] text-slate-400 block">صورتحساب</span>
+                    <span className="text-[11px] font-bold font-mono text-slate-700 block mt-0.5 truncate">
+                      {formatPersianCurrency(childSummary.totalBilled)}
+                    </span>
+                  </div>
+                  <div className="bg-emerald-50/60 p-2 rounded-xl border border-emerald-100 text-center">
+                    <span className="text-[10px] text-emerald-700 block">پرداختی</span>
+                    <span className="text-[11px] font-bold font-mono text-emerald-800 block mt-0.5 truncate">
+                      {formatPersianCurrency(childSummary.totalPaid)}
+                    </span>
+                  </div>
+                  <div className={`p-2 rounded-xl border text-center ${isSettled ? 'bg-emerald-50/60 border-emerald-100' : 'bg-rose-50/70 border-rose-100'}`}>
+                    <span className={`text-[10px] block ${isSettled ? 'text-emerald-700' : 'text-rose-700'}`}>مانده بدهی</span>
+                    <span className={`text-[11px] font-bold font-mono block mt-0.5 truncate ${isSettled ? 'text-emerald-800' : 'text-rose-800'}`}>
+                      {formatPersianCurrency(childSummary.remainingDebt)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Desktop inline summary */}
+                <div className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
                   <span>کل صورتحساب: <strong>{formatPersianCurrency(childSummary.totalBilled)}</strong></span>
                   <span>•</span>
                   <span>پرداختی: <strong className="text-emerald-700">{formatPersianCurrency(childSummary.totalPaid)}</strong></span>
@@ -206,15 +230,16 @@ export const ParentDashboard: React.FC<Props> = ({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto">
+            {/* Action buttons: mobile touch-friendly */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100">
               <button
                 type="button"
                 id="btn-parent-view-installments"
                 onClick={() => handleOpenChildDossier('finances')}
-                className="px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors flex-1 sm:flex-initial cursor-pointer"
+                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 active:bg-teal-200 text-teal-800 border border-teal-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <FileText className="w-4 h-4" />
-                <span>مشاهده ریز اقساط و پرونده</span>
+                <span>ریز اقساط و سوابق</span>
               </button>
 
               {!isSettled && (
@@ -222,7 +247,7 @@ export const ParentDashboard: React.FC<Props> = ({
                   type="button"
                   id="btn-parent-direct-pay"
                   onClick={() => setIsPaymentModalOpen(true)}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all flex-1 sm:flex-initial cursor-pointer"
+                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <CreditCard className="w-4 h-4" />
                   <span>پرداخت آنلاین شهریه</span>

@@ -39,6 +39,10 @@ This document preserves the institutional memory, technical decisions, component
 - **Decision:** Implement a dual-level financial management system: an institutional ledger for the Principal/VP (`FinanceManagerModal.tsx`), integrated tab in the student dossier (`StudentFinancialTab.tsx`), and a dedicated 3-step payment flow for parents (`ParentPaymentModal.tsx`).
 - **Rationale:** Tuition, bus service, extracurriculars, insurance, and books represent critical cash-flow operations for Iranian schools. Storing granular installments (`InstallmentItem`), discounts/scholarships (`DiscountItem`), and transactional receipts (`PaymentTransaction`) provides complete auditability with tracking codes, while the parent modal supports simulated Shaparak online gateway, card-to-card, and bank slip uploads.
 
+### ADR-007: Mobile-First Responsive Adaptation for Dense Financial Data
+- **Decision:** Replace monolithic desktop `<table>` elements on mobile viewports with structured, thumb-friendly card layouts (`hidden md:table` paired with `block md:hidden`). Ensure all interactive controls (buttons, inputs, selects, segmented tabs) provide a minimum touch target height of 40px–44px and stack vertically on mobile screens.
+- **Rationale:** Financial management modules inherently feature wide columns (installments, due dates, billing, tracking codes, payment actions). On mobile screens (360px–480px), wide tables cause horizontal overflow and clipped cards. Transforming data into native cards preserves 100% of administrative options while maintaining effortless single-handed touch usability.
+
 ---
 
 ## 3. Component & Modal Registry
@@ -50,16 +54,16 @@ This document preserves the institutional memory, technical decisions, component
 | `MobileBottomNav.tsx` | Mobile UX | Bottom floating navigation bar for small screens (<768px) | Root `App.tsx` |
 | `NotificationToast.tsx` | Toast Alert | Floating animated notification simulating SMS & Bale delivery | Triggered by `sendNotification` in `AppContext` |
 | `AcademicYearManagerModal.tsx` | Modal | Manage school years, switch terms, create new years, and run rollover | Triggered from PrincipalDashboard & Header |
-| `FinanceManagerModal.tsx` | Modal | Comprehensive school finance, approved fee definitions, installment scheduling, revenue analytics & debtor reminders | Triggered from PrincipalDashboard & VicePrincipalDashboard |
-| `StudentFinancialTab.tsx` | Component | Embedded financial dossier tab: student ledger, installments, payments log, discount grant | Sub-component inside `StudentDossierModal.tsx` |
-| `ParentPaymentModal.tsx` | Modal | Dedicated 3-step parent payment gateway (Shaparak online simulation, card-to-card, bank deposit slip) | Triggered from `ParentDashboard.tsx` & `StudentFinancialTab.tsx` |
+| `FinanceManagerModal.tsx` | Modal | Comprehensive school finance, approved fee definitions, installment scheduling, revenue analytics, debtor reminders & mobile card views | Triggered from PrincipalDashboard & VicePrincipalDashboard |
+| `StudentFinancialTab.tsx` | Component | Embedded financial dossier tab: student ledger, installments, payments log, discount grant, fully responsive with mobile cards | Sub-component inside `StudentDossierModal.tsx` |
+| `ParentPaymentModal.tsx` | Modal | Dedicated 3-step parent payment gateway (Shaparak online simulation, card-to-card, bank deposit slip) with mobile-optimized touch flow | Triggered from `ParentDashboard.tsx` & `StudentFinancialTab.tsx` |
 | `PlatformAdminDashboard.tsx` | Dashboard | County-wide analytics, sponsor ads manager, schools overview | `currentRole === 'platform_admin'` |
 | `PrincipalDashboard.tsx` | Dashboard | School KPI overview, quick access to all school modals | `currentRole === 'principal'` |
 | `VicePrincipalDashboard.tsx` | Dashboard | Fast daily attendance, discipline, permitted task links | `currentRole === 'vice_principal'` |
 | `TeacherDashboard.tsx` | Dashboard | Live classroom attendance, fast grading, homework links | `currentRole === 'teacher'` |
 | `StudentDashboard.tsx` | Dashboard | Daily timetable, active homework, daily test question | `currentRole === 'student'` |
 | `ParentDashboard.tsx` | Dashboard | Child attendance status, tuition summary, direct pay modal, Bale message log | `currentRole === 'parent'` |
-| `StudentDossierModal.tsx` | Modal | Comprehensive academic record, discipline logs, past GPAs | Triggered from student lists across dashboards |
+| `StudentDossierModal.tsx` | Modal | Comprehensive academic record, discipline logs, past GPAs, and dedicated financial tab | Triggered from student lists across dashboards |
 | `SchedulePlannerModal.tsx` | Modal | Weekly timetable schedule matrix (Saturday to Wednesday) | Triggered by Principal or permitted VP |
 | `ClassAndStudentManagerModal.tsx` | Modal | Class cohorts definition, student enrollment & transfers | Triggered by Principal or permitted VP |
 | `PostManagerModal.tsx` | Modal | Publish and filter announcements, news, and event reports | Triggered by Principal or permitted VP |
@@ -95,12 +99,16 @@ This document preserves the institutional memory, technical decisions, component
 4. **Port Binding Invariant:**
    - Container dev server must remain on port `3000` (`vite --port=3000 --host=0.0.0.0`). Do not modify the dev script port.
 
+5. **Mobile Table Clipping Prevention:**
+   - Always avoid wide unconstrained `<table>` elements without horizontal wrappers or mobile card alternatives. Complex tables must render responsive card stacks on small viewports (`hidden md:table` and `block md:hidden`).
+
 ---
 
 ## 5. Next Iteration Backlog (Roadmap for Future Agents)
 
 If asked by the user to implement further capabilities:
 - [x] **Tuition & Finance Module (COMPLETED):** School fee tracking, installment schedules, transactions ledger, debtor reminders via Bale/SMS, student financial dossier tab (`StudentFinancialTab`), and dedicated parent online payment gateway (`ParentPaymentModal`).
+- [x] **Full Mobile Responsiveness for Finance Hub (COMPLETED):** Comprehensive mobile card layouts for fees, installments, transaction ledgers, debtor management, and touch-friendly modal action bars across `FinanceManagerModal.tsx`, `StudentFinancialTab.tsx`, and `ParentPaymentModal.tsx`.
 - [ ] **Real PDF Export:** Add printable PDF report card generation for student dossiers (using `html2canvas` / `jspdf` or server-side puppeteer).
 - [ ] **Live Online Exam Solver:** Allow students to open a timed quiz modal and submit answers directly, auto-calculating score percentages.
 - [ ] **Bale Messenger Webhook Bot:** Connect `sendNotification()` to a real Bale Bot Token via an Express server-side proxy (`/api/bale-send`).

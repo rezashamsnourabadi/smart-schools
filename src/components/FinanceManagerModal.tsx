@@ -262,43 +262,43 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto" dir="rtl">
       <div
-        className="bg-slate-50 w-full max-w-5xl rounded-none sm:rounded-3xl shadow-2xl min-h-screen sm:min-h-0 sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
+        className="bg-slate-50 w-full max-w-5xl rounded-none sm:rounded-3xl shadow-2xl h-full sm:h-auto sm:max-h-[92vh] max-h-screen flex flex-col overflow-hidden border border-slate-200"
         id="finance-manager-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 text-white p-5 sm:p-6 shrink-0 relative">
+        <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 text-white p-4 sm:p-6 shrink-0 relative">
           <button
             onClick={onClose}
-            className="absolute top-4 left-4 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+            className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
             title="بستن پنجره"
             aria-label="بستن"
           >
             <X className="w-5 h-5" />
           </button>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pe-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pe-10 sm:pe-12">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-white shadow-inner">
-                <CreditCard className="w-6 h-6" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-white shadow-inner shrink-0">
+                <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-xl font-bold text-white truncate">
                   سامانه امور مالی و شهریه آموزشگاه
                 </h2>
-                <p className="text-xs sm:text-sm text-teal-100 mt-0.5">
+                <p className="text-[11px] sm:text-sm text-teal-100 mt-0.5 truncate">
                   {currentSchool?.name || 'مدرسه هوشمند'} • سال تحصیلی {activeAcademicYear?.title || '۱۴۰۴-۱۴۰۵'}
                 </p>
               </div>
             </div>
 
             {/* Quick Action in Header */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <button
                 type="button"
                 id="btn-header-record-pay"
                 onClick={() => handleOpenPaymentModal()}
-                className="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                className="min-h-[40px] px-3.5 py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 ثبت واریزی جدید
@@ -306,38 +306,38 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
             </div>
           </div>
 
-          {/* Top KPI Cards Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mt-5">
-            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-3 border border-white/10">
-              <span className="text-[11px] text-teal-100 block">کل مصوب سالانه</span>
-              <span className="text-sm sm:text-base font-bold text-white block mt-0.5">
+          {/* Top KPI Cards Row: Swipeable on mobile, 5 cols on desktop */}
+          <div className="flex overflow-x-auto gap-2 sm:grid sm:grid-cols-5 sm:gap-2.5 mt-4 sm:mt-5 pb-1 sm:pb-0 no-scrollbar snap-x">
+            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/10">
+              <span className="text-[10px] sm:text-[11px] text-teal-100 block">کل مصوب سالانه</span>
+              <span className="text-xs sm:text-base font-bold text-white block mt-0.5 whitespace-nowrap">
                 {formatPersianCurrency(stats.totalBilled)}
               </span>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-3 border border-white/10">
-              <span className="text-[11px] text-emerald-200 block">کل وجوه وصول‌شده</span>
-              <span className="text-sm sm:text-base font-bold text-emerald-300 block mt-0.5">
+            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/10">
+              <span className="text-[10px] sm:text-[11px] text-emerald-200 block">کل وجوه وصول‌شده</span>
+              <span className="text-xs sm:text-base font-bold text-emerald-300 block mt-0.5 whitespace-nowrap">
                 {formatPersianCurrency(stats.totalPaid)}
               </span>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-3 border border-white/10">
-              <span className="text-[11px] text-rose-200 block">مانده مطالبات معوق</span>
-              <span className="text-sm sm:text-base font-bold text-rose-300 block mt-0.5">
+            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/10">
+              <span className="text-[10px] sm:text-[11px] text-rose-200 block">مانده مطالبات معوق</span>
+              <span className="text-xs sm:text-base font-bold text-rose-300 block mt-0.5 whitespace-nowrap">
                 {formatPersianCurrency(stats.totalRemainingDebt)}
               </span>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-3 border border-white/10">
-              <span className="text-[11px] text-purple-200 block">تخفیف و بورسیه‌ها</span>
-              <span className="text-sm sm:text-base font-bold text-purple-200 block mt-0.5">
+            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/10">
+              <span className="text-[10px] sm:text-[11px] text-purple-200 block">تخفیف و بورسیه‌ها</span>
+              <span className="text-xs sm:text-base font-bold text-purple-200 block mt-0.5 whitespace-nowrap">
                 {formatPersianCurrency(stats.totalDiscount)}
               </span>
             </div>
 
-            <div className="col-span-2 sm:col-span-1 bg-white/15 backdrop-blur-xs rounded-2xl p-3 border border-white/15">
-              <div className="flex items-center justify-between text-[11px] text-teal-100">
+            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/15 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/15">
+              <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-teal-100">
                 <span>درصد وصولی</span>
                 <span className="font-bold text-white font-mono">{toPersianDigits(stats.collectionRate)}%</span>
               </div>
@@ -352,23 +352,23 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-2 overflow-x-auto shrink-0">
+        <div className="bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-start sm:justify-between gap-1 sm:gap-2 overflow-x-auto no-scrollbar shrink-0">
           <div className="flex items-center gap-1 sm:gap-2">
             <button
               type="button"
               id="tab-btn-debtors"
               onClick={() => setActiveTab('debtors')}
-              className={`py-3.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              className={`min-h-[44px] py-2.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'debtors'
                   ? 'border-emerald-600 text-emerald-700'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              <UserCheck className="w-4 h-4" />
-              وضعیت بدهکاران و حساب دانش‌آموزان
+              <UserCheck className="w-4 h-4 shrink-0" />
+              <span>بدهکاران و وضعیت حساب</span>
               {stats.overdueCount > 0 && (
                 <span className="px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded-full text-[10px] font-bold">
-                  {toPersianDigits(stats.overdueCount)} معوق
+                  {toPersianDigits(stats.overdueCount)}
                 </span>
               )}
             </button>
@@ -377,14 +377,14 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
               type="button"
               id="tab-btn-fees"
               onClick={() => setActiveTab('fees')}
-              className={`py-3.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              className={`min-h-[44px] py-2.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'fees'
                   ? 'border-emerald-600 text-emerald-700'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              <Building2 className="w-4 h-4" />
-              تعرفه‌ها و سرفصل‌های مصوب
+              <Building2 className="w-4 h-4 shrink-0" />
+              <span>تعرفه‌ها و سرفصل‌ها</span>
               <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px]">
                 {toPersianDigits(feeItems.length)}
               </span>
@@ -394,14 +394,14 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
               type="button"
               id="tab-btn-transactions"
               onClick={() => setActiveTab('transactions')}
-              className={`py-3.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              className={`min-h-[44px] py-2.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'transactions'
                   ? 'border-emerald-600 text-emerald-700'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              <Receipt className="w-4 h-4" />
-              اسناد و واریزی‌های بانکی
+              <Receipt className="w-4 h-4 shrink-0" />
+              <span>دفتر اسناد و واریزی‌ها</span>
               <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px]">
                 {toPersianDigits(allTransactions.length)}
               </span>
@@ -411,14 +411,14 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
               type="button"
               id="tab-btn-reports"
               onClick={() => setActiveTab('reports')}
-              className={`py-3.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              className={`min-h-[44px] py-2.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'reports'
                   ? 'border-emerald-600 text-emerald-700'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              <TrendingUp className="w-4 h-4" />
-              گزارش و تراز تفکیکی
+              <TrendingUp className="w-4 h-4 shrink-0" />
+              <span>گزارش و تراز تفکیکی</span>
             </button>
           </div>
         </div>
@@ -429,10 +429,10 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
           {activeTab === 'debtors' && (
             <div className="space-y-4">
               {/* Filters Bar */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+              <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 w-full">
                   {/* Search */}
-                  <div className="relative flex-1 min-w-[180px]">
+                  <div className="relative flex-1 w-full">
                     <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
                     <input
                       type="text"
@@ -443,32 +443,34 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     />
                   </div>
 
-                  {/* Class Filter */}
-                  <select
-                    value={selectedClassFilter}
-                    onChange={(e) => setSelectedClassFilter(e.target.value)}
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50/50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                  >
-                    <option value="all">همه کلاس‌ها</option>
-                    {classes.map((cls) => (
-                      <option key={cls.id} value={cls.id}>
-                        {cls.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="grid grid-cols-2 sm:flex items-center gap-2">
+                    {/* Class Filter */}
+                    <select
+                      value={selectedClassFilter}
+                      onChange={(e) => setSelectedClassFilter(e.target.value)}
+                      className="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50/50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                    >
+                      <option value="all">همه کلاس‌ها</option>
+                      {classes.map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.name}
+                        </option>
+                      ))}
+                    </select>
 
-                  {/* Financial Status Filter */}
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50/50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                  >
-                    <option value="all">همه وضعیت‌های مالی</option>
-                    <option value="overdue">فقط بدهکاران معوقه (فوری)</option>
-                    <option value="debtor">دارای مانده بدهی</option>
-                    <option value="settled">تسویه‌شده کامل</option>
-                    <option value="discounted">دارای تخفیف / بورسیه</option>
-                  </select>
+                    {/* Financial Status Filter */}
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as any)}
+                      className="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50/50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                    >
+                      <option value="all">همه وضعیت‌ها</option>
+                      <option value="overdue">معوقه فوری</option>
+                      <option value="debtor">دارای بدهی</option>
+                      <option value="settled">تسویه‌شده</option>
+                      <option value="discounted">دارای تخفیف</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Batch Action */}
@@ -477,16 +479,133 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     type="button"
                     id="btn-batch-remind"
                     onClick={() => setIsBatchReminderModalOpen(true)}
-                    className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+                    className="w-full sm:w-auto min-h-[40px] px-3.5 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
-                    ارسال پیامک و بله به همه معوقات ({toPersianDigits(stats.overdueCount)})
+                    ارسال پیامک و بله به معوقات ({toPersianDigits(stats.overdueCount)})
                   </button>
                 )}
               </div>
 
-              {/* Students Table */}
-              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+              {/* Mobile Card View (md:hidden) */}
+              <div className="space-y-3 md:hidden">
+                {filteredStudents.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs">
+                    دانش‌آموزی با این مشخصات یافت نشد.
+                  </div>
+                ) : (
+                  filteredStudents.map(({ student, summary }) => {
+                    const cls = classes.find((c) => c.id === student.classGroupId);
+                    const isSettled = summary.remainingDebt === 0;
+                    const isOverdue = summary.status === 'overdue';
+
+                    return (
+                      <div
+                        key={student.id}
+                        className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-3"
+                      >
+                        {/* Header: Name, Class, Status Badge */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 text-sm truncate">{student.name}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
+                              <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-medium">
+                                {cls?.name || student.grade}
+                              </span>
+                              <span>•</span>
+                              <span>کد: {toPersianDigits(student.nationalCode)}</span>
+                              <span>•</span>
+                              <span>ولی: {student.parentName}</span>
+                            </div>
+                          </div>
+                          <div className="shrink-0">
+                            {isSettled ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                تسویه کامل
+                              </span>
+                            ) : isOverdue ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-bold animate-pulse">
+                                <AlertTriangle className="w-3 h-3 text-rose-600" />
+                                معوق فوری
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                مانده جاری
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 4-cell Financial Grid */}
+                        <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">کل صورتحساب</span>
+                            <span className="font-mono font-bold text-slate-700 block mt-0.5 truncate">
+                              {formatPersianCurrency(summary.totalBilled)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block">تخفیف / بورسیه</span>
+                            <span className="font-mono text-purple-700 font-bold block mt-0.5 truncate">
+                              {summary.totalDiscount > 0 ? formatPersianCurrency(summary.totalDiscount) : '—'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-emerald-600 block">مجموع دریافتی</span>
+                            <span className="font-mono font-bold text-emerald-700 block mt-0.5 truncate">
+                              {formatPersianCurrency(summary.totalPaid)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className={`text-[10px] block ${isSettled ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              مانده بدهی
+                            </span>
+                            <span className={`font-mono font-black block mt-0.5 truncate ${isSettled ? 'text-emerald-700' : 'text-rose-700'}`}>
+                              {isSettled ? '۰ ریال' : formatPersianCurrency(summary.remainingDebt)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Mobile Action Buttons (min-h 40px) */}
+                        <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPaymentModal(student)}
+                            className="min-h-[40px] px-2 py-2 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer border border-emerald-200/80"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>ثبت واریز</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={summary.remainingDebt <= 0}
+                            onClick={() => sendPaymentReminder(student.id)}
+                            className="min-h-[40px] px-2 py-2 bg-sky-50 hover:bg-sky-100 active:bg-sky-200 disabled:opacity-40 text-sky-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer border border-sky-200/80"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>یادآوری</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedStudentForDossier(student)}
+                            className="min-h-[40px] px-2 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer border border-slate-200"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>پرونده</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop Table View (hidden md:block) */}
+              <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-right text-xs">
                     <thead className="bg-slate-100/70 text-slate-600 border-b border-slate-200 font-semibold">
@@ -565,7 +684,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                                     type="button"
                                     onClick={() => handleOpenPaymentModal(student)}
                                     title="ثبت واریزی"
-                                    className="p-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors"
+                                    className="p-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
                                   >
                                     <CreditCard className="w-4 h-4" />
                                   </button>
@@ -575,7 +694,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                                       type="button"
                                       onClick={() => sendPaymentReminder(student.id)}
                                       title="ارسال یادآوری بله و پیامک"
-                                      className="p-1.5 bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-lg transition-colors"
+                                      className="p-1.5 bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-lg transition-colors cursor-pointer"
                                     >
                                       <Send className="w-4 h-4" />
                                     </button>
@@ -585,7 +704,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                                     type="button"
                                     onClick={() => setSelectedStudentForDossier(student)}
                                     title="مشاهده پرونده کامل دانش‌آموز"
-                                    className="p-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+                                    className="p-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
                                   >
                                     <FileText className="w-4 h-4" />
                                   </button>
@@ -605,7 +724,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
           {/* TAB 2: FEE ITEMS & TARIFFS */}
           {activeTab === 'fees' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="font-bold text-slate-800 text-sm">سرفصل‌های مصوب شهریه و خدمات مدرسه</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -616,7 +735,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   type="button"
                   id="btn-add-fee-item"
                   onClick={() => setIsNewFeeModalOpen(true)}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+                  className="w-full sm:w-auto min-h-[40px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   تعریف سرفصل جدید
@@ -659,23 +778,23 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                       <span>مهلت پرداخت: {fee.dueDate ? toPersianDigits(fee.dueDate) : 'ثبت‌نام'}</span>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => assignFeeItemToStudents(fee.id, fee.targetScope)}
-                          className="px-2.5 py-1 bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg text-xs font-bold transition-colors"
+                          className="min-h-[36px] px-3 py-1.5 bg-teal-50 text-teal-800 hover:bg-teal-100 active:bg-teal-200 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-teal-200/60"
                         >
                           تخصیص به دانش‌آموزان
                         </button>
                         <button
                           type="button"
                           onClick={() => deleteFeeItem(fee.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
+                          className="min-h-[36px] p-2 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
                           title="حذف سرفصل"
                         >
-                          <Ban className="w-3.5 h-3.5" />
+                          <Ban className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -688,7 +807,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
           {/* TAB 3: TRANSACTION LEDGER */}
           {activeTab === 'transactions' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="font-bold text-slate-800 text-sm">دفتر کل اسناد مالی و فیش‌های بانکی</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -698,14 +817,115 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleOpenPaymentModal()}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+                  className="w-full sm:w-auto min-h-[40px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   ثبت تراکنش دستی
                 </button>
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+              {/* Mobile Card View (md:hidden) */}
+              <div className="space-y-3 md:hidden">
+                {allTransactions.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs">
+                    هنوز تراکنشی ثبت نشده است.
+                  </div>
+                ) : (
+                  allTransactions.map(({ transaction: txn, student }) => (
+                    <div
+                      key={txn.id}
+                      className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-bold text-slate-900 text-sm">{student.name}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
+                            <span>تاریخ: {toPersianDigits(txn.date)}</span>
+                            <span>•</span>
+                            <span className="font-mono text-[10px] text-slate-400">{txn.id}</span>
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <span className="font-mono font-bold text-emerald-700 text-sm block">
+                            {formatPersianCurrency(txn.amount)}
+                          </span>
+                          <span className="mt-1 inline-block">
+                            {txn.status === 'confirmed' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                تایید شده
+                              </span>
+                            ) : txn.status === 'pending_verification' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                در انتظار تایید
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-bold">
+                                <Ban className="w-3 h-3 text-rose-600" />
+                                رد شده
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">روش پرداخت</span>
+                          <span className="font-medium text-slate-700 block mt-0.5">
+                            {txn.method === 'pos'
+                              ? 'دستگاه پوز'
+                              : txn.method === 'card_to_card'
+                              ? 'کارت به کارت'
+                              : txn.method === 'cheque'
+                              ? 'چک صیادی'
+                              : txn.method === 'online_gateway'
+                              ? 'درگاه پرداخت'
+                              : 'فیش نقدی'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">کد پیگیری</span>
+                          <span className="font-mono text-slate-700 block mt-0.5 truncate">
+                            {toPersianDigits(txn.trackingCode)}
+                          </span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-[10px] text-slate-400 block">بابت سرفصل</span>
+                          <span className="font-medium text-slate-700 block mt-0.5">
+                            {txn.feeTitle || 'شهریه مصوب آموزشگاه'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {txn.status === 'pending_verification' && (
+                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => updatePaymentTransactionStatus(student.id, txn.id, 'confirmed')}
+                            className="min-h-[40px] px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Check className="w-4 h-4" />
+                            تایید سند واریز
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updatePaymentTransactionStatus(student.id, txn.id, 'rejected')}
+                            className="min-h-[40px] px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-rose-200"
+                          >
+                            <X className="w-4 h-4" />
+                            عدم تایید
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop Table View (hidden md:block) */}
+              <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-right text-xs">
                     <thead className="bg-slate-100/70 text-slate-600 border-b border-slate-200 font-semibold">
@@ -779,7 +999,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => updatePaymentTransactionStatus(student.id, txn.id, 'confirmed')}
-                                    className="p-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded"
+                                    className="p-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
                                     title="تایید واریزی"
                                   >
                                     <Check className="w-3.5 h-3.5" />
@@ -787,7 +1007,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => updatePaymentTransactionStatus(student.id, txn.id, 'rejected')}
-                                    className="p-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded"
+                                    className="p-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
                                     title="عدم تایید"
                                   >
                                     <X className="w-3.5 h-3.5" />
@@ -808,37 +1028,37 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
           {/* TAB 4: REPORTS & EXPORT */}
           {activeTab === 'reports' && (
             <div className="space-y-5">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <h3 className="font-bold text-slate-800 text-sm">تراز مالی و تحلیل سرفصل‌های درآمدی آموزشگاه</h3>
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+                    className="min-h-[38px] px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto"
                   >
                     <Printer className="w-4 h-4" />
                     چاپ تراز مالی
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
                     <span className="text-xs text-slate-500">تعداد کل دانش‌آموزان ثبت‌نامی:</span>
-                    <span className="text-lg font-bold text-slate-800 block mt-1">
+                    <span className="text-base sm:text-lg font-bold text-slate-800 block mt-1">
                       {toPersianDigits(students.length)} نفر
                     </span>
                   </div>
 
-                  <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200">
+                  <div className="bg-emerald-50/70 p-3.5 sm:p-4 rounded-xl border border-emerald-200">
                     <span className="text-xs text-emerald-700">دانش‌آموزان با تسویه کامل:</span>
-                    <span className="text-lg font-bold text-emerald-800 block mt-1">
+                    <span className="text-base sm:text-lg font-bold text-emerald-800 block mt-1">
                       {toPersianDigits(stats.settledCount)} نفر
                     </span>
                   </div>
 
-                  <div className="bg-rose-50/70 p-4 rounded-xl border border-rose-200">
+                  <div className="bg-rose-50/70 p-3.5 sm:p-4 rounded-xl border border-rose-200">
                     <span className="text-xs text-rose-700">تعداد بدهکاران معوق:</span>
-                    <span className="text-lg font-bold text-rose-800 block mt-1">
+                    <span className="text-base sm:text-lg font-bold text-rose-800 block mt-1">
                       {toPersianDigits(stats.overdueCount)} نفر
                     </span>
                   </div>
@@ -871,17 +1091,17 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 
       {/* Modal: New Fee Item */}
       {isNewFeeModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-slate-200" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-5">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 my-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-slate-800 text-base">تعریف سرفصل و تعرفه مالی جدید</h3>
+                <h3 className="font-bold text-slate-800 text-sm sm:text-base">تعریف سرفصل و تعرفه مالی جدید</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsNewFeeModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -902,7 +1122,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     دسته‌بندی مالی
@@ -941,7 +1161,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 معادل فارسی: {formatPersianCurrency(newFeeAmount)}
               </p>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     دامنه تخصیص
@@ -1002,13 +1222,13 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsNewFeeModalOpen(false)}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors"
+                  className="min-h-[40px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  className="min-h-[40px] px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
                   افزودن و تخصیص سرفصل
                 </button>
@@ -1020,17 +1240,17 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 
       {/* Modal: Record Payment for Any Student */}
       {isRecordPaymentModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-slate-200" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-5">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 my-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-slate-800 text-base">ثبت واریزی و سند دریافت وجه</h3>
+                <h3 className="font-bold text-slate-800 text-sm sm:text-base">ثبت واریزی و سند دریافت وجه</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsRecordPaymentModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -1079,7 +1299,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     روش دریافت
@@ -1140,13 +1360,13 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsRecordPaymentModalOpen(false)}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors"
+                  className="min-h-[40px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                  className="min-h-[40px] px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
                   ثبت پرداخت و ارسال اعلان بله
                 </button>
@@ -1158,17 +1378,17 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 
       {/* Modal: Batch Reminders to all overdue */}
       {isBatchReminderModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-200" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-5">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 my-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2 text-rose-600">
                 <Send className="w-5 h-5" />
-                <h3 className="font-bold text-slate-800 text-base">ارسال پیامک و بله گروهی</h3>
+                <h3 className="font-bold text-slate-800 text-sm sm:text-base">ارسال پیامک و بله گروهی</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsBatchReminderModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -1187,14 +1407,14 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsBatchReminderModalOpen(false)}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors"
+                  className="min-h-[40px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="button"
                   onClick={handleBatchReminders}
-                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+                  className="min-h-[40px] px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                   ارسال به همه بدهکاران

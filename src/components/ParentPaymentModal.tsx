@@ -98,23 +98,23 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-teal-800 text-white p-5 sm:p-6 shrink-0 relative">
+        <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-teal-800 text-white p-4 sm:p-6 shrink-0 relative">
           <button
             onClick={onClose}
-            className="absolute top-4 left-4 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
+            className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
             title="بستن"
           >
             <X className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/30 flex items-center justify-center shrink-0">
-              <CreditCard className="w-6 h-6 text-emerald-200" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white/15 border border-white/30 flex items-center justify-center shrink-0">
+              <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-200" />
             </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">
+            <div className="pe-8 sm:pe-0">
+              <h2 className="text-sm sm:text-lg font-bold text-white">
                 درگاه پرداخت شهریه و خدمات مدرسه
               </h2>
-              <p className="text-teal-100 text-xs mt-0.5">
+              <p className="text-teal-100 text-[11px] sm:text-xs mt-0.5">
                 دانش‌آموز: <strong>{student.name}</strong> • آموزشگاه: {currentSchool?.name || 'مدرسه هوشمند'}
               </p>
             </div>
@@ -122,18 +122,18 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 sm:space-y-5">
           {activeStep === 'details' && (
             <form onSubmit={handleStartPayment} className="space-y-4">
               {/* Financial Snapshot */}
-              <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
+              <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
                   <span className="text-xs text-emerald-800 font-medium block">مانده بدهی قابل پرداخت:</span>
                   <div className="text-lg sm:text-xl font-black text-emerald-950 mt-0.5">
                     {formatPersianCurrency(summary.remainingDebt)}
                   </div>
                 </div>
-                <div className="text-left text-xs text-emerald-800">
+                <div className="text-right sm:text-left text-xs text-emerald-800 bg-white/60 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none border border-emerald-100 sm:border-0">
                   <span>کل صورتحساب: {formatPersianCurrency(summary.totalBilled)}</span>
                   <br />
                   <span>کل پرداختی قبلی: {formatPersianCurrency(summary.totalPaid)}</span>
@@ -158,7 +158,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                             setSelectedFee(`قسط: ${inst.title}`);
                             setPayAmount(remain > 0 ? remain : inst.amount);
                           }}
-                          className={`p-3 rounded-xl border text-right transition-all flex flex-col justify-between ${
+                          className={`p-3 rounded-xl border text-right transition-all flex flex-col justify-between cursor-pointer ${
                             isSelected
                               ? 'border-emerald-600 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-500/20'
                               : inst.status === 'paid'
@@ -326,18 +326,18 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-200">
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="min-h-[44px] px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
                   id="btn-parent-submit-payment"
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="min-h-[44px] px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Lock className="w-4 h-4" />
                   <span>
@@ -351,7 +351,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
           {/* Online Gateway Simulation */}
           {activeStep === 'gateway' && (
             <div className="space-y-4 py-2">
-              <div className="bg-slate-900 text-white p-4 rounded-2xl flex items-center justify-between">
+              <div className="bg-slate-900 text-white p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-6 h-6 text-emerald-400" />
                   <div>
@@ -388,12 +388,12 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                 <span>رمز یکبار مصرف پویا (OTP) به شماره همراه ولی ارسال و آماده تایید است.</span>
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-200">
+              <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setActiveStep('details')}
                   disabled={isProcessing}
-                  className="px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="min-h-[44px] px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   بازگشت
                 </button>
@@ -402,7 +402,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                   id="btn-confirm-gateway-payment"
                   onClick={finalizePayment}
                   disabled={isProcessing}
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+                  className="min-h-[44px] px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isProcessing ? (
                     <>
@@ -427,7 +427,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900">پرداخت با موفقیت انجام شد</h3>
+                <h3 className="text-base sm:text-lg font-black text-slate-900">پرداخت با موفقیت انجام شد</h3>
                 <p className="text-xs text-slate-500 mt-1">
                   سند مالی ثبت و رسید الکترونیکی در پیام‌رسان بله و پیامک برای شما ارسال شد.
                 </p>
@@ -460,7 +460,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                   type="button"
                   id="btn-close-payment-receipt"
                   onClick={onClose}
-                  className="w-full py-3 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  className="w-full min-h-[44px] py-3 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center"
                 >
                   بستن و مشاهده کارنامه مالی دانش‌آموز
                 </button>
