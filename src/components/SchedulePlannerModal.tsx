@@ -77,25 +77,27 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto">
       <div 
-        className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
+        className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl my-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-slate-900 text-white p-3.5 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-teal-500/20 text-teal-300">
-              <Calendar className="w-5 h-5" />
+            <div className="p-1.5 sm:p-2 rounded-xl bg-teal-500/20 text-teal-300">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base sm:text-lg">مدیریت و چیدمان برنامه هفتگی</h3>
-              <p className="text-xs text-slate-400">تنظیم ساعات تدریس، نام دبیران و دروس به تفکیک پایه‌ها</p>
+              <h3 className="font-bold text-sm sm:text-lg">مدیریت و چیدمان برنامه هفتگی</h3>
+              <p className="text-[11px] sm:text-xs text-slate-400">تنظیم ساعات تدریس، نام دبیران و دروس به تفکیک پایه‌ها</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+            title="بستن"
+            aria-label="بستن پنجره"
           >
             <X className="w-5 h-5" />
           </button>

@@ -74,24 +74,26 @@ export const RoleQuickSwitch: React.FC = () => {
   const { currentRole, setCurrentRole } = useApp();
 
   return (
-    <section className="bg-slate-900 text-white py-3 border-b border-slate-800" id="role-quick-switcher">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+    <section className="bg-slate-900 text-white py-2 sm:py-2.5 border-b border-slate-800 shrink-0" id="role-quick-switcher">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
           {/* Label */}
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-teal-500/20 text-teal-300 text-xs font-bold">
-              ★
-            </span>
-            <div>
-              <span className="text-xs font-bold text-slate-200">سوئیچ سریع نقش کاربری (برای بررسی سناریوهای پلتفرم):</span>
-              <p className="text-[11px] text-slate-400">
-                هر نقش نمای اختصاصی خود را در هاب شهرستان تجربه می‌کند.
-              </p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-500/20 text-teal-300 text-[10px] font-bold">
+                ★
+              </span>
+              <span className="text-xs font-bold text-slate-200 whitespace-nowrap">
+                سوئیچ سریع نقش کاربری:
+              </span>
+              <span className="text-[11px] text-slate-400 hidden xl:inline">
+                (تغییر بین ۶ پرسونای سامانه)
+              </span>
             </div>
           </div>
 
-          {/* Quick Buttons Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
+          {/* Quick Buttons - Single scrollable row on mobile/landscape, grid on desktop */}
+          <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-0.5 lg:grid lg:grid-cols-6 lg:gap-2">
             {ROLES_LIST.map((item) => {
               const Icon = item.icon;
               const isActive = currentRole === item.role;
@@ -100,16 +102,14 @@ export const RoleQuickSwitch: React.FC = () => {
                   key={item.role}
                   id={`role-switch-${item.role}`}
                   onClick={() => setCurrentRole(item.role)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-right transition-all text-xs font-medium border ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-right transition-all text-xs font-medium border shrink-0 whitespace-nowrap ${
                     isActive
                       ? `${item.badgeColor} border-transparent shadow-sm ring-2 ring-white/20 font-bold scale-[1.02]`
                       : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
                   }`}
                 >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <div className="truncate">
-                    <div className="truncate">{item.title}</div>
-                  </div>
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{item.title}</span>
                 </button>
               );
             })}

@@ -129,8 +129,8 @@ const AppContent: React.FC = () => {
       {/* Role Quick Switcher bar */}
       <RoleQuickSwitch />
 
-      {/* Main Content Area (extra bottom padding for mobile navigation bar) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 md:pb-6">
+      {/* Main Content Area (extra bottom padding for mobile navigation bar, compact for landscape) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 pb-20 landscape:pb-14 md:pb-6">
         {renderDashboardByRole()}
       </main>
 

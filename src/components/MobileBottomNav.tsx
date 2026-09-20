@@ -96,8 +96,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavActionProps> = ({
     <nav
       id="mobile-bottom-nav"
       aria-label="نوار ابزار ناوبری موبایل"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-2xl px-1.5 py-1 flex items-center justify-around select-none"
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6px)' }}
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-2xl px-1.5 py-1 landscape:py-0.5 flex items-center justify-around select-none"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 4px)' }}
     >
       {navItems.map((item) => {
         const Icon = item.icon;
@@ -107,12 +107,12 @@ export const MobileBottomNav: React.FC<MobileBottomNavActionProps> = ({
             id={`nav-item-${item.id}`}
             onClick={item.onClick}
             type="button"
-            className="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-slate-600 hover:text-teal-700 active:bg-teal-50/70 transition-all min-h-[46px]"
+            className="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-slate-600 hover:text-teal-700 active:bg-teal-50/70 transition-all min-h-[42px] landscape:min-h-[36px]"
           >
-            <div className="w-8 h-8 rounded-xl bg-slate-100/80 flex items-center justify-center text-slate-700 hover:text-teal-700 hover:bg-teal-100/50 transition-colors">
-              <Icon className="w-4 h-4" />
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-100/80 flex items-center justify-center text-slate-700 hover:text-teal-700 hover:bg-teal-100/50 transition-colors">
+              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
-            <span className="text-[10px] font-bold mt-1 whitespace-nowrap text-slate-700">
+            <span className="text-[9px] sm:text-[10px] font-bold mt-0.5 sm:mt-1 whitespace-nowrap text-slate-700">
               {item.label}
             </span>
           </button>

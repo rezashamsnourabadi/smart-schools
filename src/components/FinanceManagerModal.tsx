@@ -260,14 +260,14 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto" dir="rtl">
+    <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-3 overflow-y-auto" dir="rtl">
       <div
-        className="bg-slate-50 w-full max-w-5xl rounded-none sm:rounded-3xl shadow-2xl h-full sm:h-auto sm:max-h-[92vh] max-h-screen flex flex-col overflow-hidden border border-slate-200"
+        className="bg-slate-50 w-full max-w-5xl rounded-none sm:rounded-3xl shadow-2xl my-auto h-full sm:h-auto sm:max-h-[96vh] max-h-screen flex flex-col overflow-hidden border border-slate-200"
         id="finance-manager-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 text-white p-4 sm:p-6 shrink-0 relative">
+        <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 text-white p-3.5 sm:p-5 shrink-0 relative">
           <button
             onClick={onClose}
             className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"

@@ -43,6 +43,12 @@ This document preserves the institutional memory, technical decisions, component
 - **Decision:** Replace monolithic desktop `<table>` elements on mobile viewports with structured, thumb-friendly card layouts (`hidden md:table` paired with `block md:hidden`). Ensure all interactive controls (buttons, inputs, selects, segmented tabs) provide a minimum touch target height of 40px–44px and stack vertically on mobile screens.
 - **Rationale:** Financial management modules inherently feature wide columns (installments, due dates, billing, tracking codes, payment actions). On mobile screens (360px–480px), wide tables cause horizontal overflow and clipped cards. Transforming data into native cards preserves 100% of administrative options while maintaining effortless single-handed touch usability.
 
+### ADR-008: Landscape Orientation Fluidity & Mobile-First Grade Entry Refactor
+- **Decision:** Optimize all modal overlays and mobile navigation for mobile landscape orientation (aspect ratios with height < 500px and width 640px–900px), and completely refactor `TeacherGradeEntryModal.tsx` to prioritize the student grading list.
+- **Rationale:**
+  1. **Landscape Phone Constraints:** When phones are rotated horizontally, screen height drops to 350px–420px while width triggers `sm:` breakpoints (≥640px). In traditional flex centering (`items-center`), modal headers and settings push the top and bottom of modals outside the viewport coordinates. Adding `items-start sm:items-center` on overlays with `my-auto` on dialog cards, along with compact horizontal role switchers and navigation, ensures modals remain fully visible and naturally scrollable.
+  2. **Teacher Grading UX:** The previous grading modal had fixed multi-row dropdowns and inputs that consumed the entire vertical space on smartphones, pushing students off-screen. The refactored design renders a collapsible 42px configuration bar with a summary badge, single-touch quick fill actions (all 20, all 19, clear), student search, +/-0.5 steppers, expandable parent notes, and sticky action buttons.
+
 ---
 
 ## 3. Component & Modal Registry

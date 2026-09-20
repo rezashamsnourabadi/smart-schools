@@ -87,46 +87,46 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   const activeTerm2Card = student.reportCards?.find((r) => r.term === 'term2');
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-3 overflow-y-auto">
       <div 
-        className="bg-white w-full max-w-3xl rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
+        className="bg-white w-full max-w-3xl rounded-t-3xl sm:rounded-2xl shadow-2xl my-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="relative bg-gradient-to-r from-teal-700 via-teal-800 to-cyan-900 text-white p-5 sm:p-6 shrink-0">
+        <div className="relative bg-gradient-to-r from-teal-700 via-teal-800 to-cyan-900 text-white p-3.5 sm:p-5 shrink-0">
           <button
             onClick={onClose}
-            className="absolute top-4 left-4 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+            className="absolute top-3 left-3 sm:top-4 sm:left-4 p-1.5 sm:p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors"
             title="بستن پنجره"
             aria-label="بستن"
           >
             <X className="w-5 h-5" />
           </button>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/15 border border-white/30 flex items-center justify-center text-2xl font-black shrink-0 shadow-inner">
+          <div className="flex flex-row items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/15 border border-white/30 flex items-center justify-center text-xl sm:text-2xl font-black shrink-0 shadow-inner">
               {student.name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">{student.name}</h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-teal-500/30 text-teal-100 text-xs border border-teal-400/30 font-medium">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-white truncate">{student.name}</h2>
+                <span className="px-2 py-0.5 rounded-full bg-teal-500/30 text-teal-100 text-xs border border-teal-400/30 font-medium">
                   {studentClass?.name || student.grade}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-100 text-xs font-mono">
+                <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-100 text-[11px] font-mono">
                   ش.د: {toPersianDigits(student.studentNumber)}
                 </span>
               </div>
-              <p className="text-teal-100/90 text-xs sm:text-sm flex flex-wrap items-center gap-x-4 gap-y-1">
+              <p className="text-teal-100/90 text-xs sm:text-sm flex flex-wrap items-center gap-x-3 gap-y-0.5">
                 <span>کد ملی: <strong className="font-mono text-white">{toPersianDigits(student.nationalCode)}</strong></span>
                 <span>فرزند: <strong className="text-white">{student.fatherName}</strong></span>
-                <span>رشته: <strong className="text-white">{student.fieldOfStudy}</strong></span>
+                <span className="hidden xs:inline">رشته: <strong className="text-white">{student.fieldOfStudy}</strong></span>
               </p>
             </div>
           </div>
 
           {/* Navigation Tabs (scrollable on mobile) */}
-          <div className="flex items-center gap-1.5 mt-5 overflow-x-auto pb-1 no-scrollbar border-b border-teal-600/50">
+          <div className="flex items-center gap-1 mt-3 sm:mt-5 overflow-x-auto pb-1 no-scrollbar border-b border-teal-600/50">
             <button
               onClick={() => setActiveTab('profile')}
               className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
