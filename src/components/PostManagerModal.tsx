@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import {
   X,
   Bell,
@@ -25,6 +26,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { Announcement, PostType, PostAttachment } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
+import { MAX_LOCAL_ATTACHMENT_BYTES, MAX_LOCAL_ATTACHMENT_LABEL } from '../utils/localAttachments';
 
 interface PostManagerModalProps {
   onClose: () => void;
@@ -35,6 +37,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
   onClose,
   canPublish = true
 }) => {
+  const shouldReduceMotion = useReducedMotion();
   const {
     announcements,
     currentSchoolId,
@@ -54,7 +57,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [target, setTarget] = useState<'all' | 'teachers' | 'parents' | 'students'>('all');
-  const [priority, setPriority] = useState<'normal' | 'urgent'>('normal');
+  const [priority, setPriority] = useState<Announcement['priority']>('normal');
   
   // Real Uploaded File State
   const [uploadedFile, setUploadedFile] = useState<{
@@ -63,6 +66,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
     dataUrl: string;
     type: 'image' | 'video' | 'file';
   } | null>(null);
+  const [attachmentError, setAttachmentError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,7 +83,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
     setEditingPost(post);
     setTitle(post.title);
     setContent(post.content);
-    setPostType(post.type);
+    setPostType(post.type || 'announcement');
     setTarget(post.target || 'all');
     setPriority(post.priority || 'normal');
     setUploadedFile(null);
@@ -98,12 +102,23 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > MAX_LOCAL_ATTACHMENT_BYTES) {
+      setAttachmentError(`اندازه فایل باید حداکثر ${MAX_LOCAL_ATTACHMENT_LABEL} باشد.`);
+      e.currentTarget.value = '';
+      return;
+    }
+
     const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
     const isImg = file.type.startsWith('image/');
     const isVid = file.type.startsWith('video/');
 
     const reader = new FileReader();
     reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        setAttachmentError('خواندن فایل ممکن نشد. دوباره تلاش کنید.');
+        return;
+      }
+      setAttachmentError('');
       setUploadedFile({
         name: file.name,
         size: `${toPersianDigits(sizeInMb)} مگابایت`,
@@ -111,6 +126,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
         type: isImg ? 'image' : isVid ? 'video' : 'file'
       });
     };
+    reader.onerror = () => setAttachmentError('خواندن فایل ممکن نشد. دوباره تلاش کنید.');
     reader.readAsDataURL(file);
   };
 
@@ -149,7 +165,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
         type: postType,
         title: title.trim(),
         content: content.trim(),
-        senderRole: currentUser.roleTitle,
+        senderRole: currentUser.role,
         senderName: currentUser.name,
         target,
         priority,
@@ -162,8 +178,16 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto w-full max-w-full">
-      <div 
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto w-full max-w-full"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
         className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 m-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -180,7 +204,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -308,7 +332,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   <label className="block text-xs font-medium text-slate-700 mb-1">مخاطبان هدف:</label>
                   <select
                     value={target}
-                    onChange={(e) => setTarget(e.target.value as any)}
+                    onChange={(e) => setTarget(e.target.value as typeof target)}
                     className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="all">همه (عمومی)</option>
@@ -321,10 +345,11 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   <label className="block text-xs font-medium text-slate-700 mb-1">اولویت نمایش:</label>
                   <select
                     value={priority}
-                    onChange={(e) => setPriority(e.target.value as any)}
+                    onChange={(e) => setPriority(e.target.value as Announcement['priority'])}
                     className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="normal">عادی</option>
+                    <option value="important">بااهمیت</option>
                     <option value="urgent">فوری / بااهمیت</option>
                   </select>
                 </div>
@@ -382,7 +407,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                       کلیک کنید یا فایل را اینجا رها کنید
                     </span>
                     <span className="text-[11px] text-slate-500 mt-0.5">
-                      تصاویر JPG/PNG، فایل‌های بخشنامه PDF یا ویدیوهای گزارش
+                      ذخیره محلی مرورگر • حداکثر {MAX_LOCAL_ATTACHMENT_LABEL} برای هر فایل
                     </span>
                   </label>
                 ) : (
@@ -419,6 +444,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                     </button>
                   </div>
                 )}
+                {attachmentError && <p role="alert" className="mt-2 text-xs font-medium text-rose-700">{attachmentError}</p>}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -591,12 +617,12 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
         <div className="p-4 bg-white border-t border-slate-200 flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors"
+            className="min-h-[44px] px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors"
           >
             بستن
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

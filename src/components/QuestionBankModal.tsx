@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { QuestionBankItem } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
+  const shouldReduceMotion = useReducedMotion();
   const { questionBank } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,8 +37,6 @@ export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
   const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   // Subjects list dynamically
   const subjects = Array.from(new Set(questionBank.map((q) => q.subject)));
@@ -71,8 +71,20 @@ export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-6 overflow-y-auto w-full max-w-full">
-      <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl m-auto h-full max-h-[96vh] sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+    <AnimatePresence>
+    {isOpen && <motion.div
+      key="question-bank-overlay"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-6 overflow-y-auto w-full max-w-full"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
+        className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl m-auto h-full max-h-[96vh] sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200"
+      >
         {/* Modal Top Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bg-slate-50/80 rounded-t-3xl shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -82,14 +94,14 @@ export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-bold text-sm sm:text-base text-slate-900 leading-snug">
-                  بانک سوالات متمرکز و مشترک مدارس شهرستان
+                  بانک سوالات نمونه محلی
                 </h2>
                 <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 font-bold border border-teal-200 shrink-0">
                   {toPersianDigits(questionBank.length)} سوال ثبت‌شده
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate sm:whitespace-normal">
-                منبع سراسری سوالات استاندارد امتحانی طراحی‌شده توسط دبیران کلیه مدارس منطقه
+                داده‌های این بانک در همین مرورگر نگهداری می‌شوند و با مدرسه‌های دیگر همگام نیستند.
               </p>
             </div>
           </div>
@@ -98,7 +110,7 @@ export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <button
               id="btn-add-question-from-bank"
               onClick={() => setShowAddQuestionModal(true)}
-              className="px-3.5 sm:px-4 py-2 rounded-xl bg-slate-900 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
+              className="min-h-[44px] px-3.5 sm:px-4 py-2 rounded-xl bg-slate-900 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
             >
               <PlusCircle className="w-4 h-4" />
               <span>افزودن سوال</span>
@@ -107,7 +119,7 @@ export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <button
               id="btn-close-question-bank"
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+              className="min-h-[44px] min-w-[44px] p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
               aria-label="بستن پنجره"
             >
               <X className="w-5 h-5" />
@@ -330,7 +342,8 @@ export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
           isOpen={showAddQuestionModal}
           onClose={() => setShowAddQuestionModal(false)}
         />
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>}
+    </AnimatePresence>
   );
 };

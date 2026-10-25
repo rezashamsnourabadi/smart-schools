@@ -40,14 +40,17 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
     students,
     schools,
     currentSchoolId,
+    findStudentForEnrollment,
     addClassGroup,
     addStudent,
     removeStudent,
     transferStudentClass,
     markStudentGraduated,
     markStudentTransferred,
-    markStudentActive
+    markStudentActive,
+    isViewingNonCurrentYear
   } = useApp();
+  const mayManageClasses = canManageClasses && !isViewingNonCurrentYear;
 
   // Primary Tab: 'active' | 'graduated' | 'transferred' | 'classes'
   const [activeTab, setActiveTab] = useState<'active' | 'graduated' | 'transferred' | 'classes'>('active');
@@ -81,7 +84,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
   const [stdFatherName, setStdFatherName] = useState('');
   const [stdParentPhone, setStdParentPhone] = useState('');
   const [stdAddress, setStdAddress] = useState('');
-  const [stdClassId, setStdClassId] = useState(classes[0]?.id || 'cls-1');
+  const [stdClassId, setStdClassId] = useState(classes[0]?.id || '');
 
   // New Class Form States
   const [newClassName, setNewClassName] = useState('');
@@ -92,7 +95,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
   // Live lookup if student exists anywhere across schools
   const normInputCode = toEnglishDigits(stdNationalCode).trim();
   const existingMatchedStudent = normInputCode.length >= 6
-    ? students.find((s) => toEnglishDigits(s.nationalCode).trim() === normInputCode)
+    ? findStudentForEnrollment(normInputCode)
     : null;
   const existingMatchedSchool = existingMatchedStudent
     ? schools.find((s) => s.id === existingMatchedStudent.schoolId)
@@ -110,6 +113,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
       s.fatherName?.includes(searchQuery);
     return matchesClass && matchesSearch;
   });
+  const pendingClassStudents = students.filter((student) => student.schoolId === currentSchoolId && student.status === 'pending_class_assignment');
 
   const graduatedStudents = students.filter((s) => {
     const isThisSchool = s.schoolId === currentSchoolId;
@@ -156,7 +160,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
       address: stdAddress || 'شهرستان، خیابان اصلی',
       parentBaleAccount: `@parent_${stdNationalCode.slice(-4)}`,
       grade: targetClass?.grade || 'پایه دهم',
-      fieldOfStudy: targetClass?.fieldOfStudy || 'ریاضی و فیزیک',
+      fieldOfStudy: targetClass?.major || 'ریاضی و فیزیک',
       studentNumber: `۴۰۲${Math.floor(1000 + Math.random() * 9000)}`
     });
 
@@ -176,7 +180,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
       schoolId: currentSchoolId,
       name: newClassName,
       grade: newClassGrade,
-      fieldOfStudy: newClassField,
+      major: newClassField,
       room: newClassRoom
     });
 
@@ -330,7 +334,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
           </div>
 
           <div className="flex items-center gap-2">
-            {canManageClasses && activeTab !== 'classes' && (
+            {mayManageClasses && activeTab !== 'classes' && (
               <button
                 onClick={() => setShowAddStudentModal(true)}
                 className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
@@ -340,7 +344,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
               </button>
             )}
 
-            {canManageClasses && (
+            {mayManageClasses && (
               <button
                 onClick={() => setShowAddClassModal(true)}
                 className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
@@ -387,6 +391,41 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
           {/* TAB 1: ACTIVE STUDENTS */}
           {activeTab === 'active' && (
             <div>
+              {pendingClassStudents.length > 0 && (
+                <section className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4" aria-labelledby="pending-class-assignment-title">
+                  <h3 id="pending-class-assignment-title" className="font-bold text-amber-950 text-sm">نیازمند کلاس‌بندی ({toPersianDigits(pendingClassStudents.length)})</h3>
+                  <p className="text-xs text-amber-900 mt-1 mb-3">پایه این دانش‌آموزان ارتقا یافته، اما کلاس مقصد یکتا پیدا نشده است. پس از انتخاب کلاس، آن‌ها به فهرست فعال افزوده می‌شوند.</p>
+                  <div className="space-y-2">
+                    {pendingClassStudents.map((student) => {
+                      const choices = classes.filter((cls) => cls.schoolId === currentSchoolId
+                        && cls.grade === (student.pendingClassGrade || student.grade)
+                        && (!student.fieldOfStudy || !cls.major || cls.major === student.fieldOfStudy));
+                      return (
+                        <div key={student.id} className="rounded-xl border border-amber-200 bg-white p-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-slate-900 text-sm">{student.name}</div>
+                            <div className="text-xs text-slate-600">پایه مقصد: {student.pendingClassGrade || student.grade}</div>
+                          </div>
+                          {mayManageClasses && choices.length > 0 ? (
+                            <select
+                              id={`pending-class-select-${student.id}`}
+                              aria-label={`کلاس مقصد ${student.name}`}
+                              defaultValue=""
+                              onChange={(event) => { if (event.target.value) markStudentActive(student.id, event.target.value); }}
+                              className="min-h-11 w-full sm:w-auto rounded-xl border border-slate-300 px-3 text-sm bg-white"
+                            >
+                              <option value="" disabled>انتخاب کلاس مقصد</option>
+                              {choices.map((cls) => <option key={cls.id} value={cls.id}>{cls.name} — {cls.major || cls.grade}</option>)}
+                            </select>
+                          ) : (
+                            <span className="text-xs text-amber-900">{isViewingNonCurrentYear ? 'برای تغییر، به سال فعال بازگردید.' : canManageClasses ? 'ابتدا کلاس این پایه را بسازید.' : 'برای کلاس‌بندی به مدیر مدرسه مراجعه کنید.'}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
               {activeStudents.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {activeStudents.map((std) => {
@@ -418,8 +457,8 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
                           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 py-2 border-t border-b border-slate-100 mb-3 bg-slate-50/60 p-2 rounded-xl">
                             <div>نام پدر: <strong>{std.fatherName}</strong></div>
                             <div>تلفن ولی: <strong className="font-mono">{toPersianDigits(std.parentPhone)}</strong></div>
-                            <div>معدل کارنامه: <strong className="text-teal-700 font-bold">{toPersianDigits(std.reportCards?.[0]?.gpa || '۱۹.۴')}</strong></div>
-                            <div>غیبت‌ها: <strong className="text-rose-700 font-bold">{toPersianDigits(std.attendanceStats?.absentDays ?? 0)} زنگ</strong></div>
+                            <div>معدل کارنامه: <strong className="text-teal-700 font-bold">{std.reportCards?.[0]?.gpa !== undefined ? toPersianDigits(std.reportCards[0].gpa) : 'ثبت نشده'}</strong></div>
+                            <div>روزهای غیبت: <strong className="text-rose-700 font-bold">{toPersianDigits(std.attendanceStats?.absentDays ?? 0)} روز</strong></div>
                           </div>
                         </div>
 
@@ -433,7 +472,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
                             پرونده کامل
                           </button>
 
-                          {canManageClasses && (
+                          {mayManageClasses && (
                             <div className="flex items-center gap-1.5">
                               {/* Change Class */}
                               <button
@@ -573,7 +612,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
 
                           <button
                             onClick={() => {
-                              const targetClass = classes[0]?.id || 'cls-1';
+                              const targetClass = classes[0]?.id || '';
                               markStudentActive(std.id, targetClass);
                             }}
                             className="px-2.5 py-1.5 text-slate-600 hover:text-teal-700 hover:bg-teal-50 border border-slate-200 rounded-xl text-xs font-semibold"
@@ -656,7 +695,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
 
                         <button
                           onClick={() => {
-                            const targetClass = classes[0]?.id || 'cls-1';
+                            const targetClass = classes[0]?.id || '';
                             markStudentActive(std.id, targetClass);
                           }}
                           className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-teal-200"
@@ -697,7 +736,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
                           </span>
                         </div>
                         <div className="text-xs text-slate-500 mb-2">
-                          پایه: {cls.grade} • رشته: {cls.fieldOfStudy}
+                          پایه: {cls.grade} • رشته: {cls.major}
                         </div>
 
                         <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
@@ -784,7 +823,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
                     onChange={(e) => {
                       setStdNationalCode(e.target.value);
                       const norm = toEnglishDigits(e.target.value).trim();
-                      const match = students.find((s) => toEnglishDigits(s.nationalCode).trim() === norm);
+                      const match = findStudentForEnrollment(norm);
                       if (match && !stdName) {
                         setStdName(match.name);
                         setStdFatherName(match.fatherName || '');
@@ -840,7 +879,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
                   >
                     {classes.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name} ({c.grade} - {c.fieldOfStudy})
+                        {c.name} ({c.grade} - {c.major})
                       </option>
                     ))}
                   </select>

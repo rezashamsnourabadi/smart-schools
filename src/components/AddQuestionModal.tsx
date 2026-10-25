@@ -80,16 +80,16 @@ export const AddQuestionModal: React.FC<Props> = ({
             </div>
             <div>
               <h3 className="font-bold text-sm text-slate-900">
-                افزودن سوال به بانک سوالات مشترک شهرستان
+                افزودن سوال به بانک نمونه محلی
               </h3>
               <p className="text-[11px] text-slate-500">
-                طراحی و اشتراک‌گذاری آزمون با سایر همکاران و مدارس منطقه
+                این سوال فقط در داده‌های همین مرورگر ثبت می‌شود و به مدرسه دیگری ارسال نمی‌شود.
               </p>
             </div>
           </div>
           <button
             onClick={handleResetAndClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
             aria-label="بستن"
           >
             <X className="w-4 h-4" />
@@ -154,7 +154,7 @@ export const AddQuestionModal: React.FC<Props> = ({
               <label className="block font-medium text-slate-600 mb-1">سطح سختی</label>
               <select
                 value={qDifficulty}
-                onChange={(e) => setQDifficulty(e.target.value as any)}
+                onChange={(e) => setQDifficulty(e.target.value as typeof qDifficulty)}
                 className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white text-xs"
               >
                 <option value="آسان">آسان</option>
@@ -166,7 +166,7 @@ export const AddQuestionModal: React.FC<Props> = ({
               <label className="block font-medium text-slate-600 mb-1">نوع سوال</label>
               <select
                 value={qType}
-                onChange={(e) => setQType(e.target.value as any)}
+                onChange={(e) => setQType(e.target.value as typeof qType)}
                 className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white text-xs"
               >
                 <option value="تستی">تستی چهارگزینه‌ای</option>

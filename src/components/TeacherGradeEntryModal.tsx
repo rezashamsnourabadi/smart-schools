@@ -19,7 +19,8 @@ import {
   Minus
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { toPersianDigits, formatPersianScore } from '../utils/persianUtils';
+import { getSchoolDate, toEnglishDigits, toPersianDigits } from '../utils/persianUtils';
+import { parseGradeScore } from '../utils/gradeUtils';
 
 interface TeacherGradeEntryModalProps {
   onClose: () => void;
@@ -28,7 +29,7 @@ interface TeacherGradeEntryModalProps {
 export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ onClose }) => {
   const { classes, students, currentSchoolId, addGradeItem } = useApp();
 
-  const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || 'cls-1');
+  const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
   const [subject, setSubject] = useState<string>('ریاضی ۱');
   const [category, setCategory] = useState<'continuous' | 'term1' | 'term2' | 'quiz'>('continuous');
   const [title, setTitle] = useState<string>('ارزشیابی مستمر کلاسی و حل تمرین');
@@ -36,28 +37,27 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
   const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showNoteForStudent, setShowNoteForStudent] = useState<Record<string, boolean>>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const classStudents = students.filter((s) => s.classGroupId === selectedClassId);
+  const classStudents = students.filter((s) => s.classGroupId === selectedClassId && (!s.status || s.status === 'active'));
 
   // Map of studentId -> score string
-  const [scores, setScores] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    classStudents.forEach((s) => {
-      initial[s.id] = '۱۹';
-    });
-    return initial;
-  });
+  const [scores, setScores] = useState<Record<string, string>>({});
 
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   const handleScoreChange = (studentId: string, val: string) => {
     setScores((prev) => ({ ...prev, [studentId]: val }));
+    setFormError(null);
   };
 
   const adjustScore = (studentId: string, delta: number) => {
-    const current = parseFloat(scores[studentId] || '0') || 0;
+    const parsedCurrent = parseGradeScore(scores[studentId] || '0', maxScore);
+    if (!parsedCurrent.ok) return;
+    const current = parsedCurrent.value;
     const newScore = Math.max(0, Math.min(maxScore, current + delta));
     setScores((prev) => ({ ...prev, [studentId]: String(newScore) }));
+    setFormError(null);
   };
 
   const handleNoteChange = (studentId: string, val: string) => {
@@ -74,6 +74,7 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
       updated[s.id] = String(scoreVal);
     });
     setScores(updated);
+    setFormError(null);
   };
 
   const categoryTitleMap = {
@@ -85,28 +86,25 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!classStudents.length) { setFormError('برای این کلاس دانش‌آموز فعالی جهت ثبت نمره وجود ندارد.'); return; }
+    if (!subject.trim() || !title.trim()) { setFormError('نام درس و عنوان ارزشیابی را وارد کنید.'); setIsConfigOpen(true); return; }
+    const parsedScores = classStudents.map((student) => ({ student, result: parseGradeScore(scores[student.id] || '', maxScore) }));
+    const invalid = parsedScores.find((item) => !item.result.ok);
+    if (invalid && !invalid.result.ok) { setFormError(`${invalid.student.name}: ${invalid.result.error}`); return; }
+    const formattedScores = parsedScores.flatMap(({ student, result }) => result.ok ? [{ studentId: student.id, score: result.value, note: notes[student.id] || undefined }] : []);
 
-    const formattedScores = classStudents.map((s) => {
-      const parsed = parseFloat(scores[s.id] || '0');
-      return {
-        studentId: s.id,
-        score: isNaN(parsed) ? 0 : parsed,
-        note: notes[s.id] || undefined
-      };
-    });
-
-    addGradeItem({
+    const result = addGradeItem({
       schoolId: currentSchoolId,
       classGroupId: selectedClassId,
-      subject,
-      title,
+      subject: subject.trim(),
+      title: title.trim(),
       category,
       categoryTitle: categoryTitleMap[category],
-      date: '۱۴۰۵/۰۶/۲۲',
+      date: getSchoolDate(),
       maxScore,
       scores: formattedScores
     });
-
+    if (!result.ok) { setFormError(result.error); return; }
     onClose();
   };
 
@@ -114,12 +112,12 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
 
   const filteredStudents = classStudents.filter(
     (s) =>
-      s.name.includes(searchQuery) ||
-      s.studentNumber.includes(searchQuery) ||
-      s.nationalCode.includes(searchQuery)
+      s.name.includes(searchQuery.trim()) ||
+      toEnglishDigits(s.studentNumber).includes(toEnglishDigits(searchQuery).trim()) ||
+      toEnglishDigits(s.nationalCode).includes(toEnglishDigits(searchQuery).trim())
   );
 
-  const gradedCount = classStudents.filter((s) => scores[s.id] && scores[s.id] !== '').length;
+  const gradedCount = classStudents.filter((s) => parseGradeScore(scores[s.id] || '', maxScore).ok).length;
 
   return (
     <div 
@@ -151,7 +149,7 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors shrink-0"
+            className="min-w-11 min-h-11 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors shrink-0 flex items-center justify-center"
             title="بستن"
             aria-label="بستن پنجره"
           >
@@ -197,12 +195,13 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
           {/* Expanded Configuration Form (Collapsible to save 300px on mobile) */}
           {isConfigOpen && (
             <div className="p-3 sm:p-4 bg-white border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 animate-in fade-in duration-150">
-              <div>
+            <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">کلاس آموزشی:</label>
                 <select
+                  id="grade-class-select"
                   value={selectedClassId}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
-                  className="w-full text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white"
+                  onChange={(e) => { setSelectedClassId(e.target.value); setFormError(null); }}
+                  className="w-full min-h-11 text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white"
                 >
                   {classes.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -213,20 +212,21 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">نام درس:</label>
                 <input
+                  id="grade-subject"
                   type="text"
                   value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white"
-                  required
+                  onChange={(e) => { setSubject(e.target.value); setFormError(null); }}
+                  className="w-full min-h-11 text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">نوع ارزشیابی:</label>
                 <select
+                  id="grade-category"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white"
+                  onChange={(e) => setCategory(e.target.value as typeof category)}
+                  className="w-full min-h-11 text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white"
                 >
                   <option value="continuous">نمره مستمر کلاسی</option>
                   <option value="quiz">کوییز و آزمون کلاسی</option>
@@ -238,25 +238,25 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">سقف نمره:</label>
                 <input
+                  id="grade-max-score"
                   type="number"
                   value={maxScore}
-                  onChange={(e) => setMaxScore(Number(e.target.value))}
-                  className="w-full text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl text-center font-mono font-bold"
+                  onChange={(e) => { setMaxScore(Number(e.target.value)); setFormError(null); }}
+                  className="w-full min-h-11 text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl text-center font-mono font-bold"
                   min={5}
                   max={100}
-                  required
                 />
               </div>
 
               <div className="col-span-2 sm:col-span-3">
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">عنوان ارزشیابی:</label>
                 <input
+                  id="grade-title"
                   type="text"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitle(e.target.value); setFormError(null); }}
                   placeholder="مثال: پرسش شفاهی فصل ۲ یا حل تمرین صفحه ۴۵"
                   className="w-full text-xs p-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white"
-                  required
                 />
               </div>
 
@@ -264,7 +264,7 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
                 <button
                   type="button"
                   onClick={() => setIsConfigOpen(false)}
-                  className="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-colors"
+                  className="w-full min-h-11 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-colors"
                 >
                   تایید و بازگشت به لیست
                 </button>
@@ -281,11 +281,13 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
             <div className="relative flex-1 min-w-[140px] max-w-xs">
               <Search className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
+                id="grade-student-search"
                 type="text"
                 placeholder="جستجوی نام یا شماره..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-xs pr-8 pl-2 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-teal-500"
+                aria-label="جستجوی دانش‌آموز با نام یا شماره"
+                className="w-full min-h-11 text-xs pr-8 pl-2 py-1.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500"
               />
             </div>
 
@@ -294,24 +296,27 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
               <span className="text-[10px] text-slate-500 font-bold hidden xs:inline">ثبت سریع:</span>
               <button
                 type="button"
+                id="btn-grade-fill-max"
                 onClick={() => handleQuickFill(maxScore)}
-                className="px-2 py-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold transition-colors"
+                className="min-h-11 px-3 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold transition-colors"
                 title={`ثبت نمره ${toPersianDigits(maxScore)} برای تمام دانش‌آموزان`}
               >
                 همه {toPersianDigits(maxScore)}
               </button>
               <button
                 type="button"
+                id="btn-grade-fill-one-below"
                 onClick={() => handleQuickFill(Math.max(0, maxScore - 1))}
-                className="px-2 py-1 rounded-md bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-[11px] font-bold transition-colors"
+                className="min-h-11 px-3 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-[11px] font-bold transition-colors"
                 title={`ثبت نمره ${toPersianDigits(maxScore - 1)} برای تمام دانش‌آموزان`}
               >
                 همه {toPersianDigits(maxScore - 1)}
               </button>
               <button
                 type="button"
+                id="btn-grade-clear-values"
                 onClick={() => handleQuickFill(0)}
-                className="p-1 rounded-md bg-slate-200/80 hover:bg-slate-300 text-slate-600 transition-colors"
+                className="min-w-11 min-h-11 rounded-xl bg-slate-200/80 hover:bg-slate-300 text-slate-600 transition-colors flex items-center justify-center"
                 title="پاکسازی مقادیر"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -336,7 +341,8 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
               </div>
             ) : (
               filteredStudents.map((std, idx) => {
-                const currentScore = parseFloat(scores[std.id] || '0') || 0;
+                const parsedScore = parseGradeScore(scores[std.id] || '', maxScore);
+                const currentScore = parsedScore.ok ? parsedScore.value : -1;
                 const isPerfect = currentScore >= maxScore;
                 const hasNote = Boolean(notes[std.id]);
                 const isNoteOpen = showNoteForStudent[std.id] || hasNote;
@@ -344,6 +350,7 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
                 return (
                   <div
                     key={std.id}
+                    id={`grade-student-card-${std.id}`}
                     className="bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200 shadow-2xs hover:border-teal-300 transition-all space-y-2"
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -370,12 +377,14 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
                         {/* Note Toggle Button */}
                         <button
                           type="button"
+                          id={`btn-grade-note-${std.id}`}
                           onClick={() => toggleNoteInput(std.id)}
-                          className={`p-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                          className={`min-w-11 min-h-11 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center ${
                             hasNote
                               ? 'bg-amber-100 text-amber-800 border border-amber-300'
                               : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                           }`}
+                          aria-label={`یادداشت برای ${std.name}`}
                           title="افزودن یادداشت برای اولیا"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
@@ -384,8 +393,10 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
                         {/* Quick Minus / Plus Steppers */}
                         <button
                           type="button"
+                          id={`btn-grade-decrease-${std.id}`}
                           onClick={() => adjustScore(std.id, -0.5)}
-                          className="w-7 h-8 sm:w-8 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors active:scale-95"
+                          aria-label={`کاهش نیم نمره ${std.name}`}
+                          className="min-w-11 min-h-11 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors active:scale-95"
                           title="کاهش ۰.۵ نمره"
                         >
                           <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -394,26 +405,29 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
                         {/* Main Touch Score Input */}
                         <div className="relative">
                           <input
-                            type="number"
-                            step="0.25"
-                            min="0"
-                            max={maxScore}
+                            type="text"
+                            id={`grade-score-${std.id}`}
+                            inputMode="decimal"
+                            dir="ltr"
+                            aria-label={`نمره ${std.name} از ${toPersianDigits(maxScore)}`}
                             value={scores[std.id] || ''}
                             onChange={(e) => handleScoreChange(std.id, e.target.value)}
-                            className={`w-14 sm:w-16 h-8 sm:h-9 text-center font-mono font-bold text-sm sm:text-base rounded-xl border focus:outline-none focus:ring-2 transition-all ${
-                              isPerfect
+                            aria-invalid={!parsedScore.ok && Boolean(scores[std.id]?.trim())}
+                            className={`w-[4.25rem] min-h-11 text-center font-mono font-bold text-sm sm:text-base rounded-xl border focus:outline-none focus:ring-2 transition-all ${
+                              !parsedScore.ok && Boolean(scores[std.id]?.trim()) ? 'bg-rose-50 border-rose-400 text-rose-900' : !parsedScore.ok ? 'bg-white border-slate-300 text-slate-900' : isPerfect
                                 ? 'bg-emerald-50 text-emerald-900 border-emerald-400 focus:ring-emerald-500'
                                 : 'bg-teal-50/70 text-teal-900 border-teal-300 focus:ring-teal-500'
                             }`}
                             placeholder="۲۰"
-                            required
                           />
                         </div>
 
                         <button
                           type="button"
+                          id={`btn-grade-increase-${std.id}`}
                           onClick={() => adjustScore(std.id, 0.5)}
-                          className="w-7 h-8 sm:w-8 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors active:scale-95"
+                          aria-label={`افزایش نیم نمره ${std.name}`}
+                          className="min-w-11 min-h-11 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors active:scale-95"
                           title="افزایش ۰.۵ نمره"
                         >
                           <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -452,10 +466,11 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
             )}
           </div>
 
+          {formError && <p id="grade-entry-error" role="alert" className="mx-3 mt-2 px-3 py-2 rounded-xl bg-rose-50 text-rose-800 text-xs leading-6 shrink-0">{formError}</p>}
           {/* Compact Sticky Modal Footer */}
           <div className="px-3 py-2.5 sm:px-5 sm:py-3.5 bg-white border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
             <div className="text-[11px] sm:text-xs text-slate-500 hidden xs:block">
-              نمره <strong className="text-teal-800 font-bold">{toPersianDigits(gradedCount)}</strong> دانش‌آموز آماده ثبت است.
+              نمره معتبر <strong className="text-teal-800 font-bold">{toPersianDigits(gradedCount)}</strong> دانش‌آموز ثبت شده است.
             </div>
 
             <div className="flex items-center gap-2 w-full xs:w-auto justify-end">
@@ -472,7 +487,7 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
                 className="flex-1 xs:flex-initial px-4 sm:px-5 py-2 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors min-h-[44px]"
               >
                 <Save className="w-4 h-4" />
-                <span>ذخیره نمرات و ارسال به اولیا</span>
+                <span>ذخیره نمرات</span>
               </button>
             </div>
           </div>

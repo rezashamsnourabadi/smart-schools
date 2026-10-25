@@ -26,7 +26,8 @@ import {
   Activity,
   MessageSquare
 } from 'lucide-react';
-import { toPersianDigits } from '../utils/persianUtils';
+import { normalizeSchoolDate, toPersianDigits } from '../utils/persianUtils';
+import { dailyAbsences, schoolAttendance } from '../utils/attendance';
 import { Student } from '../types';
 import { CalendarRange, CreditCard } from 'lucide-react';
 
@@ -60,11 +61,12 @@ export const PrincipalDashboard: React.FC<Props> = ({
     classes,
     students,
     attendanceSessions,
+    schoolClock,
     announcements,
     setSelectedStudentForDossier,
     activeAcademicYear,
     activeTerm,
-    isViewingArchivedYear,
+    isViewingNonCurrentYear,
     returnToCurrentAcademicYear
   } = useApp();
 
@@ -75,23 +77,8 @@ export const PrincipalDashboard: React.FC<Props> = ({
     (s) => s.schoolId === currentSchool?.id && (s.status === 'active' || !s.status)
   );
 
-  // Today's attendance sessions for this school
-  const todaySessions = attendanceSessions.filter(
-    (s) => s.schoolId === currentSchool?.id && s.date === '۱۴۰۵/۰۶/۲۲'
-  );
-
-  // Collect absent records today
-  const absentRecords: { student: Student; session: (typeof attendanceSessions)[0]; note?: string }[] = [];
-  todaySessions.forEach((session) => {
-    session.records.forEach((rec) => {
-      if (rec.status === 'absent') {
-        const std = students.find((s) => s.id === rec.studentId);
-        if (std) {
-          absentRecords.push({ student: std, session, note: rec.note });
-        }
-      }
-    });
-  });
+  const todaySessions = attendanceSessions.filter((session) => session.schoolId === currentSchool?.id && normalizeSchoolDate(session.date) === schoolClock.date);
+  const absentRecords = dailyAbsences(schoolStudents, todaySessions, schoolClock.date);
 
   const handleStudentClick = (student: Student) => {
     if (onOpenStudentDossier) {
@@ -111,8 +98,8 @@ export const PrincipalDashboard: React.FC<Props> = ({
     else if (onOpenClassStudentModal) onOpenClassStudentModal();
   };
 
-  const totalRegistered = schoolStudents.length || 1;
-  const attendanceRate = Math.max(0, Math.round(((totalRegistered - absentRecords.length) / totalRegistered) * 100));
+  const dailySummary = schoolAttendance(schoolStudents, todaySessions, currentSchool?.id || '', schoolClock.date);
+  const attendanceRate = dailySummary.rate;
 
   return (
     <div className="space-y-4 sm:space-y-5" id="principal-dashboard-view">
@@ -151,7 +138,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
 
           <div className="flex items-center gap-2 text-xs bg-slate-50 p-2 rounded-2xl border border-slate-200 text-slate-600">
             <Calendar className="w-3.5 h-3.5 text-teal-600" />
-            <span>شنبه ۲۲ شهریور</span>
+            <span>{toPersianDigits(schoolClock.dateLabel)}</span>
             <span className="text-slate-300">|</span>
             <Clock className="w-3.5 h-3.5 text-teal-600" />
             <span className="font-bold text-slate-800">زنگ ۲ (۰۹:۳۰ - ۱۱:۰۰)</span>
@@ -162,20 +149,20 @@ export const PrincipalDashboard: React.FC<Props> = ({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
           <div className="p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-800">نرخ حضور امروز</span>
+              <span className="text-[11px] font-bold text-emerald-800">حضورِ ثبت‌شده امروز</span>
               <Activity className="w-4 h-4 text-emerald-600" />
             </div>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-mono font-black text-emerald-950">
-                {toPersianDigits(attendanceRate)}٪
+                {attendanceRate === undefined ? '—' : `${toPersianDigits(attendanceRate)}٪`}
               </span>
-              <span className="text-[10px] text-emerald-700 font-medium">مطلوب</span>
+              <span className="text-[10px] text-emerald-700 font-medium">{toPersianDigits(dailySummary.recordedCount)} ثبت روزانه</span>
             </div>
           </div>
 
           <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-rose-800">غایبین امروز</span>
+              <span className="text-[11px] font-bold text-rose-800">دارای غیبت امروز</span>
               <AlertTriangle className="w-4 h-4 text-rose-600" />
             </div>
             <div className="mt-1 flex items-baseline gap-1">
@@ -214,21 +201,21 @@ export const PrincipalDashboard: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Warning banner when viewing past archived academic year */}
-      {isViewingArchivedYear && (
+      {/* Warning banner when the selected year is not the live year */}
+      {isViewingNonCurrentYear && (
         <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs animate-in fade-in">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
             <div>
-              <span className="font-bold">حالت مرور سوابق: </span>
+              <span className="font-bold">نمای سال تحصیلی: </span>
               <span>
-                شما در حال حاضر سوابق سال تحصیلی بایگانی‌شده ({toPersianDigits(activeAcademicYear?.title || '')}) را مشاهده می‌کنید.
+                {toPersianDigits(activeAcademicYear?.title || '')} انتخاب شده است. داده‌های همه بخش‌ها هنوز به تفکیک سال ذخیره نمی‌شوند؛ این نما آرشیو کامل نیست و عملیات آموزشی و پرونده‌ای مسدود است.
               </span>
             </div>
           </div>
           <button
             onClick={returnToCurrentAcademicYear}
-            className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors shrink-0 self-end sm:self-auto shadow-2xs"
+            className="min-h-11 px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs transition-colors shrink-0 self-end sm:self-auto shadow-2xs"
           >
             بازگشت به سال تحصیلی جاری
           </button>
@@ -409,7 +396,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
               }`}
             >
               <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-              <span>غایبین امروز ({toPersianDigits(absentRecords.length)})</span>
+              <span>دارای غیبت امروز ({toPersianDigits(absentRecords.length)})</span>
             </button>
 
             <button
@@ -421,7 +408,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
               }`}
             >
               <DoorOpen className="w-3.5 h-3.5 text-teal-600" />
-              <span>کلاس‌های زنگ جاری ({toPersianDigits(todaySessions.length)})</span>
+              <span>جلسه‌های ثبت‌شده امروز ({toPersianDigits(todaySessions.length)})</span>
             </button>
 
             <button
@@ -447,7 +434,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
           <div className="p-4 sm:p-5 space-y-3">
             {absentRecords.length === 0 ? (
               <div className="text-center py-10 text-xs text-slate-400">
-                تا این لحظه غیبتی در کلاس‌های امروز ثبت نشده است. تمام دانش‌آموزان در کلاس‌ها حاضرند.
+                تا این لحظه غیبتی در جلسات ثبت‌شده امروز دیده نمی‌شود. وضعیت دانش‌آموزان بدون ثبت جلسه مشخص نیست.
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
@@ -478,7 +465,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
                     <div className="flex items-center gap-2 justify-end">
                       <span className="text-[10px] px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-medium flex items-center gap-1">
                         <MessageSquare className="w-3 h-3" />
-                        <span>ارسال خودکار به بله اولیا</span>
+                        <span>سابقه اعلان آزمایشی ثبت شده</span>
                       </span>
 
                       <button
@@ -524,7 +511,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
 
             {todaySessions.length === 0 && (
               <div className="text-center py-8 text-xs text-slate-400">
-                هنوز کلاسی در این زنگ ثبت جلسه نشده است.
+                هنوز جلسه‌ای برای امروز ثبت نشده است.
               </div>
             )}
           </div>
@@ -545,7 +532,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
                   </div>
                   <p className="text-slate-600 text-[11px] leading-relaxed line-clamp-2">{ann.content}</p>
                   <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60">
-                    <span>صادرکننده: {ann.sender}</span>
+                    <span>صادرکننده: {ann.senderName}</span>
                     <span>مخاطب: {ann.target === 'all' ? 'عمومی' : ann.target}</span>
                   </div>
                 </div>

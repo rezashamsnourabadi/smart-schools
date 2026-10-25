@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import {
   X,
   Calendar,
@@ -38,31 +39,35 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
   onClose,
   canEdit = true
 }) => {
-  const { schedule, classes, currentSchoolId, addScheduleSlot, deleteScheduleSlot } = useApp();
-  const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || 'cls-1');
+  const shouldReduceMotion = useReducedMotion();
+  const { schedule, classes, teachers, currentSchoolId, addScheduleSlot, deleteScheduleSlot } = useApp();
+  const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
 
   // Form states
   const [dayOfWeek, setDayOfWeek] = useState<'شنبه' | 'یکشنبه' | 'دوشنبه' | 'سه‌شنبه' | 'چهارشنبه'>('شنبه');
   const [period, setPeriod] = useState<number>(1);
   const [subject, setSubject] = useState<string>('');
-  const [teacherName, setTeacherName] = useState<string>('');
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
+  const [formError, setFormError] = useState<string | null>(null);
 
   const currentClass = classes.find((c) => c.id === selectedClassId) || classes[0];
   const classSchedule = schedule.filter((s) => s.classGroupId === selectedClassId);
+  const availableTeachers = teachers.filter((teacher) => teacher.schoolId === currentSchoolId && !!currentClass && teacher.assignedClassIds.includes(currentClass.id));
+  const selectedTeacher = availableTeachers.find((teacher) => teacher.id === selectedTeacherId);
 
   const handleAddSlot = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject.trim() || !teacherName.trim()) return;
+    if (!subject.trim() || !selectedTeacher) { setFormError('درس و دبیر مجاز برای این کلاس را انتخاب کنید.'); return; }
 
     const periodTime = PERIOD_TIMES.find((p) => p.period === period) || PERIOD_TIMES[0];
 
-    addScheduleSlot({
+    const result = addScheduleSlot({
       schoolId: currentSchoolId,
       classGroupId: selectedClassId,
       className: currentClass?.name || 'کلاس درس',
-      teacherId: `t-${Date.now()}`,
-      teacherName,
+      teacherId: selectedTeacher.id,
+      teacherName: selectedTeacher.name,
       subject,
       dayOfWeek,
       period,
@@ -70,15 +75,25 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
       endTime: periodTime.endTime,
       isCurrentPeriod: false
     });
+    if (!result?.ok) { setFormError(result?.error || 'برنامه ثبت نشد؛ دسترسی یا سال تحصیلی را بررسی کنید.'); return; }
 
     setSubject('');
-    setTeacherName('');
+    setSelectedTeacherId('');
+    setFormError(null);
     setShowAddForm(false);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto w-full max-w-full">
-      <div 
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto w-full max-w-full"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
         className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl m-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -95,7 +110,7 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
             title="بستن"
             aria-label="بستن پنجره"
           >
@@ -111,7 +126,7 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
               <button
                 key={cls.id}
                 onClick={() => setSelectedClassId(cls.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                className={`min-h-11 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
                   selectedClassId === cls.id
                     ? 'bg-teal-700 text-white shadow-xs font-bold'
                     : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'
@@ -142,7 +157,7 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
                 <label className="block text-xs text-slate-700 mb-1 font-medium">روز هفته:</label>
                 <select
                   value={dayOfWeek}
-                  onChange={(e) => setDayOfWeek(e.target.value as any)}
+                  onChange={(e) => setDayOfWeek(e.target.value as typeof dayOfWeek)}
                   className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
                 >
                   {DAYS_OF_WEEK.map((d) => (
@@ -178,17 +193,22 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs text-slate-700 mb-1 font-medium">نام دبیر:</label>
-                <input
-                  type="text"
-                  placeholder="مثال: استاد کاظمی"
-                  value={teacherName}
-                  onChange={(e) => setTeacherName(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
+                <label className="block text-xs text-slate-700 mb-1 font-medium">دبیر انتساب‌یافته:</label>
+                <select
+                  aria-label="انتخاب دبیر کلاس"
+                  value={selectedTeacherId}
+                  onChange={(e) => { setSelectedTeacherId(e.target.value); setFormError(null); }}
+                  className="w-full min-h-11 text-xs p-2 bg-white border border-slate-300 rounded-lg"
                   required
-                />
+                >
+                  <option value="">انتخاب دبیر</option>
+                  {availableTeachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
+                </select>
               </div>
             </div>
+
+            {!availableTeachers.length && <p role="status" className="text-xs text-amber-800">برای این کلاس دبیری انتساب داده نشده است. ابتدا انتساب کلاس دبیر را در مدیریت کادر انجام دهید.</p>}
+            {formError && <p role="alert" className="text-xs text-rose-800">{formError}</p>}
 
             <div className="flex justify-end gap-2">
               <button
@@ -200,7 +220,8 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium shadow-2xs"
+                  disabled={!availableTeachers.length}
+                  className="min-h-11 px-4 py-1.5 text-xs bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 text-white rounded-lg font-medium shadow-2xs"
               >
                 ذخیره در برنامه
               </button>
@@ -280,12 +301,12 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
           <span>کلاس جاری: <strong>{currentClass?.name}</strong> • اتاق: {currentClass?.room}</span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-medium"
+            className="min-h-[44px] px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-medium"
           >
             بستن
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

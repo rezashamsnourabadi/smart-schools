@@ -94,7 +94,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
     canManageSchedule: true,
     canManageStudentsAndClasses: true,
     canViewFullDossier: true,
-    canLogDisciplinary: true
+    canLogDisciplinary: true,
+    canManageFinances: false
   });
 
   // Form States for Teacher
@@ -139,6 +140,11 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
       key: 'canLogDisciplinary',
       title: 'ثبت موارد انضباطی و تشویقی‌ها',
       desc: 'درج تشویقی، تذکر و اطلاع‌رسانی خودکار به اولیا از طریق بله و پیامک'
+    },
+    {
+      key: 'canManageFinances',
+      title: 'مدیریت امور مالی و شهریه',
+      desc: 'تعرفه‌ها، اسناد پرداخت، تخفیف و یادآوری بدهی'
     }
   ];
 
@@ -162,7 +168,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
       canManageSchedule: true,
       canManageStudentsAndClasses: true,
       canViewFullDossier: true,
-      canLogDisciplinary: true
+      canLogDisciplinary: true,
+      canManageFinances: false
     });
     setShowAddVPModal(true);
   };

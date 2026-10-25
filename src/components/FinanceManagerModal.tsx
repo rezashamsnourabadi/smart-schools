@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   X,
   CreditCard,
@@ -38,7 +39,7 @@ import {
   PaymentTransaction
 } from '../types';
 import { toPersianDigits, formatPersianCurrency } from '../utils/persianUtils';
-import { createInitialStudentFinancialSummary } from '../data/mockFinanceData';
+import { readFinancialSummary } from '../utils/financialLedger';
 
 interface FinanceManagerModalProps {
   isOpen: boolean;
@@ -51,8 +52,10 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
   onClose,
   initialTab = 'debtors'
 }) => {
+  const shouldReduceMotion = useReducedMotion();
   const {
     currentSchool,
+    currentSchoolId,
     students,
     classes,
     feeItems,
@@ -66,10 +69,13 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
     applyStudentDiscount,
     setSelectedStudentForDossier,
     activeAcademicYear,
-    currentRole
+    currentRole,
+    activeToast
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'debtors' | 'fees' | 'transactions' | 'reports'>(initialTab);
+  const [actionError, setActionError] = useState('');
+  const [feeTargetClassId, setFeeTargetClassId] = useState('');
 
   // Filter & Search states for Debtors Tab
   const [searchQuery, setSearchQuery] = useState('');
@@ -106,7 +112,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
       .filter((s) => s.status !== 'graduated' && s.status !== 'transferred')
       .map((s) => ({
         student: s,
-        summary: s.financialSummary || createInitialStudentFinancialSummary(s.id, s.name, s.grade, 'normal_partial')
+        ...readFinancialSummary(s.financialSummary)
       }));
   }, [students]);
 
@@ -120,7 +126,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
     let overdueCount = 0;
     let settledCount = 0;
 
-    studentListWithSummary.forEach(({ summary }) => {
+    studentListWithSummary.forEach(({ summary, error }) => {
+      if (error) return;
       totalBilled += summary.totalBilled;
       totalPaid += summary.totalPaid;
       totalDiscount += summary.totalDiscount;
@@ -193,14 +200,15 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
     return list.sort((a, b) => b.transaction.id.localeCompare(a.transaction.id));
   }, [studentListWithSummary]);
 
-  if (!isOpen) return null;
-
   // Actions
   const handleCreateFeeItem = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeAcademicYear) return;
     if (!newFeeTitle.trim() || newFeeAmount <= 0) return;
 
-    addFeeItem({
+    const result = addFeeItem({
+      schoolId: currentSchoolId,
+      academicYearId: activeAcademicYear.id,
       title: newFeeTitle,
       category: newFeeCategory,
       amount: newFeeAmount,
@@ -209,7 +217,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
       isMandatory: newFeeMandatory,
       description: newFeeDescription
     });
-
+    if (!result.ok) { setActionError(result.error); return; }
+    setActionError('');
     setNewFeeTitle('');
     setNewFeeDescription('');
     setIsNewFeeModalOpen(false);
@@ -219,8 +228,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
     if (student) {
       setSelectedStudentForAction(student);
       setPayStudentId(student.id);
-      const sSummary = student.financialSummary || createInitialStudentFinancialSummary(student.id, student.name, student.grade, 'normal_partial');
-      setPayAmount(Math.min(sSummary.remainingDebt, 5000000) || 5000000);
+      const sSummary = readFinancialSummary(student.financialSummary).summary;
+      setPayAmount(Math.min(sSummary.remainingDebt, 5000000));
     } else if (students.length > 0) {
       setPayStudentId(students[0].id);
       setPayAmount(5000000);
@@ -234,7 +243,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
     const targetStudent = students.find((s) => s.id === payStudentId);
     if (!targetStudent || payAmount <= 0) return;
 
-    recordStudentPayment({
+    const result = recordStudentPayment({
       studentId: targetStudent.id,
       studentName: targetStudent.name,
       schoolId: targetStudent.schoolId,
@@ -246,7 +255,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
       recordedBy: currentRole === 'principal' ? 'مدیر آموزشگاه' : 'معاون مالی/اجرایی',
       status: 'confirmed'
     });
-
+    if (!result.ok) { setActionError(result.error); return; }
+    setActionError('');
     setIsRecordPaymentModalOpen(false);
     setPayNote('');
   };
@@ -260,12 +270,25 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-3 overflow-y-auto w-full max-w-full" dir="rtl">
-      <div
+    <AnimatePresence>
+    {isOpen && <motion.div
+      key="finance-modal-overlay"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
+      className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-3 overflow-y-auto w-full max-w-full"
+      dir="rtl"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
         className="bg-slate-50 w-full max-w-5xl rounded-none sm:rounded-3xl shadow-2xl m-auto h-full sm:h-auto sm:max-h-[96vh] max-h-screen flex flex-col overflow-hidden border border-slate-200"
         id="finance-manager-modal"
         onClick={(e) => e.stopPropagation()}
       >
+        {activeToast?.type === 'warning' && <p role="alert" className="p-3 shrink-0 bg-rose-50 text-rose-800 text-sm">{activeToast.message}</p>}
+        {studentListWithSummary.some((item) => item.error) && <p role="alert" className="p-3 shrink-0 bg-amber-50 text-amber-900 text-sm">برخی پرونده‌ها ناسازگاری مالی دارند و در جمع آمار منظور نشده‌اند؛ اسناد آن‌ها برای بررسی محفوظ است.</p>}
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 text-white p-3.5 sm:p-5 shrink-0 relative">
           <button
@@ -461,7 +484,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     {/* Financial Status Filter */}
                     <select
                       value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value as any)}
+                      onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
                       className="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50/50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                     >
                       <option value="all">همه وضعیت‌ها</option>
@@ -479,10 +502,10 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     type="button"
                     id="btn-batch-remind"
                     onClick={() => setIsBatchReminderModalOpen(true)}
-                    className="w-full sm:w-auto min-h-[40px] px-3.5 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full sm:w-auto min-h-[44px] px-3.5 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
-                    ارسال پیامک و بله به معوقات ({toPersianDigits(stats.overdueCount)})
+                    ثبت سابقه یادآوری آزمایشی ({toPersianDigits(stats.overdueCount)})
                   </button>
                 )}
               </div>
@@ -563,7 +586,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                               مانده بدهی
                             </span>
                             <span className={`font-mono font-black block mt-0.5 truncate ${isSettled ? 'text-emerald-700' : 'text-rose-700'}`}>
-                              {isSettled ? '۰ ریال' : formatPersianCurrency(summary.remainingDebt)}
+                              {isSettled ? '۰ تومان' : formatPersianCurrency(summary.remainingDebt)}
                             </span>
                           </div>
                         </div>
@@ -693,8 +716,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                                     <button
                                       type="button"
                                       onClick={() => sendPaymentReminder(student.id)}
-                                      title="ارسال یادآوری بله و پیامک"
-                                      className="p-1.5 bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-lg transition-colors cursor-pointer"
+                                      title="ثبت سابقه یادآوری آزمایشی"
+                                      className="min-h-[44px] min-w-[44px] p-1.5 bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-lg transition-colors cursor-pointer"
                                     >
                                       <Send className="w-4 h-4" />
                                     </button>
@@ -742,6 +765,13 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 </button>
               </div>
 
+              <label className="block text-xs font-bold text-slate-700 space-y-1">
+                <span>کلاس مقصد برای تعرفه‌های انتخابی</span>
+                <select value={feeTargetClassId} onChange={(event) => setFeeTargetClassId(event.target.value)} className="w-full min-h-11 p-2 border border-slate-300 rounded-xl bg-white">
+                  <option value="">انتخاب کلاس</option>
+                  {classes.map((cls) => <option key={cls.id} value={cls.id}>{cls.name}</option>)}
+                </select>
+              </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {feeItems.map((fee) => (
                   <div
@@ -753,7 +783,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                         <div>
                           <span className="text-xs font-bold text-slate-800 block">{fee.title}</span>
                           <span className="text-[11px] text-slate-400 mt-0.5 block">
-                            دسته: {fee.category === 'tuition' ? 'شهریه پایه' : fee.category === 'service' ? 'سرویس ایاب و ذهاب' : fee.category === 'extracurricular' ? 'فوق برنامه' : fee.category === 'nutrition' ? 'تغذیه' : fee.category === 'books' ? 'کتاب و اقلام' : 'سایر خدمات'}
+                            دسته: {fee.category === 'tuition' ? 'شهریه پایه' : fee.category === 'transportation' ? 'سرویس ایاب و ذهاب' : fee.category === 'extracurricular' ? 'فوق برنامه' : fee.category === 'catering' ? 'تغذیه' : fee.category === 'registration_insurance' ? 'کتاب و اقلام' : 'سایر خدمات'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
@@ -783,7 +813,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => assignFeeItemToStudents(fee.id, fee.targetScope)}
+                          onClick={() => assignFeeItemToStudents(fee.id, fee.targetScope, fee.targetScope === 'selective' ? feeTargetClassId || undefined : undefined)}
                           className="min-h-[36px] px-3 py-1.5 bg-teal-50 text-teal-800 hover:bg-teal-100 active:bg-teal-200 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-teal-200/60"
                         >
                           تخصیص به دانش‌آموزان
@@ -811,7 +841,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 <div>
                   <h3 className="font-bold text-slate-800 text-sm">دفتر کل اسناد مالی و فیش‌های بانکی</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    فهرست کلیه تراکنش‌های کارتخوان، کارت به کارت، درگاه آنلاین و چک‌های صیادی
+                    فهرست اسناد محلی کارتخوان، کارت‌به‌کارت، پرداخت آنلاین نمایشی و چک
                   </p>
                 </div>
                 <button
@@ -880,8 +910,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                               ? 'کارت به کارت'
                               : txn.method === 'cheque'
                               ? 'چک صیادی'
-                              : txn.method === 'online_gateway'
-                              ? 'درگاه پرداخت'
+                              : txn.method === 'online'
+                              ? 'آنلاین نمایشی'
                               : 'فیش نقدی'}
                           </span>
                         </div>
@@ -899,11 +929,12 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                         </div>
                       </div>
 
-                      {txn.status === 'pending_verification' && (
+                      {txn.status !== 'rejected' && (
                         <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
                           <button
                             type="button"
                             onClick={() => updatePaymentTransactionStatus(student.id, txn.id, 'confirmed')}
+                            disabled={txn.status === 'confirmed'}
                             className="min-h-[40px] px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                           >
                             <Check className="w-4 h-4" />
@@ -915,7 +946,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                             className="min-h-[40px] px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-rose-200"
                           >
                             <X className="w-4 h-4" />
-                            عدم تایید
+                            {txn.status === 'confirmed' ? 'لغو تأیید سند' : 'عدم تأیید'}
                           </button>
                         </div>
                       )}
@@ -966,8 +997,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                                   ? 'کارت به کارت'
                                   : txn.method === 'cheque'
                                   ? 'چک صیادی'
-                                  : txn.method === 'online_gateway'
-                                  ? 'درگاه پرداخت'
+                                  : txn.method === 'online'
+                                  ? 'آنلاین نمایشی'
                                   : 'فیش نقدی'}
                               </span>
                             </td>
@@ -994,11 +1025,12 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                               )}
                             </td>
                             <td className="py-3 px-4 text-center">
-                              {txn.status === 'pending_verification' && (
+                              {txn.status !== 'rejected' && (
                                 <div className="flex items-center justify-center gap-1">
                                   <button
                                     type="button"
                                     onClick={() => updatePaymentTransactionStatus(student.id, txn.id, 'confirmed')}
+                                    disabled={txn.status === 'confirmed'}
                                     className="p-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
                                     title="تایید واریزی"
                                   >
@@ -1008,7 +1040,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                                     type="button"
                                     onClick={() => updatePaymentTransactionStatus(student.id, txn.id, 'rejected')}
                                     className="p-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
-                                    title="عدم تایید"
+                                    title={txn.status === 'confirmed' ? 'لغو تأیید سند' : 'عدم تأیید'}
                                   >
                                     <X className="w-3.5 h-3.5" />
                                   </button>
@@ -1037,7 +1069,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     className="min-h-[38px] px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto"
                   >
                     <Printer className="w-4 h-4" />
-                    چاپ تراز مالی
+                    چاپ صفحه گزارش از مرورگر
                   </button>
                 </div>
 
@@ -1087,7 +1119,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
             </div>
           )}
         </div>
-      </div>
+        </motion.div>
 
       {/* Modal: New Fee Item */}
       {isNewFeeModalOpen && (
@@ -1108,6 +1140,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
             </div>
 
             <form onSubmit={handleCreateFeeItem} className="space-y-4">
+              {actionError && <p role="alert" className="text-sm text-rose-800">{actionError}</p>}
+              {!activeAcademicYear && <p role="status" className="text-sm text-amber-800">ابتدا سال تحصیلی این مدرسه را در مدیریت سال تحصیلی تعریف کنید.</p>}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   عنوان سرفصل مالی
@@ -1133,22 +1167,24 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   >
                     <option value="tuition">شهریه مصوب / ثبت‌نام</option>
-                    <option value="service">سرویس ایاب و ذهاب</option>
+                    <option value="transportation">سرویس ایاب و ذهاب</option>
                     <option value="extracurricular">کلاس‌های فوق‌برنامه و کارگاه</option>
-                    <option value="nutrition">تغذیه و میان‌وعده</option>
-                    <option value="insurance">بیمه حوادث دانش‌آموزی</option>
-                    <option value="books">کتاب و بسته‌های آموزشی</option>
-                    <option value="other">سایر خدمات آموزشی</option>
+                    <option value="catering">تغذیه و میان‌وعده</option>
+                    <option value="registration_insurance">حق‌الثبت، بیمه و کتب</option>
+                    <option value="uniform_supplies">لباس فرم و لوازم کمک‌آموزشی</option>
+                    <option value="camp_event">اردو و رویداد</option>
+                    <option value="custom">سایر خدمات آموزشی</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    مبلغ تعرفه (ریال)
+                    مبلغ تعرفه (تومان)
                   </label>
                   <input
                     type="number"
-                    step="1000000"
+                    step="1"
+                  min="1"
                     value={newFeeAmount}
                     onChange={(e) => setNewFeeAmount(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono text-left focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
@@ -1168,7 +1204,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   </label>
                   <select
                     value={newFeeScope}
-                    onChange={(e) => setNewFeeScope(e.target.value as any)}
+                    onChange={(e) => setNewFeeScope(e.target.value as typeof newFeeScope)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   >
                     <option value="all">کلیه دانش‌آموزان آموزشگاه</option>
@@ -1222,13 +1258,14 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsNewFeeModalOpen(false)}
-                  className="min-h-[40px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="min-h-[44px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
-                  className="min-h-[40px] px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  disabled={!activeAcademicYear}
+                  className="min-h-[44px] px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
                   افزودن و تخصیص سرفصل
                 </button>
@@ -1257,6 +1294,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
             </div>
 
             <form onSubmit={handleSubmitPayment} className="space-y-4">
+              {actionError && <p role="alert" className="text-sm text-rose-800">{actionError}</p>}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   انتخاب دانش‌آموز
@@ -1267,8 +1305,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     setPayStudentId(e.target.value);
                     const st = students.find((s) => s.id === e.target.value);
                     if (st) {
-                      const sum = st.financialSummary || createInitialStudentFinancialSummary(st.id, st.name, st.grade, 'normal_partial');
-                      setPayAmount(Math.min(sum.remainingDebt, 5000000) || 5000000);
+                      const sum = readFinancialSummary(st.financialSummary).summary;
+                      setPayAmount(Math.min(sum.remainingDebt, 5000000));
                     }
                   }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
@@ -1284,11 +1322,12 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  مبلغ واریزی (ریال)
+                  مبلغ واریزی (تومان)
                 </label>
                 <input
                   type="number"
-                  step="1000000"
+                  step="1"
+                  min="1"
                   value={payAmount}
                   onChange={(e) => setPayAmount(Number(e.target.value))}
                   className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-mono text-left focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
@@ -1311,9 +1350,9 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   >
                     <option value="pos">کارتخوان آموزشگاه</option>
                     <option value="card_to_card">کارت به کارت</option>
-                    <option value="online_gateway">درگاه آنلاین</option>
+                    <option value="online">پرداخت آنلاین نمایشی</option>
                     <option value="cheque">چک صیادی</option>
-                    <option value="cash_deposit">فیش واریز نقدی</option>
+                    <option value="bank_receipt">فیش واریز نقدی</option>
                   </select>
                 </div>
 
@@ -1360,15 +1399,15 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsRecordPaymentModalOpen(false)}
-                  className="min-h-[40px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="min-h-[44px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="submit"
-                  className="min-h-[40px] px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  className="min-h-[44px] px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
-                  ثبت پرداخت و ارسال اعلان بله
+                  ثبت پرداخت در نمونه محلی
                 </button>
               </div>
             </form>
@@ -1383,12 +1422,12 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2 text-rose-600">
                 <Send className="w-5 h-5" />
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base">ارسال پیامک و بله گروهی</h3>
+                <h3 className="font-bold text-slate-800 text-sm sm:text-base">ثبت یادآوری آزمایشی گروهی</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsBatchReminderModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                className="min-h-[44px] min-w-[44px] text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 ✕
               </button>
@@ -1396,34 +1435,35 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 
             <div className="space-y-4">
               <p className="text-xs text-slate-600 leading-relaxed">
-                آیا از ارسال خودکار پیام یادآوری تسویه حساب برای کلیه اولیای دانش‌آموزان دارای قسط معوقه (مجموعاً {toPersianDigits(stats.overdueCount)} نفر) اطمینان دارید؟
+                برای {toPersianDigits(stats.overdueCount)} پرونده معوق، سابقه یادآوری آزمایشی ثبت شود؟ هیچ پیام واقعی ارسال نمی‌شود.
               </p>
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-                پیام‌ها همزمان از طریق پیام‌رسان بله و سامانه پیامک ملی آموزش و پرورش با سرشماره رسمی آموزشگاه ارسال خواهند شد.
+                این نسخه فقط رکورد محلی اعلان را ثبت می‌کند؛ اتصال پیام‌رسان بله یا سرویس پیامک فعال نیست.
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsBatchReminderModalOpen(false)}
-                  className="min-h-[40px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="min-h-[44px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   انصراف
                 </button>
                 <button
                   type="button"
                   onClick={handleBatchReminders}
-                  className="min-h-[40px] px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="min-h-[44px] px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
-                  ارسال به همه بدهکاران
+                  ثبت سابقه آزمایشی برای همه
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </motion.div>}
+    </AnimatePresence>
   );
 };

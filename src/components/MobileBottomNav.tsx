@@ -40,7 +40,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavActionProps> = ({
   onOpenProfile,
   onOpenDossier
 }) => {
-  const { currentRole } = useApp();
+  const { currentRole, canManageSchool } = useApp();
 
   const handleScrollTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -53,10 +53,12 @@ export const MobileBottomNav: React.FC<MobileBottomNavActionProps> = ({
       case 'vice_principal':
         return [
           { id: 'home', label: 'میز کار', icon: Home, onClick: handleScrollTop },
-          { id: 'students', label: 'دانش‌آموزان', icon: Users, onClick: onOpenStudents },
-          { id: 'classes', label: 'کلاس‌بندی', icon: Building2, onClick: onOpenClasses },
-          { id: 'schedule', label: 'برنامه هفتگی', icon: Calendar, onClick: onOpenSchedule },
-          { id: 'posts', label: 'اخبار و رویداد', icon: Bell, onClick: onOpenPosts },
+          ...(canManageSchool('canManageStudentsAndClasses') ? [
+            { id: 'students', label: 'دانش‌آموزان', icon: Users, onClick: onOpenStudents },
+            { id: 'classes', label: 'کلاس‌بندی', icon: Building2, onClick: onOpenClasses }
+          ] : []),
+          ...(canManageSchool('canManageSchedule') ? [{ id: 'schedule', label: 'برنامه هفتگی', icon: Calendar, onClick: onOpenSchedule }] : []),
+          ...(canManageSchool('canManageAnnouncements') ? [{ id: 'posts', label: 'اخبار و رویداد', icon: Bell, onClick: onOpenPosts }] : []),
           { id: 'profile', label: 'پروفایل', icon: UserCheck, onClick: onOpenProfile }
         ];
       case 'teacher':
@@ -107,7 +109,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavActionProps> = ({
             id={`nav-item-${item.id}`}
             onClick={item.onClick}
             type="button"
-            className="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-slate-600 hover:text-teal-700 active:bg-teal-50/70 transition-all min-h-[42px] landscape:min-h-[36px]"
+            className="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl text-slate-600 hover:text-teal-700 active:bg-teal-50/70 transition-all min-h-11"
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-100/80 flex items-center justify-center text-slate-700 hover:text-teal-700 hover:bg-teal-100/50 transition-colors">
               <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />

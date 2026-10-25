@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   CreditCard,
   CheckCircle2,
@@ -18,7 +19,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { Student, PaymentMethod } from '../types';
 import { toPersianDigits, formatPersianCurrency } from '../utils/persianUtils';
-import { createInitialStudentFinancialSummary } from '../data/mockFinanceData';
+import { readFinancialSummary } from '../utils/financialLedger';
 
 interface ParentPaymentModalProps {
   isOpen: boolean;
@@ -33,14 +34,10 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
   student,
   preselectedInstallmentId
 }) => {
+  const shouldReduceMotion = useReducedMotion();
   const { currentSchool, currentUser, recordStudentPayment } = useApp();
 
-  const summary = student.financialSummary || createInitialStudentFinancialSummary(
-    student.id,
-    student.name,
-    student.grade,
-    'normal_partial'
-  );
+  const { summary, error: financialError } = readFinancialSummary(student.financialSummary);
 
   const [activeStep, setActiveStep] = useState<'details' | 'gateway' | 'receipt'>('details');
   const [selectedFee, setSelectedFee] = useState<string>('قسط شهریه مصوب آموزشگاه');
@@ -49,20 +46,20 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
       const inst = summary.installments.find((i) => i.id === preselectedInstallmentId);
       if (inst) return Math.max(0, inst.amount - inst.paidAmount);
     }
-    return Math.min(summary.remainingDebt, 5000000) || 5000000;
+    return Math.min(summary.remainingDebt, 5000000);
   });
-  const [payMethod, setPayMethod] = useState<PaymentMethod>('online_gateway');
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('online');
   const [receiptNumber, setReceiptNumber] = useState<string>(() => Math.floor(10000000 + Math.random() * 90000000).toString());
   const [parentNote, setParentNote] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-
-  if (!isOpen) return null;
+  const [paymentError, setPaymentError] = useState('');
+  const [receiptStatus, setReceiptStatus] = useState<'confirmed' | 'pending_verification'>('pending_verification');
 
   const handleStartPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (payAmount <= 0) return;
+    if (financialError) { setPaymentError(financialError); return; }
 
-    if (payMethod === 'online_gateway') {
+    if (payMethod === 'online') {
       setActiveStep('gateway');
     } else {
       // Offline receipt submission (card-to-card or bank deposit)
@@ -71,29 +68,43 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
   };
 
   const finalizePayment = () => {
+    if (isProcessing || financialError) return;
     setIsProcessing(true);
-    setTimeout(() => {
-      const generatedTracking = receiptNumber || Math.floor(10000000 + Math.random() * 90000000).toString();
-      recordStudentPayment({
-        studentId: student.id,
-        studentName: student.name,
-        schoolId: student.schoolId,
-        amount: payAmount,
-        trackingCode: generatedTracking,
-        method: payMethod,
-        feeTitle: selectedFee,
-        note: parentNote || `پرداخت توسط ولی دانش‌آموز (${currentUser.name})`,
-        recordedBy: `ولی دانش‌آموز (${currentUser.name})`,
-        status: 'confirmed'
-      });
-      setIsProcessing(false);
-      setActiveStep('receipt');
-    }, 1000);
+    const generatedTracking = receiptNumber.trim();
+    const status = payMethod === 'online' ? 'confirmed' : 'pending_verification';
+    const result = recordStudentPayment({
+      studentId: student.id,
+      studentName: student.name,
+      schoolId: student.schoolId,
+      amount: payAmount,
+      trackingCode: generatedTracking,
+      method: payMethod,
+      feeTitle: selectedFee,
+      note: parentNote || `پرداخت توسط ولی دانش‌آموز (${currentUser.name})`,
+      recordedBy: `ولی دانش‌آموز (${currentUser.name})`,
+      status
+    });
+    setIsProcessing(false);
+    if (!result.ok) { setPaymentError(result.error); return; }
+    setPaymentError('');
+    setReceiptStatus(status);
+    setActiveStep('receipt');
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto" dir="rtl">
-      <div
+    <AnimatePresence>
+    {isOpen && <motion.div
+      key="parent-payment-overlay"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto"
+      dir="rtl"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
         className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -101,7 +112,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
         <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-teal-800 text-white p-4 sm:p-6 shrink-0 relative">
           <button
             onClick={onClose}
-            className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
+            className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 min-h-[44px] min-w-[44px] flex items-center justify-center p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
             title="بستن"
           >
             <X className="w-5 h-5" />
@@ -112,7 +123,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
             </div>
             <div className="pe-8 sm:pe-0">
               <h2 className="text-sm sm:text-lg font-bold text-white">
-                درگاه پرداخت شهریه و خدمات مدرسه
+                ثبت رسید و پرداخت آزمایشی شهریه
               </h2>
               <p className="text-teal-100 text-[11px] sm:text-xs mt-0.5">
                 دانش‌آموز: <strong>{student.name}</strong> • آموزشگاه: {currentSchool?.name || 'مدرسه هوشمند'}
@@ -123,8 +134,10 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 sm:space-y-5">
+          {(paymentError || financialError) && <p role="alert" className="p-3 bg-rose-50 text-rose-800 rounded-xl text-sm">{paymentError || financialError}</p>}
           {activeStep === 'details' && (
             <form onSubmit={handleStartPayment} className="space-y-4">
+              <p className="text-xs text-slate-600">پرداخت به ترتیب سررسید اقساط محاسبه می‌شود. مبلغ‌ها بر حسب تومان هستند.</p>
               {/* Financial Snapshot */}
               <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
@@ -189,12 +202,14 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
               {/* Amount Input */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  مبلغ واریزی (ریال)
+                  مبلغ واریزی (تومان)
                 </label>
                 <div className="relative">
                   <input
                     type="number"
-                    step="500000"
+                    step="1"
+                    min="1"
+                    max={summary.remainingDebt}
                     value={payAmount}
                     onChange={(e) => setPayAmount(Number(e.target.value))}
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-mono text-left focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
@@ -225,7 +240,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <label
                     className={`p-3 rounded-2xl border flex items-center gap-2.5 cursor-pointer transition-all ${
-                      payMethod === 'online_gateway'
+                      payMethod === 'online'
                         ? 'border-emerald-600 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-500/20'
                         : 'border-slate-200 hover:border-slate-300 bg-white'
                     }`}
@@ -233,14 +248,14 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                     <input
                       type="radio"
                       name="payment_method"
-                      value="online_gateway"
-                      checked={payMethod === 'online_gateway'}
-                      onChange={() => setPayMethod('online_gateway')}
+                      value="online"
+                      checked={payMethod === 'online'}
+                      onChange={() => { setPayMethod('online'); setReceiptNumber(Math.floor(10000000 + Math.random() * 90000000).toString()); }}
                       className="text-emerald-600 focus:ring-emerald-500"
                     />
                     <div>
-                      <div className="text-xs font-bold">درگاه شتابی آنلاین</div>
-                      <div className="text-[10px] text-slate-500">کارت کلیه بانک‌ها شاپرک</div>
+                      <div className="text-xs font-bold">پرداخت آنلاین نمایشی</div>
+                      <div className="text-[10px] text-slate-500">شبیه‌سازی ثبت پرداخت</div>
                     </div>
                   </label>
 
@@ -256,7 +271,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                       name="payment_method"
                       value="card_to_card"
                       checked={payMethod === 'card_to_card'}
-                      onChange={() => setPayMethod('card_to_card')}
+                      onChange={() => { setPayMethod('card_to_card'); setReceiptNumber(''); }}
                       className="text-emerald-600 focus:ring-emerald-500"
                     />
                     <div>
@@ -267,7 +282,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
 
                   <label
                     className={`p-3 rounded-2xl border flex items-center gap-2.5 cursor-pointer transition-all ${
-                      payMethod === 'cash_deposit'
+                      payMethod === 'bank_receipt'
                         ? 'border-emerald-600 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-500/20'
                         : 'border-slate-200 hover:border-slate-300 bg-white'
                     }`}
@@ -275,9 +290,9 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                     <input
                       type="radio"
                       name="payment_method"
-                      value="cash_deposit"
-                      checked={payMethod === 'cash_deposit'}
-                      onChange={() => setPayMethod('cash_deposit')}
+                      value="bank_receipt"
+                      checked={payMethod === 'bank_receipt'}
+                      onChange={() => { setPayMethod('bank_receipt'); setReceiptNumber(''); }}
                       className="text-emerald-600 focus:ring-emerald-500"
                     />
                     <div>
@@ -288,10 +303,10 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                 </div>
               </div>
 
-              {payMethod !== 'online_gateway' && (
+              {payMethod !== 'online' && (
                 <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
                   <div className="text-xs font-bold text-slate-800">
-                    شماره حساب و کارت آموزشگاه:
+                    شماره حساب و کارت نمایشی آموزشگاه:
                   </div>
                   <div className="p-2.5 bg-white rounded-xl border border-slate-200 font-mono text-xs text-slate-800 flex justify-between items-center">
                     <span>شماره کارت آموزشگاه:</span>
@@ -337,11 +352,12 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                 <button
                   type="submit"
                   id="btn-parent-submit-payment"
+                  disabled={!!financialError || isProcessing || summary.remainingDebt <= 0}
                   className="min-h-[44px] px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Lock className="w-4 h-4" />
                   <span>
-                    {payMethod === 'online_gateway' ? 'اتصال به درگاه امن شاپرک' : 'ثبت قطعی پرداخت فیش'}
+                    {payMethod === 'online' ? 'ادامه پرداخت آزمایشی' : 'ثبت رسید برای بررسی مدرسه'}
                   </span>
                 </button>
               </div>
@@ -355,8 +371,8 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-6 h-6 text-emerald-400" />
                   <div>
-                    <div className="text-xs font-bold">سامانه درگاه پرداخت الکترونیکی (شاپرک)</div>
-                    <div className="text-[10px] text-slate-400">اتصال امن SSL ۲۵۶ بیتی</div>
+                    <div className="text-xs font-bold">شبیه‌ساز پرداخت شهریه</div>
+                    <div className="text-[10px] text-slate-400">ثبت آزمایشی سند در نسخه نمایشی</div>
                   </div>
                 </div>
                 <div className="text-left font-mono text-sm text-emerald-400 font-bold">
@@ -385,7 +401,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
 
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2">
                 <Smartphone className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>رمز یکبار مصرف پویا (OTP) به شماره همراه ولی ارسال و آماده تایید است.</span>
+                <span>این مرحله شبیه‌سازی تأیید پرداخت است.</span>
               </div>
 
               <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-slate-200">
@@ -407,12 +423,12 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                   {isProcessing ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>در حال تراکنش بانکی...</span>
+                      <span>در حال ثبت سند...</span>
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>تایید و پرداخت {formatPersianCurrency(payAmount)}</span>
+                      <span>ثبت پرداخت آزمایشی {formatPersianCurrency(payAmount)}</span>
                     </>
                   )}
                 </button>
@@ -427,9 +443,9 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-black text-slate-900">پرداخت با موفقیت انجام شد</h3>
+                <h3 className="text-base sm:text-lg font-black text-slate-900">{receiptStatus === 'confirmed' ? 'پرداخت آزمایشی ثبت شد' : 'رسید برای بررسی ثبت شد'}</h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  سند مالی ثبت و رسید الکترونیکی در پیام‌رسان بله و پیامک برای شما ارسال شد.
+                  {receiptStatus === 'confirmed' ? 'سند آزمایشی در پرونده مالی ثبت شد.' : 'رسید پس از تأیید مدرسه در مبلغ پرداختی محاسبه می‌شود.'}
                 </p>
               </div>
 
@@ -450,7 +466,7 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                   <span className="text-slate-500">وضعیت سند:</span>
                   <span className="font-bold text-emerald-700 flex items-center gap-1">
                     <FileCheck2 className="w-3.5 h-3.5" />
-                    تایید شده و ثبت در پرونده مالی
+                    {receiptStatus === 'confirmed' ? 'تأیید آزمایشی' : 'در انتظار بررسی مدرسه'}
                   </span>
                 </div>
               </div>
@@ -468,7 +484,8 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>}
+    </AnimatePresence>
   );
 };

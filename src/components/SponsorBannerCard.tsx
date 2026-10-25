@@ -14,7 +14,7 @@ export const SponsorBannerCard: React.FC<Props> = ({
   const { banners, clickBanner } = useApp();
 
   const activeBanners = banners.filter(
-    (b) => b.isActive && (b.targetAudience.includes('all') || b.targetAudience.includes(audienceFilter as any))
+    (b) => b.isActive && (b.targetAudience.includes('all') || b.targetAudience.includes(audienceFilter))
   );
 
   if (activeBanners.length === 0) return null;

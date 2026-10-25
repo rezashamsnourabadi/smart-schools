@@ -5,6 +5,30 @@
 const PERSIAN_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 const ARABIC_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
 
+export function getSchoolDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US-u-ca-persian', { timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || '';
+  return `${part('year')}/${part('month')}/${part('day')}`;
+}
+
+export interface SchoolClock { date: string; time: string; dayOfWeek: string; dateLabel: string; minuteOfDay: number }
+
+export function getSchoolClock(now = new Date()): SchoolClock {
+  const time = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tehran', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
+  const [hour, minute] = time.split(':').map(Number);
+  return {
+    date: getSchoolDate(now), time, minuteOfDay: hour * 60 + minute,
+    dayOfWeek: new Intl.DateTimeFormat('fa-IR', { timeZone: 'Asia/Tehran', weekday: 'long' }).format(now),
+    dateLabel: new Intl.DateTimeFormat('fa-IR', { timeZone: 'Asia/Tehran', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(now)
+  };
+}
+
+export function normalizeSchoolDate(value: string): string | undefined {
+  const match = toEnglishDigits(value).trim().match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (!match || +match[2] < 1 || +match[2] > 12 || +match[3] < 1 || +match[3] > 31) return undefined;
+  return `${match[1]}/${match[2].padStart(2, '0')}/${match[3].padStart(2, '0')}`;
+}
+
 export function toPersianDigits(val: string | number | null | undefined): string {
   if (val === null || val === undefined) return '';
   const str = String(val);
@@ -15,10 +39,10 @@ export function toPersianDigits(val: string | number | null | undefined): string
 
 export function formatPersianScore(score: number | string | undefined | null): string {
   if (score === undefined || score === null) return '—';
-  const num = typeof score === 'number' ? score : parseFloat(score);
+  const normalized = toEnglishDigits(score).trim().replace('٫', '.');
+  const num = normalized ? Number(normalized) : Number.NaN;
   if (isNaN(num)) return toPersianDigits(score);
-  // If integer or formatted to 1 decimal place
-  const formatted = num % 1 === 0 ? num.toString() : num.toFixed(1);
+  const formatted = Number(num.toFixed(2)).toString();
   return toPersianDigits(formatted);
 }
 

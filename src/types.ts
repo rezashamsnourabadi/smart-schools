@@ -25,6 +25,7 @@ export interface School {
   classesCount: number;
   todayAttendanceSubmitted: boolean;
   attendanceRateToday: number;
+  attendanceRecordedCount?: number;
   accentColor: string;
 }
 
@@ -68,6 +69,7 @@ export interface UserProfile {
   teachingSubjects?: string[];
   assignedClassIds?: string[];
   studentClassId?: string;
+  studentId?: string;
   childStudentId?: string;
 }
 
@@ -96,9 +98,9 @@ export interface PastYearAcademicHistory {
   year: string;
   grade: string;
   schoolName: string;
-  gpa: number;
-  disciplineScore: number;
-  status: 'قبول با رتبه ممتاز' | 'قبول خرداد';
+  gpa?: number;
+  disciplineScore?: number;
+  status: 'قبول با رتبه ممتاز' | 'قبول خرداد' | 'دارای تجدید' | 'نیازمند بررسی' | 'انتقال پرونده تحصیلی به مدرسه جدید' | 'نتیجه ثبت نشده';
 }
 
 export interface DisciplinaryRecord {
@@ -139,7 +141,8 @@ export interface Student {
   todayStatus?: 'present' | 'absent' | 'late' | 'excused';
   
   // Enrollment and Alumni Status
-  status?: 'active' | 'graduated' | 'transferred';
+  status?: 'active' | 'graduated' | 'transferred' | 'pending_class_assignment';
+  pendingClassGrade?: string;
   graduationDetails?: {
     year: string; // e.g. ۱۴۰۴
     university?: string; // e.g. دانشگاه صنعتی شریف
@@ -155,6 +158,9 @@ export interface Student {
 
   // Comprehensive Dossier History
   attendanceStats: AttendanceStats;
+  attendanceStatsSource?: 'sessions';
+  legacyAttendanceStats?: AttendanceStats;
+  attendanceAcademicYearId?: string;
   disciplinaryRecords: DisciplinaryRecord[];
   reportCards: ReportCard[];
   pastYearHistory: PastYearAcademicHistory[];
@@ -186,6 +192,11 @@ export interface ScheduleSlot {
   isCurrentPeriod?: boolean;
 }
 
+export interface ScheduleActionResult {
+  ok: boolean;
+  error?: string;
+}
+
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
 export interface AttendanceEntry {
@@ -207,7 +218,15 @@ export interface AttendanceSession {
   submittedAt: string;
   records: AttendanceEntry[];
   sentNotificationsCount: number;
+  scheduleSlotId?: string;
+  academicYearId?: string;
+  recordedBy?: string;
+  updatedAt?: string;
+  revision?: number;
+  previousVersions?: Array<Omit<AttendanceSession, 'previousVersions'>>;
 }
+
+export type AttendanceActionResult = { ok: true; changed: boolean; notificationsSent: number } | { ok: false; error: string };
 
 export type GradeCategory = 'continuous' | 'term1' | 'term2' | 'quiz';
 
@@ -223,6 +242,8 @@ export interface GradeItem {
   maxScore: number;
   scores: { studentId: string; score: number; note?: string }[];
 }
+
+export type GradeActionResult = { ok: true } | { ok: false; error: string };
 
 export interface HomeworkAttachment {
   name: string;
@@ -288,6 +309,7 @@ export interface OnlineExam {
 
 export interface QuestionBankItem {
   id: string;
+  schoolId?: string;
   title: string;
   content: string;
   subject: string;
@@ -347,14 +369,31 @@ export interface Announcement {
 
 export interface NotificationLog {
   id: string;
+  schoolId?: string;
+  studentId?: string;
   studentName: string;
   recipientName: string;
   recipientPhone: string;
   platform: 'بله' | 'ایتا' | 'پیامک';
-  status: 'sent' | 'delivered';
+  status: 'simulated' | 'sent' | 'delivered';
   message: string;
   timestamp: string;
   schoolName: string;
+  type?: 'general' | 'attendance_absent' | 'attendance_late' | 'attendance_correction' | 'payment' | 'reminder';
+  attendanceSessionId?: string;
+  attendanceRevision?: number;
+}
+
+export interface NotificationInput {
+  studentId?: string;
+  studentName: string;
+  recipientName: string;
+  recipientPhone: string;
+  message: string;
+  platform: 'bale' | 'sms';
+  type?: NotificationLog['type'];
+  attendanceSessionId?: string;
+  attendanceRevision?: number;
 }
 
 export type AcademicTermId = 'term1' | 'term2' | 'summer';
@@ -371,6 +410,7 @@ export type AcademicYearStatus = 'active' | 'archived' | 'planned';
 
 export interface AcademicYear {
   id: string; // e.g. 'ay-1403-1404', 'ay-1404-1405', 'ay-1405-1406'
+  schoolId?: string; // Legacy years from the original demo belong to school-1.
   title: string; // e.g. '۱۴۰۴-۱۴۰۵'
   startDate: string; // '۱۴۰۴/۰۷/۰۱'
   endDate: string; // '۱۴۰۵/۰۶/۳۱'
@@ -391,6 +431,16 @@ export interface YearRolloverOptions {
   resetAttendanceLogs: boolean; // شروع دوره حضور و غیاب نو
 }
 
+export interface YearRolloverResult {
+  ok: boolean;
+  error?: string;
+  promoted?: number;
+  graduated?: number;
+  pendingClassAssignment?: number;
+  archivedReportCards?: number;
+  notEligible?: number;
+}
+
 // -------------------------------------------------------------
 // School Financial & Student Accounting Types
 // -------------------------------------------------------------
@@ -407,7 +457,8 @@ export type FeeCategory =
 
 export type PaymentMethod = 
   | 'pos'                     // کارت‌خوان مدرسه (POS)
-  | 'bank_receipt'            // فیش واریزی / پایا / ساتنا / کارت به کارت
+  | 'card_to_card'            // کارت به کارت
+  | 'bank_receipt'            // فیش واریزی / پایا / ساتنا
   | 'cheque'                  // چک بانکی صیادی
   | 'online'                  // درگاه پرداخت اینترنتی
   | 'cash';                   // پرداخت نقدی در دفتر مدرسه
@@ -446,6 +497,7 @@ export interface PaymentInstallment {
   id: string;
   title: string;              // e.g. 'قسط اول (هنگام ثبت‌نام)'
   amount: number;
+  originalAmount?: number;    // Original schedule amount before a discount adjustment.
   dueDate: string;            // تاریخ سررسید
   paidAmount: number;
   status: 'paid' | 'partially_paid' | 'pending' | 'overdue';
@@ -475,7 +527,30 @@ export interface PaymentTransaction {
   feeTitle?: string;
   recordedBy: string;         // 'مدیر آموزشگاه' | 'معاون اجرایی' | 'ثبت فیش توسط اولیا'
   status: 'confirmed' | 'pending_verification' | 'rejected';
+  isSimulated?: boolean;
 }
+
+export interface StudentDiscountRecord {
+  id: string;
+  feeItemId: string;
+  amount: number;
+  reason: string;
+  recordedBy: string;
+  date: string;
+}
+
+export interface FinancialAuditEntry {
+  id: string;
+  action: 'payment_recorded' | 'payment_status_changed' | 'discount_applied' | 'fee_assigned';
+  referenceId: string;
+  recordedBy: string;
+  date: string;
+  previousTotals: Pick<StudentFinancialSummary, 'totalBilled' | 'totalDiscount' | 'totalPaid' | 'remainingDebt'>;
+  previousStatus?: PaymentTransaction['status'];
+  nextStatus?: PaymentTransaction['status'];
+}
+
+export type FinancialActionResult = { ok: true } | { ok: false; error: string };
 
 export interface StudentFinancialSummary {
   totalBilled: number;        // مجموع صورتحساب مصوب
@@ -486,6 +561,8 @@ export interface StudentFinancialSummary {
   assignedFees: StudentFeeAssignment[];
   installments: PaymentInstallment[];
   transactions: PaymentTransaction[];
+  discounts?: StudentDiscountRecord[];
+  audit?: FinancialAuditEntry[];
 }
 
 

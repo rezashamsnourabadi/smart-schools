@@ -148,13 +148,13 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/30">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>پنل عالی مدیریت کل پلتفرم مدارس شهرستان</span>
+              <span>پیش‌نمایش مدیر پلتفرم • داده نمونه محلی</span>
             </div>
             <h1 className="text-2xl font-black tracking-tight">
-              قطب نظارت و هاب متمرکز مدارس منطقه
+              نمای منطقه‌ای مدارس نمونه
             </h1>
             <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-              کنترل یکپارچه مدارس، تایید بنرهای حامیان و اطلاعیه‌های فرهنگی منطقه، و نظارت بر بانک سوالات سراسری
+              داده‌ها و اعلان‌های این پنل نمونه‌اند و به مدرسه‌ها یا کاربران واقعی متصل نیستند.
             </p>
           </div>
 
@@ -269,7 +269,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
           }`}
         >
           <Megaphone className="w-4 h-4" />
-          <span>بخشنامه‌ها و اعلانات سراسری</span>
+          <span>بخشنامه‌های نمونه</span>
         </button>
       </div>
 
@@ -450,7 +450,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                   <label className="block font-semibold text-slate-700 mb-1">مخاطبان هدف</label>
                   <select
                     value={ancTarget}
-                    onChange={(e) => setAncTarget(e.target.value as any)}
+                    onChange={(e) => setAncTarget(e.target.value as typeof ancTarget)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white"
                   >
                     <option value="all">کلیه کاربران (معلمان، اولیا، دانش‌آموزان)</option>
@@ -479,7 +479,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                   className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition-all shadow-xs flex items-center gap-2"
                 >
                   <Send className="w-4 h-4" />
-                  <span>انتشار سراسری در داشبورد مدارس</span>
+                  <span>ثبت در داشبوردهای نمونه</span>
                 </button>
               </div>
             </form>
@@ -555,7 +555,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                   <label className="block font-semibold text-slate-700 mb-1">مقطع / نوع مدرسه</label>
                   <select
                     value={schType}
-                    onChange={(e) => setSchType(e.target.value as any)}
+                    onChange={(e) => setSchType(e.target.value as SchoolType)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white"
                   >
                     <option value="دبیرستان دوره دوم">دبیرستان دوره دوم</option>
@@ -700,7 +700,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                   <label className="block font-semibold text-slate-700 mb-1">مخاطب نمایش</label>
                   <select
                     value={adAudience}
-                    onChange={(e) => setAdAudience(e.target.value as any)}
+                    onChange={(e) => setAdAudience(e.target.value as typeof adAudience)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white"
                   >
                     <option value="all">همه کاربران پلتفرم</option>

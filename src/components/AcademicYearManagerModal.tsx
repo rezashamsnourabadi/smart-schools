@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import {
   CalendarRange,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits } from '../utils/persianUtils';
 import { AcademicTermId, AcademicYear } from '../types';
+import { isFinalYearRecordPublished } from '../utils/academicYear';
 
 interface Props {
   isOpen: boolean;
@@ -28,11 +30,13 @@ interface Props {
 }
 
 export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) => {
+  const shouldReduceMotion = useReducedMotion();
   const {
     academicYears,
     activeAcademicYearId,
     activeAcademicYear,
     activeTerm,
+    isViewingNonCurrentYear,
     setActiveAcademicYearId,
     setActiveTermId,
     addAcademicYear,
@@ -71,24 +75,24 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
   const [createEndDate, setCreateEndDate] = useState('۱۴۰۶/۰۶/۳۱');
   const [createDesc, setCreateDesc] = useState('');
 
-  if (!isOpen) return null;
-
   // School-specific active students stats
   const activeStudents = students.filter(
     (s) => s.schoolId === currentSchool?.id && (s.status === 'active' || !s.status)
   );
-  const tenthGradersCount = activeStudents.filter((s) => s.grade.includes('دهم') || s.grade.includes('10')).length;
-  const eleventhGradersCount = activeStudents.filter((s) => s.grade.includes('یازدهم') || s.grade.includes('11')).length;
-  const twelfthGradersCount = activeStudents.filter((s) => s.grade.includes('دوازدهم') || s.grade.includes('12')).length;
+  const eligibleStudents = activeStudents.filter((student) => isFinalYearRecordPublished(student, currentTitle));
+  const tenthGradersCount = eligibleStudents.filter((s) => s.grade.includes('دهم') || s.grade.includes('10')).length;
+  const eleventhGradersCount = eligibleStudents.filter((s) => s.grade.includes('یازدهم') || s.grade.includes('11')).length;
+  const twelfthGradersCount = eligibleStudents.filter((s) => s.grade.includes('دوازدهم') || s.grade.includes('12')).length;
 
   const handleExecuteRollover = () => {
-    rolloverAcademicYear({
+    const result = rolloverAcademicYear({
       newYearTitle: newYearTitle.trim() || getNextYearDefault(),
       promoteStudents,
       graduateTwelfthGraders,
       archiveCurrentGrades,
       resetAttendanceLogs
     });
+    if (!result.ok) return;
     setIsConfirmingRollover(false);
     setActiveTab('overview');
   };
@@ -120,10 +124,20 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto w-full max-w-full">
-      <div
+    <AnimatePresence>
+    {isOpen && <motion.div
+      key="academic-year-modal-overlay"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
+      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto w-full max-w-full"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
         id="academic-year-manager-modal"
-        className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150 m-auto"
+        className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[92vh] m-auto"
       >
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-teal-50/70 via-white to-slate-50">
@@ -148,7 +162,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors"
+            className="min-h-[44px] min-w-[44px] rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors"
             title="بستن پنجره"
           >
             <X className="w-5 h-5" />
@@ -196,6 +210,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
 
         {/* Tab Content Body */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+          {!activeAcademicYear && <p role="status" className="text-sm text-amber-800">سال تحصیلی برای این مدرسه تعریف نشده است. از بخش تعریف سال تحصیلی آینده شروع کنید.</p>}
           {/* TAB 1: OVERVIEW & TERMS */}
           {activeTab === 'overview' && (
             <div className="space-y-5 animate-in fade-in">
@@ -362,9 +377,17 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                 <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-xs leading-relaxed">
                   <div className="font-bold text-sm mb-0.5">فرآیند سال‌بندی و انتقال به سال تحصیلی جدید</div>
-                  این فرآیند سال تحصیلی جاری ({toPersianDigits(currentTitle)}) را به عنوان آرشیو ذخیره کرده و سال تحصیلی جدید را رسماً آغاز می‌کند. گزینه‌های زیر به شما اجازه می‌دهند ارتقای پایه‌ها و بایگانی نمرات را با یک کلیک انجام دهید.
+                  سال فعال ({toPersianDigits(currentTitle)}) به پایان می‌رسد. ارتقا یا فراغت فقط برای دانش‌آموز دارای کارنامه نوبت دوم منتشرشده، نمره‌های معتبر و نتیجه قبول ثبت می‌شود. نبود کلاس مقصد، دانش‌آموز را در فهرست «نیازمند کلاس‌بندی» می‌گذارد.
                 </div>
               </div>
+              <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs leading-relaxed">
+                فهرست جزئیات سال‌ها در این نسخه تفکیک کامل ندارد؛ اجرای این عملیات به معنی آرشیو کامل کارنامه، حضور و مالی نیست. در نمای سال‌های غیرجاری، عملیات آموزشی و پرونده‌ای فقط‌خواندنی‌اند.
+              </div>
+              {isViewingNonCurrentYear && (
+                <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-bold">
+                  برای اجرای سال‌بندی، ابتدا سال فعال مدرسه را از فهرست سال‌ها انتخاب کنید.
+                </div>
+              )}
 
               {/* Step 1: Next Year Title */}
               <div className="space-y-1.5">
@@ -401,11 +424,11 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                     <div className="font-bold text-slate-900 flex items-center justify-between">
                       <span>ارتقای خودکار پایه دانش‌آموزان در حال تحصیل</span>
                       <span className="text-[11px] font-mono text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
-                        {toPersianDigits(tenthGradersCount + eleventhGradersCount)} دانش‌آموز
+                        {toPersianDigits(tenthGradersCount + eleventhGradersCount)} واجد شرایط
                       </span>
                     </div>
                     <div className="text-slate-500">
-                      دانش‌آموزان پایه دهم به یازدهم و دانش‌آموزان یازدهم به پایه دوازدهم ارتقا می‌یابند.
+                      فقط دانش‌آموزان پایه دهم و یازدهم با کارنامه نهایی منتشرشده و نتیجه قبول ارتقا می‌یابند.
                     </div>
                   </div>
                 </label>
@@ -422,11 +445,11 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                     <div className="font-bold text-slate-900 flex items-center justify-between">
                       <span>انتقال دانش‌آموزان پایه دوازدهم به فهرست فارغ‌التحصیلان</span>
                       <span className="text-[11px] font-mono text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                        {toPersianDigits(twelfthGradersCount)} فارغ‌التحصیل
+                        {toPersianDigits(twelfthGradersCount)} واجد شرایط
                       </span>
                     </div>
                     <div className="text-slate-500">
-                      دانش‌آموزان دوازدهم با حفظ کامل کارنامه نهایی و سوابق در بخش فارغ‌التحصیلان مدرسه ثبت می‌شوند.
+                      فقط دانش‌آموزان دوازدهم با کارنامه نهایی منتشرشده و نتیجه قبول به فهرست فارغ‌التحصیلان منتقل می‌شوند.
                     </div>
                   </div>
                 </label>
@@ -441,13 +464,13 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                   />
                   <div className="text-xs space-y-0.5 flex-1">
                     <div className="font-bold text-slate-900 flex items-center justify-between">
-                      <span>انجماد و ذخیره معدل سال جاری در کارپوشه سوابق تحصیلی دانش‌آموزان</span>
+                      <span>ثبت خلاصه کارنامه موجود در سابقه تحصیلی</span>
                       <span className="text-[11px] font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        آرشیو دائمی
+                        فقط داده موجود
                       </span>
                     </div>
                     <div className="text-slate-500">
-                      معدل، رتبه و کارنامه‌های سال جاری در بخش سوابق سال‌های پیشین پرونده هر دانش‌آموز ثبت می‌شود.
+                      خلاصه‌ای از کارنامه همان سال ثبت می‌شود؛ برای نبود کارنامه، معدل یا نتیجه ساخته نمی‌شود.
                     </div>
                   </div>
                 </label>
@@ -465,7 +488,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                       آغاز دوره حضور و غیاب جدید (ریست شمارنده‌های روزانه)
                     </div>
                     <div className="text-slate-500">
-                      جلسات حضور و غیاب برای سال جدید با شمارنده‌های صفر آغاز شده و سابقه سال گذشته در پرونده‌ها محفوظ می‌ماند.
+                      شمارنده پرونده صفر می‌شود؛ جلسه‌های ثبت‌شده در داده خام حذف نمی‌شوند و با سال تحصیلی مرتبط باقی می‌مانند.
                     </div>
                   </div>
                 </label>
@@ -476,7 +499,8 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                 {!isConfirmingRollover ? (
                   <button
                     onClick={() => setIsConfirmingRollover(true)}
-                    className="w-full py-3 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                    disabled={isViewingNonCurrentYear}
+                    className="min-h-11 w-full py-3 rounded-2xl bg-teal-700 hover:bg-teal-800 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>آغاز سال تحصیلی جدید ({toPersianDigits(newYearTitle)})</span>
@@ -570,7 +594,8 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
             </form>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>}
+    </AnimatePresence>
   );
 };

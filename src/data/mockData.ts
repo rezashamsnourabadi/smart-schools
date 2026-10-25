@@ -115,13 +115,13 @@ export const INITIAL_TEACHERS: TeacherProfile[] = [
     roleTitle: 'دبیر رسمی'
   },
   {
-    id: 'teacher-4',
-    name: 'استاد رضا حسینی',
-    phone: '۰۹۱۲-۳۳۳-۹۹۰۰',
+    id: 'user-t1',
+    name: 'استاد مسعود کاظمی',
+    phone: '۰۹۱۸-۴۴۴-۳۰۳۳',
     avatarBg: 'bg-amber-600',
     schoolId: 'school-1',
-    teachingSubjects: ['ریاضی', 'حسابان'],
-    assignedClassIds: ['cls-1'],
+    teachingSubjects: ['ریاضی ۱', 'حسابان', 'هندسه تحلیلی'],
+    assignedClassIds: ['cls-1', 'cls-2'],
     roleTitle: 'دبیر رسمی'
   }
 ];
@@ -215,7 +215,8 @@ export const INITIAL_USERS: Record<string, UserProfile> = {
     schoolId: 'school-1',
     phone: '۰۹۱۸-۵۵۵-۴۰۴۴',
     avatarBg: 'bg-cyan-600',
-    studentClassId: 'cls-1'
+    studentClassId: 'cls-1',
+    studentId: 'std-1'
   },
   parent: {
     id: 'user-par1',
@@ -1096,7 +1097,7 @@ export const INITIAL_NOTIFICATIONS: NotificationLog[] = [
     recipientName: 'صادق قاسمی (ولی دانش‌آموز)',
     recipientPhone: '۰۹۱۸۲۲۲۳۳۴۴',
     platform: 'بله',
-    status: 'delivered',
+    status: 'simulated',
     message: 'سلام جناب آقای صادق قاسمی؛ فرزند شما پارسا قاسمی در زنگ اول (درس ریاضی ۱) مورخ ۱۴۰۵/۰۶/۲۲ غیبت ثبت شده است. جهت پیگیری با دبیرستان امام صادق (ع) تماس حاصل فرمایید.',
     timestamp: '۰۸:۰۵:۱۰',
     schoolName: 'دبیرستان نمونه دولتی امام صادق (ع)'
@@ -1107,7 +1108,7 @@ export const INITIAL_NOTIFICATIONS: NotificationLog[] = [
     recipientName: 'عباس کریمی (ولی دانش‌آموز)',
     recipientPhone: '۰۹۱۸۴۴۴۵۵۶۶',
     platform: 'پیامک',
-    status: 'sent',
+    status: 'simulated',
     message: 'ولی محترم دانش‌آموز دانیال کریمی، تاخیر ۱۰ دقیقه‌ای در ورود به کلاس درس در ساعت ۰۸:۱۰ ثبت شد.',
     timestamp: '۰۸:۰۵:۱۵',
     schoolName: 'دبیرستان نمونه دولتی امام صادق (ع)'

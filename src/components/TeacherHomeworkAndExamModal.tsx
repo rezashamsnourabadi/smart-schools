@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import {
   X,
   BookOpen,
@@ -21,12 +22,14 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { toPersianDigits } from '../utils/persianUtils';
+import { MAX_LOCAL_ATTACHMENT_BYTES, MAX_LOCAL_ATTACHMENT_LABEL } from '../utils/localAttachments';
 
 interface TeacherHomeworkAndExamModalProps {
   onClose: () => void;
 }
 
 export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalProps> = ({ onClose }) => {
+  const shouldReduceMotion = useReducedMotion();
   const {
     classes,
     homework,
@@ -46,7 +49,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
   const [gradingDrafts, setGradingDrafts] = useState<Record<string, { score: number; feedback: string }>>({});
 
   // Homework form states
-  const [hwClassId, setHwClassId] = useState(classes[0]?.id || 'cls-1');
+  const [hwClassId, setHwClassId] = useState(classes[0]?.id || '');
   const [hwSubject, setHwSubject] = useState('ریاضی ۱');
   const [hwTitle, setHwTitle] = useState('');
   const [hwDesc, setHwDesc] = useState('');
@@ -57,10 +60,17 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
     url: string;
     type: 'image' | 'pdf' | 'doc';
   } | null>(null);
+  const [hwAttachmentError, setHwAttachmentError] = useState('');
 
   const handleHwFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > MAX_LOCAL_ATTACHMENT_BYTES) {
+      setHwAttachmentError(`اندازه فایل باید حداکثر ${MAX_LOCAL_ATTACHMENT_LABEL} باشد.`);
+      e.currentTarget.value = '';
+      return;
+    }
 
     const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
     const isImg = file.type.startsWith('image/');
@@ -68,6 +78,11 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
 
     const reader = new FileReader();
     reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        setHwAttachmentError('خواندن فایل ممکن نشد. دوباره تلاش کنید.');
+        return;
+      }
+      setHwAttachmentError('');
       setHwUploadedFile({
         name: file.name,
         size: `${toPersianDigits(sizeInMb)} مگابایت`,
@@ -75,17 +90,17 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
         type: isImg ? 'image' : isPdf ? 'pdf' : 'doc'
       });
     };
+    reader.onerror = () => setHwAttachmentError('خواندن فایل ممکن نشد. دوباره تلاش کنید.');
     reader.readAsDataURL(file);
   };
 
   // Exam form states
-  const [exClassId, setExClassId] = useState(classes[0]?.id || 'cls-1');
+  const [exClassId, setExClassId] = useState(classes[0]?.id || '');
   const [exSubject, setExSubject] = useState('ریاضی ۱');
   const [exTitle, setExTitle] = useState('');
   const [exDate, setExDate] = useState('۱۴۰۵/۰۶/۳۰');
   const [exTime, setExTime] = useState('۱۰:۰۰');
   const [exDuration, setExDuration] = useState(45);
-  const [exQuestionsCount, setExQuestionsCount] = useState(10);
 
   const handleSaveGrade = (submissionId: string) => {
     const draft = gradingDrafts[submissionId];
@@ -107,7 +122,9 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
       title: hwTitle,
       description: hwDesc,
       dueDate: hwDueDate,
-      createdAt: '۱۴۰۵/۰۶/۲۲',
+      assignedDate: new Intl.DateTimeFormat('fa-IR', { timeZone: 'Asia/Tehran' }).format(new Date()),
+      teacherId: currentUser.id,
+      status: 'active',
       teacherName: currentUser.name,
       totalStudents: targetClass?.studentCount || 30,
       attachments: hwUploadedFile ? [hwUploadedFile] : undefined
@@ -135,18 +152,9 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
       examDate: exDate,
       startTime: exTime,
       teacherName: currentUser.name,
-      questionsCount: exQuestionsCount,
-      isPublished: true,
+      totalScore: 0,
       status: 'scheduled',
-      questions: [
-        {
-          id: 'q1',
-          text: 'ریشه‌های معادله درجه دوم داده شده کدام گزینه است؟',
-          options: ['x = 2 و x = -3', 'x = 1 و x = 4', 'x = -1 و x = -2', 'معادله فاقد ریشه حقیقی است'],
-          correctOptionIndex: 0,
-          score: 2
-        }
-      ]
+      questions: []
     });
 
     setExTitle('');
@@ -154,8 +162,16 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto w-full max-w-full">
-      <div 
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto w-full max-w-full"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
         className="bg-white w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl m-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -172,7 +188,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
             title="بستن"
             aria-label="بستن پنجره"
           >
@@ -221,7 +237,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
               className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-medium flex items-center gap-1 shadow-xs transition-colors"
             >
               <Plus className="w-4 h-4" />
-              طراحی آزمون
+              برنامه‌ریزی آزمون
             </button>
           )}
         </div>
@@ -307,7 +323,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
                   >
                     <UploadCloud className="w-4 h-4 text-slate-400" />
                     <span className="text-xs text-slate-600 font-medium">
-                      کلیک برای پیوست کاربرگ PDF یا تصویر تمرین‌ها
+                      فایل تا {MAX_LOCAL_ATTACHMENT_LABEL} (ذخیره محلی مرورگر)
                     </span>
                   </label>
                 ) : (
@@ -336,6 +352,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
                     </button>
                   </div>
                 )}
+                {hwAttachmentError && <p role="alert" className="mt-2 text-xs font-medium text-rose-700">{hwAttachmentError}</p>}
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -666,7 +683,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
                   </div>
                   <div className="flex items-center gap-1">
                     <FileQuestion className="w-3.5 h-3.5 text-slate-400" />
-                    <span>تعداد سوالات: <strong>{toPersianDigits(exam.questionsCount)} سوال</strong></span>
+                    <span>تعداد سؤال ثبت‌شده: <strong>{toPersianDigits(exam.questions.length)}</strong></span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Users className="w-3.5 h-3.5 text-slate-400" />
@@ -676,9 +693,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
 
                 <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
                   <span>طراح آزمون: <strong>{exam.teacherName}</strong></span>
-                  <button className="text-xs text-teal-700 font-bold hover:underline">
-                    مشاهده سوالات و پاسخنامه
-                  </button>
+                  <span className="text-[11px] text-amber-800">موتور افزودن سؤال و شرکت آنلاین فعال نیست.</span>
                 </div>
               </div>
             ))
@@ -689,12 +704,12 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
         <div className="p-3.5 bg-white border-t border-slate-200 flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold"
+            className="min-h-[44px] px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold"
           >
             بستن
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

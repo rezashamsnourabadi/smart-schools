@@ -22,8 +22,9 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Student, DisciplinaryRecord } from '../types';
-import { toPersianDigits, formatPersianScore } from '../utils/persianUtils';
+import { toPersianDigits, formatPersianScore, normalizeSchoolDate } from '../utils/persianUtils';
 import { StudentFinancialTab } from './StudentFinancialTab';
+import { attendanceLabel } from '../utils/attendance';
 
 interface StudentDossierModalProps {
   student: Student;
@@ -40,8 +41,9 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   canManageDiscipline = true,
   initialTab = 'profile'
 }) => {
-  const { classes, updateParentContact, addDisciplinaryRecord, currentUser } = useApp();
-  const [activeTab, setActiveTab] = useState<'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances'>(initialTab);
+  const { classes, grades, updateParentContact, addDisciplinaryRecord, currentUser, currentRole, canManageSchool, attendanceSessions, schoolClock } = useApp();
+  const canViewFinances = currentRole === 'parent' || currentRole === 'student' || canManageSchool('canManageFinances');
+  const [activeTab, setActiveTab] = useState<'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances'>(initialTab === 'finances' && !canViewFinances ? 'profile' : initialTab);
   
   // Edit contact state
   const [isEditingContact, setIsEditingContact] = useState(false);
@@ -75,7 +77,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
       type: newDiscType,
       title: newDiscTitle,
       note: newDiscNote,
-      date: '۱۴۰۵/۰۶/۲۲',
+      date: schoolClock.date,
       recordedBy: currentUser.name
     });
     setNewDiscTitle('');
@@ -83,8 +85,17 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
     setShowAddDiscipline(false);
   };
 
+  const attendanceHistory = attendanceSessions.flatMap((session) => {
+    const row = session.records.find((item) => item.studentId === student.id);
+    return row ? [{ session, row }] : [];
+  }).sort((a, b) => (normalizeSchoolDate(b.session.date) || '').localeCompare(normalizeSchoolDate(a.session.date) || '') || b.session.period - a.session.period);
+
   const activeTerm1Card = student.reportCards?.find((r) => r.term === 'term1');
   const activeTerm2Card = student.reportCards?.find((r) => r.term === 'term2');
+  const studentGradebookItems = grades
+    .filter((item) => item.classGroupId === student.classGroupId && item.scores.some((score) => score.studentId === student.id))
+    .slice()
+    .sort((a, b) => (normalizeSchoolDate(b.date) || '').localeCompare(normalizeSchoolDate(a.date) || ''));
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-3 overflow-y-auto w-full max-w-full">
@@ -182,7 +193,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
               <GraduationCap className="w-3.5 h-3.5" />
               سوابق سال‌های گذشته
             </button>
-            <button
+            {canViewFinances && <button
               onClick={() => setActiveTab('finances')}
               className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
                 activeTab === 'finances'
@@ -192,7 +203,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
             >
               <CreditCard className="w-3.5 h-3.5" />
               امور مالی و شهریه
-            </button>
+            </button>}
           </div>
         </div>
 
@@ -204,9 +215,9 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
               {/* Quick Academic Summary */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-                  <div className="text-slate-400 text-xs mb-1">معدل نوبت اول</div>
+                  <div className="text-slate-400 text-xs mb-1">معدل کارنامه نوبت اول</div>
                   <div className="text-xl font-black text-teal-700">
-                    {formatPersianScore(activeTerm1Card?.gpa || '—')}
+                    {formatPersianScore(activeTerm1Card?.gpa)}
                   </div>
                 </div>
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
@@ -218,13 +229,13 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                   <div className="text-slate-400 text-xs mb-1">نمره انضباط</div>
                   <div className="text-xl font-black text-emerald-700">
-                    {formatPersianScore(activeTerm1Card?.disciplineScore || 20)}
+                    {formatPersianScore(activeTerm1Card?.disciplineScore)}
                   </div>
                 </div>
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                   <div className="text-slate-400 text-xs mb-1">تعداد غیبت مجاز</div>
                   <div className="text-xl font-black text-amber-700">
-                    {toPersianDigits(student.attendanceStats?.absentDays || 0)} زنگ
+                    {toPersianDigits(student.attendanceStats?.absentDays || 0)} روز ثبت‌شده
                   </div>
                 </div>
               </div>
@@ -371,6 +382,26 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
           {/* TAB 2: Official Report Cards (کارنامه‌های تحصیلی) */}
           {activeTab === 'reportCards' && (
             <div className="space-y-6">
+              <section aria-labelledby="gradebook-heading" className="space-y-3">
+                <div>
+                  <h3 id="gradebook-heading" className="font-bold text-slate-900">دفتر نمره</h3>
+                  <p className="mt-1 text-xs text-slate-600 leading-6">ارزشیابی‌های ثبت‌شده دبیر در این بخش نمایش داده می‌شوند و به‌تنهایی کارنامه رسمی یا معدل نوبت را تعیین نمی‌کنند.</p>
+                </div>
+                {studentGradebookItems.length ? <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {studentGradebookItems.map((item) => {
+                    const result = item.scores.find((score) => score.studentId === student.id);
+                    if (!result) return null;
+                    return <li key={item.id} className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2">
+                      <div className="flex justify-between items-start gap-2"><div className="min-w-0"><h4 className="font-bold text-sm break-words">{item.subject}</h4><p className="text-xs text-slate-600 mt-1 break-words">{item.title} • {item.categoryTitle}</p></div><time className="text-[11px] text-slate-500 shrink-0">{toPersianDigits(item.date)}</time></div>
+                      <div className="flex flex-wrap gap-2 text-xs"><span className="px-2 py-1 rounded-lg bg-teal-50 text-teal-900">نمره: {formatPersianScore(result.score)} از {toPersianDigits(item.maxScore)}</span></div>
+                      {result.note && <p className="text-xs leading-6 text-slate-700 border-t border-slate-100 pt-2">یادداشت دبیر: {result.note}</p>}
+                    </li>;
+                  })}
+                </ul> : <p role="status" className="p-4 rounded-2xl border border-dashed border-slate-300 text-sm text-slate-600">هنوز ارزشیابی‌ای در دفتر نمره این دانش‌آموز ثبت نشده است.</p>}
+              </section>
+              <div className="border-t border-slate-200" />
+              <section aria-labelledby="official-report-cards-heading" className="space-y-3">
+              <div><h3 id="official-report-cards-heading" className="font-bold text-slate-900">کارنامه‌های ثبت‌شده</h3><p className="mt-1 text-xs text-slate-600 leading-6">معدل و رتبه فقط از کارنامه ذخیره‌شده خوانده می‌شوند؛ دفتر نمره به‌صورت خودکار به معدل تبدیل نمی‌شود.</p></div>
               {student.reportCards && student.reportCards.length > 0 ? (
                 student.reportCards.map((rc, idx) => (
                   <div key={idx} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
@@ -391,7 +422,15 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="md:hidden p-3 space-y-2">
+                      {rc.subjects.map((sub, sIdx) => <article key={sIdx} className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                        <div className="flex items-start justify-between gap-2"><h5 className="font-bold text-sm">{sub.name}</h5><span className="text-[11px] text-slate-600">{toPersianDigits(sub.unit)} واحد</span></div>
+                        <div className="grid grid-cols-3 gap-2 text-center"><div className="bg-slate-50 rounded-lg p-2"><span className="block text-[10px] text-slate-500">مستمر</span><span className="font-bold text-xs">{formatPersianScore(sub.continuousScore)}</span></div><div className="bg-slate-50 rounded-lg p-2"><span className="block text-[10px] text-slate-500">پایانی</span><span className="font-bold text-xs">{formatPersianScore(sub.finalScore)}</span></div><div className="bg-teal-50 rounded-lg p-2"><span className="block text-[10px] text-teal-800">نهایی</span><span className="font-black text-xs text-teal-900">{formatPersianScore(sub.totalScore)}</span></div></div>
+                        <div className="flex justify-between gap-2 text-xs text-slate-600"><span>{sub.status}</span><span className="text-left">{sub.teacherName}</span></div>
+                      </article>)}
+                      <p className="text-xs text-slate-600 px-1">نمره انضباط نوبت: {formatPersianScore(rc.disciplineScore)} • معدل: {formatPersianScore(rc.gpa)}</p>
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
                       <table className="w-full text-right text-xs sm:text-sm">
                         <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 font-medium">
                           <tr>
@@ -429,7 +468,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                           <tr>
                             <td colSpan={2} className="p-3">نمره انضباط نوبت: {formatPersianScore(rc.disciplineScore)}</td>
                             <td colSpan={4} className="p-3 text-center">معدل کل کارنامه: <span className="text-teal-700 text-base">{formatPersianScore(rc.gpa)}</span></td>
-                            <td colSpan={2} className="p-3 text-left text-emerald-700">نتیجه: قبولی خرداد</td>
+                            <td colSpan={2} className="p-3 text-left text-slate-600">وضعیت از کارنامه ثبت‌شده</td>
                           </tr>
                         </tfoot>
                       </table>
@@ -438,9 +477,10 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                 ))
               ) : (
                 <div className="bg-white p-8 text-center rounded-2xl border border-slate-200 text-slate-500">
-                  کارنامه ثبت‌شده‌ای برای این دانش‌آموز یافت نشد. نمرات مستمر در طول ترم ثبت می‌گردند.
+                  کارنامه رسمی ثبت‌شده‌ای برای این دانش‌آموز یافت نشد. ارزشیابی‌های دفتر نمره در بخش جداگانه بالا دیده می‌شوند.
                 </div>
               )}
+              </section>
             </div>
           )}
 
@@ -476,29 +516,22 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
 
               <div className="bg-white p-4 rounded-xl border border-slate-200">
                 <h4 className="font-bold text-slate-800 text-sm mb-3">تاریخچه ثبت لحظه‌ای حضور و غیاب</h4>
-                <div className="space-y-2 text-xs sm:text-sm">
-                  <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span className="font-semibold text-slate-800">امروز - زنگ اول (ریاضی ۱)</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-medium">حاضر در کلاس</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-amber-600" />
-                      <span className="font-semibold text-slate-800">۱۴۰۴/۱۱/۰۴ - زنگ اول (فیزیک ۱)</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-medium">۱۰ دقیقه تاخیر (موجه با هماهنگی تلفنی)</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span className="font-semibold text-slate-800">۱۴۰۴/۱۱/۰۳ - زنگ دوم (شیمی ۱)</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-medium">حاضر در کلاس</span>
-                  </div>
+                <p className="text-xs text-slate-500 mb-3 leading-6">آمار بر اساس روزهای دارای جلسه ثبت‌شده است. وجود غیبت در هر زنگ، آن روز را دارای غیبت محسوب می‌کند؛ هر روز فقط یک بار شمرده می‌شود.</p>
+                <div id="student-attendance-history" className="space-y-2 text-xs sm:text-sm">
+                  {!attendanceHistory.length && <p role="status" className="p-3 text-slate-500">جلسه‌ای برای این دانش‌آموز ثبت نشده است.</p>}
+                  {attendanceHistory.map(({ session, row }) => <div key={session.id} className="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-bold">{toPersianDigits(session.date)} • زنگ {toPersianDigits(session.period)}</span><span className={`font-bold ${row.status === 'absent' ? 'text-rose-700' : row.status === 'late' ? 'text-amber-800' : 'text-slate-700'}`}>{attendanceLabel(row.status)}</span></div>
+                    <p className="text-slate-600 break-words">{session.subject} • {session.teacherName}</p>
+                    <p className="text-[11px] text-slate-500">آخرین ثبت: {toPersianDigits(session.updatedAt || session.submittedAt)}</p>
+                    {row.note && <p className="text-slate-600 break-words">{row.note}</p>}
+                  </div>)}
                 </div>
+                {!!student.legacyAttendanceStats?.totalDays && <details className="mt-3 p-3 border border-amber-200 rounded-xl bg-amber-50 text-xs text-amber-900">
+                  <summary className="min-h-11 flex items-center cursor-pointer font-bold">خلاصه قدیمی محفوظ: {toPersianDigits(student.legacyAttendanceStats.totalDays)} روز</summary>
+                  <p className="leading-6">حاضر: {toPersianDigits(student.legacyAttendanceStats.presentDays)} • غایب: {toPersianDigits(student.legacyAttendanceStats.absentDays)} • تأخیر: {toPersianDigits(student.legacyAttendanceStats.lateDays)} • موجه: {toPersianDigits(student.legacyAttendanceStats.excusedDays)}</p>
+                  <p className="mt-2 leading-6">این خلاصه ریزجلسه کامل ندارد و برای جلوگیری از شمارش دوباره با آمار جلسات جمع نشده است.</p>
+                </details>}
+
               </div>
             </div>
           )}
@@ -526,7 +559,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                       <label className="block text-xs font-medium text-slate-700 mb-1">نوع مورد:</label>
                       <select
                         value={newDiscType}
-                        onChange={(e) => setNewDiscType(e.target.value as any)}
+                        onChange={(e) => setNewDiscType(e.target.value as typeof newDiscType)}
                         className="w-full text-xs sm:text-sm p-2 bg-white border border-slate-300 rounded-lg"
                       >
                         <option value="تشویقی">تشویقی و تقدیرنامه</option>
@@ -625,11 +658,11 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                     <div>
                       <div className="text-xs font-semibold text-teal-700 mb-0.5">{toPersianDigits(py.year)} - {py.grade}</div>
                       <div className="font-bold text-slate-800 text-sm sm:text-base">{py.schoolName}</div>
-                      <div className="text-xs text-slate-500 mt-1">وضعیت پایان دوره: <strong className="text-emerald-700">{py.status}</strong></div>
+                      <div className="text-xs text-slate-500 mt-1">وضعیت پایان دوره: <strong className={py.status === 'قبول خرداد' || py.status === 'قبول با رتبه ممتاز' ? 'text-emerald-700' : py.status === 'دارای تجدید' || py.status === 'نیازمند بررسی' ? 'text-amber-800' : 'text-slate-700'}>{py.status}</strong></div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-center bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[11px] text-slate-400 block">معدل کل</span>
+                        <span className="text-[11px] text-slate-400 block">معدل کارنامه</span>
                         <span className="text-base font-black text-teal-800">{formatPersianScore(py.gpa)}</span>
                       </div>
                       <div className="text-center bg-slate-50 p-2 rounded-lg border border-slate-100">
@@ -648,7 +681,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
           )}
 
           {/* TAB 6: Financial and Tuition */}
-          {activeTab === 'finances' && (
+          {activeTab === 'finances' && canViewFinances && (
             <StudentFinancialTab student={student} />
           )}
         </div>
@@ -664,7 +697,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
               className="px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-100 rounded-xl flex items-center gap-1.5 border border-slate-200 font-medium"
             >
               <Printer className="w-3.5 h-3.5 text-slate-500" />
-              چاپ کارنامه و پرونده
+              چاپ صفحه از مرورگر
             </button>
             <button
               onClick={onClose}

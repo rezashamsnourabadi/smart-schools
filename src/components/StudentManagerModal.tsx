@@ -39,6 +39,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
     students,
     schools,
     currentSchoolId,
+    findStudentForEnrollment,
     addStudent,
     removeStudent,
     transferStudentClass,
@@ -78,12 +79,14 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
   const [stdFatherName, setStdFatherName] = useState('');
   const [stdParentPhone, setStdParentPhone] = useState('');
   const [stdAddress, setStdAddress] = useState('');
-  const [stdClassId, setStdClassId] = useState(classes[0]?.id || 'cls-1');
+  const [stdDetails, setStdDetails] = useState({ birthDate: '', parentName: '', studentNumber: '', parentBaleAccount: '' });
+  const [enrollmentError, setEnrollmentError] = useState('');
+  const [stdClassId, setStdClassId] = useState(classes[0]?.id || '');
 
   // Live lookup if student exists anywhere across schools
   const normInputCode = toEnglishDigits(stdNationalCode).trim();
   const existingMatchedStudent = normInputCode.length >= 6
-    ? students.find((s) => toEnglishDigits(s.nationalCode).trim() === normInputCode)
+    ? findStudentForEnrollment(normInputCode)
     : null;
   const existingMatchedSchool = existingMatchedStudent
     ? schools.find((s) => s.id === existingMatchedStudent.schoolId)
@@ -91,6 +94,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
   // Filter students by active school & current status tab
   const schoolStudents = students.filter((s) => {
+    if (s.schoolId !== currentSchoolId) return false;
     if (activeTab === 'graduated') {
       return s.status === 'graduated';
     }
@@ -122,26 +126,42 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
     e.preventDefault();
     if (!stdName.trim() || !stdNationalCode.trim()) return;
 
-    if (existingMatchedStudent && existingMatchedStudent.schoolId !== currentSchoolId) {
-      markStudentActive(existingMatchedStudent.id, currentSchoolId, stdClassId);
-    } else {
+    const targetClass = classes.find((cls) => cls.id === stdClassId && cls.schoolId === currentSchoolId);
+    if (!targetClass) {
+      setEnrollmentError('یک کلاس از مدرسه جاری انتخاب کنید.');
+      return;
+    }
+    const details = {
+      birthDate: stdDetails.birthDate.trim() || existingMatchedStudent?.birthDate || '',
+      parentName: stdDetails.parentName.trim() || existingMatchedStudent?.parentName || '',
+      studentNumber: toEnglishDigits(stdDetails.studentNumber.trim()) || existingMatchedStudent?.studentNumber || '',
+      parentBaleAccount: stdDetails.parentBaleAccount.trim() || existingMatchedStudent?.parentBaleAccount || ''
+    };
+    if (!details.birthDate || !details.parentName || !details.studentNumber || !(stdParentPhone.trim() || existingMatchedStudent?.parentPhone)) {
+      setEnrollmentError('تاریخ تولد، نام ولی، شماره دانش‌آموزی و شماره تماس ولی را وارد کنید.');
+      return;
+    }
       addStudent({
+        ...details,
         schoolId: currentSchoolId,
         classGroupId: stdClassId,
         name: stdName.trim(),
-        nationalCode: stdNationalCode.trim(),
-        fatherName: stdFatherName.trim() || 'محمد',
-        parentPhone: stdParentPhone.trim() || '09120000000',
-        address: stdAddress.trim() || 'خیابان معلم، پلاک ۱۲',
+        nationalCode: toEnglishDigits(stdNationalCode.trim()),
+        fatherName: stdFatherName.trim() || existingMatchedStudent?.fatherName || '',
+        parentPhone: toEnglishDigits(stdParentPhone.trim()) || existingMatchedStudent?.parentPhone || '',
+        address: stdAddress.trim() || existingMatchedStudent?.address || '',
+        grade: targetClass.grade,
+        fieldOfStudy: targetClass.major || '',
         status: 'active'
       });
-    }
 
     setStdName('');
     setStdNationalCode('');
     setStdFatherName('');
     setStdParentPhone('');
     setStdAddress('');
+    setStdDetails({ birthDate: '', parentName: '', studentNumber: '', parentBaleAccount: '' });
+    setEnrollmentError('');
     setShowAddStudentModal(false);
   };
 
@@ -397,7 +417,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
                       {(activeTab === 'graduated' || activeTab === 'transferred') && (
                         <button
-                          onClick={() => markStudentActive(std.id, currentSchoolId, std.classGroupId)}
+                          onClick={() => markStudentActive(std.id, std.classGroupId)}
                           className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-xl text-xs font-semibold flex items-center gap-1"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
@@ -519,7 +539,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
                           {(activeTab === 'graduated' || activeTab === 'transferred') && (
                             <button
-                              onClick={() => markStudentActive(std.id, currentSchoolId, std.classGroupId)}
+                              onClick={() => markStudentActive(std.id, std.classGroupId)}
                               className="px-2 py-1 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-lg text-xs font-semibold flex items-center gap-1"
                               title="بازگردانی به دانش‌آموز فعال"
                             >
@@ -561,6 +581,24 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
               </div>
 
               <form onSubmit={handleCreateOrLinkStudent} className="space-y-3 text-xs">
+                {enrollmentError && <p role="alert" className="text-rose-700">{enrollmentError}</p>}
+                {([
+                  ['birthDate', 'تاریخ تولد شمسی'],
+                  ['parentName', 'نام و نام خانوادگی ولی'],
+                  ['studentNumber', 'شماره دانش‌آموزی'],
+                  ['parentBaleAccount', 'شناسه بله ولی (اختیاری)']
+                ] as const).map(([field, label]) => (
+                  <label key={field} className="block space-y-1">
+                    <span className="font-bold text-slate-700">{label}</span>
+                    <input
+                      id={`student-enrollment-${field}`}
+                      value={stdDetails[field]}
+                      required={field !== 'parentBaleAccount' && !existingMatchedStudent}
+                      onChange={(event) => setStdDetails((prev) => ({ ...prev, [field]: event.target.value }))}
+                      className="w-full min-h-11 p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                    />
+                  </label>
+                ))}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">کد ملی دانش‌آموز:</label>
                   <input

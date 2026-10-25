@@ -22,9 +22,10 @@ import {
 } from 'lucide-react';
 import { SponsorBannerCard } from './SponsorBannerCard';
 import { toPersianDigits, formatPersianCurrency } from '../utils/persianUtils';
-import { createInitialStudentFinancialSummary } from '../data/mockFinanceData';
+import { readFinancialSummary } from '../utils/financialLedger';
 import { Student } from '../types';
 import { ParentPaymentModal } from './ParentPaymentModal';
+import { attendanceLabel } from '../utils/attendance';
 
 interface Props {
   onOpenStudentDossier?: (student: Student) => void;
@@ -39,7 +40,7 @@ export const ParentDashboard: React.FC<Props> = ({
     currentSchool,
     currentUser,
     notifications,
-    students,
+    currentStudent: child,
     announcements,
     setSelectedStudentForDossier,
     openStudentDossier
@@ -48,10 +49,10 @@ export const ParentDashboard: React.FC<Props> = ({
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Child info
-  const child = students.find((s) => s.id === 'std-1') || students[0];
+  if (!child) return <p id="parent-no-linked-student" role="status" className="p-6 bg-white rounded-2xl">پرونده‌ای برای فرزند این حساب در مدرسه انتخاب‌شده یافت نشد.</p>;
 
   // Check if there is any attendance alert for the child today
-  const childNotifications = notifications.filter((n) => n.studentName.includes(child.name));
+  const childNotifications = notifications;
 
   // Announcements targeted to parents or all (pinned first)
   const parentAnnouncements = announcements
@@ -93,8 +94,8 @@ export const ParentDashboard: React.FC<Props> = ({
         {/* Live Attendance Status Pill & Dossier Link */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
-            onClick={handleOpenChildDossier}
-            className="px-4 py-2 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
+            onClick={() => handleOpenChildDossier()}
+            className="min-h-11 px-4 py-2 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
           >
             <FileText className="w-4 h-4" />
             <span>مشاهده پرونده تحصیلی و کارنامه</span>
@@ -108,14 +109,14 @@ export const ParentDashboard: React.FC<Props> = ({
       {/* Quick Status Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Attendance Today */}
-        <div className="bg-emerald-50/80 border border-emerald-200 p-4 rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+            <Clock className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] text-emerald-800 font-bold block">حضور امروز در مدرسه</span>
-            <span className="text-xs text-emerald-950 font-bold">
-              حاضر در کلاس • ورود: {toPersianDigits('۰۷:۵۵')}
+            <span className="text-[11px] text-slate-600 font-bold block">وضعیت ثبت‌شده امروز</span>
+            <span className="text-xs text-slate-950 font-bold">
+              {attendanceLabel(child.todayStatus)}
             </span>
           </div>
         </div>
@@ -160,7 +161,8 @@ export const ParentDashboard: React.FC<Props> = ({
 
       {/* Student Financial & Tuition Status Card */}
       {(() => {
-        const childSummary = child.financialSummary || createInitialStudentFinancialSummary(child.id, child.name, child.grade, 'normal_partial');
+        const { summary: childSummary, error: financialError } = readFinancialSummary(child.financialSummary);
+        if (financialError) return <p role="alert" className="p-4 bg-amber-50 text-amber-900 rounded-2xl">پرونده مالی نیاز به بررسی مدرسه دارد: {financialError}</p>;
         const isSettled = childSummary.remainingDebt <= 0;
         const isOverdue = childSummary.status === 'overdue';
 
@@ -291,7 +293,7 @@ export const ParentDashboard: React.FC<Props> = ({
                         {ntf.type === 'attendance_absent' ? '🚨 اعلام غیبت در کلاس' : 'اطلاعیه مدرسه'}
                       </span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 font-bold">
-                        ارسال شده با {ntf.platform}
+                        ثبت آزمایشی با {ntf.platform}
                       </span>
                     </div>
                     <p className="text-slate-600 text-[11px] leading-relaxed">
@@ -389,7 +391,7 @@ export const ParentDashboard: React.FC<Props> = ({
               </div>
               <p className="text-slate-600 leading-relaxed text-[11px]">{ann.content}</p>
               <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400 border-t border-slate-100">
-                <span>مرجع صادرکننده: {ann.sender}</span>
+                <span>مرجع صادرکننده: {ann.senderName}</span>
                 {ann.priority === 'urgent' && (
                   <span className="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-md">فوری</span>
                 )}

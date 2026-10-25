@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { RoleQuickSwitch } from './components/RoleQuickSwitch';
@@ -30,11 +31,11 @@ import { Student } from './types';
 const AppContent: React.FC = () => {
   const {
     currentRole,
-    students,
+    currentStudent,
     selectedStudentForDossier,
     setSelectedStudentForDossier,
     dossierInitialTab,
-    vicePrincipalPermissions
+    canManageSchool
   } = useApp();
 
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
@@ -119,7 +120,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-slate-100/70 text-slate-800 antialiased selection:bg-teal-200" dir="rtl">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip flex flex-col bg-slate-100/70 text-slate-800 antialiased selection:bg-teal-200" dir="rtl">
       {/* Top Header with Profile Modal trigger and Brand Switcher */}
       <Header
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
@@ -130,7 +131,7 @@ const AppContent: React.FC = () => {
       <RoleQuickSwitch />
 
       {/* Main Content Area (extra bottom padding for mobile navigation bar, compact for landscape) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 pb-20 landscape:pb-14 md:pb-6 overflow-x-hidden">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 pb-24 md:pb-6 overflow-x-clip">
         {renderDashboardByRole()}
       </main>
 
@@ -145,27 +146,23 @@ const AppContent: React.FC = () => {
         onOpenHomework={() => setIsHomeworkExamModalOpen(true)}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onOpenDossier={() => {
-          const s = students[0];
-          if (s) setSelectedStudentForDossier(s);
+          if (currentStudent) setSelectedStudentForDossier(currentStudent);
         }}
       />
 
       {/* Full Student Dossier Modal */}
-      {selectedStudentForDossier && (
+      {selectedStudentForDossier && (currentRole !== 'vice_principal' || canManageSchool('canViewFullDossier')) && (
         <StudentDossierModal
           student={selectedStudentForDossier}
           onClose={() => setSelectedStudentForDossier(null)}
-          canEditContact={currentRole === 'parent'}
-          canManageDiscipline={
-            currentRole === 'principal' ||
-            (currentRole === 'vice_principal' && vicePrincipalPermissions.canManageDiscipline)
-          }
+          canEditContact={currentRole === 'parent' || canManageSchool('canManageStudentsAndClasses')}
+          canManageDiscipline={canManageSchool('canLogDisciplinary')}
           initialTab={dossierInitialTab}
         />
       )}
 
       {/* Dedicated Student Manager Modal */}
-      {isStudentModalOpen && (
+      {isStudentModalOpen && canManageSchool('canManageStudentsAndClasses') && (
         <StudentManagerModal
           onClose={() => setIsStudentModalOpen(false)}
           onOpenDossier={(student) => setSelectedStudentForDossier(student)}
@@ -173,7 +170,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Dedicated Class Manager Modal */}
-      {isClassModalOpen && (
+      {isClassModalOpen && canManageSchool('canManageStudentsAndClasses') && (
         <ClassManagerModal
           onClose={() => setIsClassModalOpen(false)}
         />
@@ -187,39 +184,42 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Weekly Schedule Planner Modal */}
-      {isScheduleModalOpen && (
-        <SchedulePlannerModal
+      <AnimatePresence>
+        {isScheduleModalOpen && canManageSchool('canManageSchedule') && <SchedulePlannerModal
+          key="schedule-planner"
           onClose={() => setIsScheduleModalOpen(false)}
-        />
-      )}
+        />}
+      </AnimatePresence>
 
-      {/* Post, News & Event Manager Modal with Direct File/Poster Upload */}
-      {isPostModalOpen && (
-        <PostManagerModal
+      {/* Post and announcement manager with local browser attachments */}
+      <AnimatePresence>
+        {isPostModalOpen && canManageSchool('canManageAnnouncements') && <PostManagerModal
+          key="post-manager"
           onClose={() => setIsPostModalOpen(false)}
-        />
-      )}
+        />}
+      </AnimatePresence>
 
       {/* Comprehensive Staff Manager Modal (Vice Principals & Teachers) */}
-      {isVpPermsModalOpen && (
+      {isVpPermsModalOpen && currentRole === 'principal' && (
         <StaffManagerModal
           onClose={() => setIsVpPermsModalOpen(false)}
         />
       )}
 
       {/* Teacher Gradebook & Exam Scoring Modal */}
-      {isGradeModalOpen && (
+      {isGradeModalOpen && currentRole === 'teacher' && (
         <TeacherGradeEntryModal
           onClose={() => setIsGradeModalOpen(false)}
         />
       )}
 
-      {/* Homework & Online Exam Planner Modal */}
-      {isHomeworkExamModalOpen && (
-        <TeacherHomeworkAndExamModal
+      {/* Homework manager and exam schedule planner */}
+      <AnimatePresence>
+        {isHomeworkExamModalOpen && currentRole === 'teacher' && <TeacherHomeworkAndExamModal
+          key="teacher-homework-exam"
           onClose={() => setIsHomeworkExamModalOpen(false)}
-        />
-      )}
+        />}
+      </AnimatePresence>
 
       {/* Regional Question Bank Modal */}
       <QuestionBankModal
@@ -229,13 +229,13 @@ const AppContent: React.FC = () => {
 
       {/* Academic Year Management Modal */}
       <AcademicYearManagerModal
-        isOpen={isAcademicYearModalOpen}
+        isOpen={isAcademicYearModalOpen && currentRole === 'principal'}
         onClose={() => setIsAcademicYearModalOpen(false)}
       />
 
       {/* School Financial & Tuition Management Modal */}
       <FinanceManagerModal
-        isOpen={isFinanceModalOpen}
+        isOpen={isFinanceModalOpen && canManageSchool('canManageFinances')}
         onClose={() => setIsFinanceModalOpen(false)}
       />
 
@@ -245,7 +245,7 @@ const AppContent: React.FC = () => {
         onClose={() => setIsDocsModalOpen(false)}
       />
 
-      {/* Floating System Toasts (Bale / SMS delivery) */}
+      {/* Floating notifications for local simulated events */}
       <NotificationToast />
 
       {/* Footer */}
@@ -271,7 +271,7 @@ const AppContent: React.FC = () => {
               <span>مستندات و کاتالوگ جامع امکانات</span>
             </button>
             <span className="text-slate-300">•</span>
-            <span>اتصال خودکار به پیام‌رسان بله و پیامک کشوری</span>
+            <span>نمونه فرانت‌اند مدیریت مدارس، با داده محلی مرورگر</span>
           </div>
         </div>
       </footer>
@@ -279,10 +279,15 @@ const AppContent: React.FC = () => {
   );
 };
 
+const AppWorkspace = () => {
+  const { currentRole, currentSchoolId, activeVicePrincipalId } = useApp();
+  return <AppContent key={`${currentRole}:${currentSchoolId}:${activeVicePrincipalId}`} />;
+};
+
 export default function App() {
   return (
     <AppProvider>
-      <AppContent />
+      <AppWorkspace />
     </AppProvider>
   );
 }

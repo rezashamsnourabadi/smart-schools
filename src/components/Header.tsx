@@ -33,7 +33,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
     resetAllData,
     activeAcademicYear,
     activeTerm,
-    isViewingArchivedYear
+    schoolClock,
+    isViewingNonCurrentYear,
+    returnToCurrentAcademicYear
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -146,25 +148,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
             {/* Academic Year Badge */}
             <div
               className={`hidden lg:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl border font-bold ${
-                isViewingArchivedYear
+                isViewingNonCurrentYear
                   ? 'bg-amber-50 text-amber-900 border-amber-300'
                   : 'bg-teal-50/80 text-teal-900 border-teal-200'
               }`}
             >
               <Calendar className="w-3.5 h-3.5 text-teal-700" />
-              <span>سال {toPersianDigits(activeAcademicYear?.title || '')}</span>
-              <span className="text-[10px] font-normal text-slate-500">
+              <span>{activeAcademicYear ? `سال ${toPersianDigits(activeAcademicYear.title)}` : 'سال تحصیلی تعریف نشده'}</span>
+              {isViewingNonCurrentYear && <span className="text-[10px] font-black">(فقط‌خواندنی)</span>}
+              {activeTerm && <span className="text-[10px] font-normal text-slate-500">
                 ({activeTerm?.title.split(' ')[0]} {activeTerm?.title.split(' ')[1] || ''})
-              </span>
+              </span>}
             </div>
 
             {/* Live Date display */}
             <div className="hidden xl:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span>شنبه ۲۲ شهریور ۱۴۰۵</span>
+              <span>{toPersianDigits(schoolClock.dateLabel)}</span>
               <span className="text-slate-300">|</span>
               <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span>۰۸:۱۵</span>
+              <span>{toPersianDigits(schoolClock.time)}</span>
             </div>
 
             {/* Simulated Bale / SMS notifications dropdown */}
@@ -191,7 +194,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
                   <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
                       <MessageSquare className="w-4 h-4 text-teal-600" />
-                      <span>پیام‌های ارسال شده به اولیا (بله / پیامک)</span>
+                      <span>اعلان‌های آزمایشی ثبت‌شده؛ ارسال واقعی انجام نمی‌شود</span>
                     </div>
                     <span className="text-[11px] text-slate-500 font-mono font-bold">
                       {toPersianDigits(notifications.length)} پیام
@@ -207,7 +210,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-slate-800">{ntf.studentName}</span>
                             <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-teal-50 text-teal-700 font-medium">
-                              ارسال با {ntf.platform}
+                              شبیه‌سازی {ntf.platform}
                             </span>
                           </div>
                           <p className="text-slate-600 text-[11px] leading-relaxed line-clamp-2">
@@ -226,14 +229,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
             </div>
 
             {/* Reset sample data button */}
-            <button
+            {currentRole === 'platform_admin' && <button
               id="reset-demo-data-btn"
               onClick={resetAllData}
               className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
               title="بازگردانی داده‌های پیش‌فرض نمونه"
             >
               <RotateCcw className="w-4 h-4" />
-            </button>
+            </button>}
 
             {/* System Docs & Feature Catalog Button */}
             <button
@@ -291,6 +294,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
           </div>
         </div>
       </div>
+      {isViewingNonCurrentYear && (
+        <div className="border-t border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <p className="leading-relaxed">نمای سال {toPersianDigits(activeAcademicYear?.title || '')} انتخاب شده است. داده‌های همه بخش‌ها هنوز به تفکیک سال ذخیره نمی‌شوند؛ این نما آرشیو کامل نیست و عملیات آموزشی و پرونده‌ای مسدود است.</p>
+            <button id="return-current-year-header" onClick={returnToCurrentAcademicYear} className="min-h-11 shrink-0 rounded-xl bg-amber-700 px-4 font-bold text-white hover:bg-amber-800">بازگشت به سال فعال</button>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

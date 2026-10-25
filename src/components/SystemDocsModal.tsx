@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   X,
   BookOpen,
@@ -46,12 +47,11 @@ interface FeatureItem {
 }
 
 export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClose }) => {
+  const shouldReduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<TabType>('features');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('همه');
   const [copied, setCopied] = useState(false);
-
-  if (!isOpen) return null;
 
   const featuresList: FeatureItem[] = [
     {
@@ -59,13 +59,13 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       category: 'مالی و اداری',
       title: 'مدیریت مالی، شهریه، اقساط، سرفصل‌های مصوب و صندوق آموزشگاه',
       badge: 'جدید و جامع',
-      description: 'سامانه کامل تعریف سرفصل‌های مصوب (شهریه، سرویس، بیمه، کلاس فوق‌برنامه)، تقسیط هوشمند، ثبت فیش و ارسال یادآوری بله.',
+      description: 'نمونه فرانت‌اند برای تعرفه، ثبت فیش، محاسبه مانده و ثبت اعلان آزمایشی؛ اتصال بانکی و پیام واقعی فعال نیست.',
       details: [
         'تعریف نامحدود سرفصل‌های درآمدی با قابلیت اجباری/اختیاری بودن و تخصیص به پایه‌ها',
         'جدول هوشمند اقساط و موعد سررسید با نشانگر وضعیت بدهکار، معوقه و تسویه‌شده',
-        'ثبت تراکنش‌های پرداختی نقدی، کارتخوان POS، حواله پایا/ساتنا و آنلاین با شماره پیگیری',
+        'ثبت محلی رسیدهای نمونه با شماره پیگیری و کنترل مانده',
         'سامانه تخفیفات و بورسیه (فرزند فرهنگیان، سادات، حافظان قرآن، تخفیف پرداخت نقدی)',
-        'ارسال تک‌لمسی پیامک و پیام بله یادآوری موعد اقساط به اولیای بدهکار',
+        'ثبت محلی یادآوری؛ ارسال پیامک یا بله انجام نمی‌شود',
         'تب اختصاصی در پرونده جامع دانش‌آموز (Dossier) و کارت هوشمند در پنل اولیا'
       ],
       userRoles: ['مدیر آموزشگاه', 'معاون (مشروط)', 'اولیا'],
@@ -76,13 +76,13 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       category: 'مدیریتی',
       title: 'مدیریت سال و تقویم تحصیلی و ویزارد ارتقا (Academic Rollover)',
       badge: 'جدید و بومی',
-      description: 'مدیریت چرخه عمر سال‌های تحصیلی (فعال، برنامه‌ریزی‌شده، بایگانی)، سوییچ نوبت‌ها و عملیات پایان سال.',
+      description: 'مدیریت محلی سال تحصیلی؛ تغییر سال فقط برای پرونده‌های واجد شرایط و پس از تأیید اجرا می‌شود.',
       details: [
-        'ارتقای خودکار پایه‌ها (دهم به یازدهم، یازدهم به دوازدهم)',
-        'فارغ‌التحصیلی اتوماتیک دانش‌آموزان پایه دوازدهم',
-        'انجماد و بایگانی کارنامه‌ها و نمرات سال گذشته در سوابق دوره تحصیلی',
-        'صفرسازی خودکار حضور و غیاب برای سال جدید',
-        'حالت مرور ایمن سوابق سال‌های بایگانی‌شده با بنر هشدار و بازگشت فوری'
+        'پیشنهاد ارتقا فقط بر اساس کارنامه نوبت دوم معتبر و منتشرشده',
+        'پیشنهاد فارغ‌التحصیلی فقط برای دانش‌آموز واجد شرایط پایه دوازدهم',
+        'کپی مقادیر واقعی کارنامه منتشرشده به سوابق؛ آرشیو همه ماژول‌ها فراهم نیست',
+        'پاک‌سازی حضور سال قبل فقط با انتخاب صریح گزینه پایان سال',
+        'نمای تقویمی سال‌های غیرجاری به‌صورت فقط‌خواندنی؛ آرشیو واقعی همه ماژول‌ها هنوز پیاده‌سازی نشده است'
       ],
       userRoles: ['مدیر آموزشگاه'],
       icon: <Calendar className="w-5 h-5 text-teal-600" />
@@ -90,14 +90,14 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
     {
       id: 'attendance-bale',
       category: 'ارتباطی',
-      title: 'حضور و غیاب تک‌لمسی و هشدار خودکار بله / پیامک',
-      badge: 'تضمین ارتباط اولیا',
-      description: 'ثبت بی‌درنگ حضور، غیاب و تاخیر در کلاس و مخابره لحظه‌ای متن هشدار رسمی به حساب بله و شماره ولی.',
+      title: 'حضور و غیاب کلاسی و پیش‌نویس اعلان',
+      badge: 'محلی و آزمایشی',
+      description: 'ثبت محلی وضعیت زنگ و ساخت سابقه اعلان برای نمایش؛ اتصال بله و پیامک واقعی فعال نیست.',
       details: [
         'تشخیص هوشمند زنگ جاری و نمایش لیست دانش‌آموزان کلاس فعال',
         'دکمه تک‌لمسی «همه حاضرند» برای صرفه‌جویی زمان آغاز کلاس',
-        'تولید خودکار متن هشدار رسمی با قید ساعت و نام مدرسه',
-        'کاهش تا ۷۰٪ هزینه‌های پیامکی مدارس از طریق ترجیح پیام‌رسان بله',
+        'تولید متن اعلان آزمایشی با زمان و نام مدرسه',
+        'سنجش هزینه پیام‌رسانی نیازمند اتصال و داده واقعی است',
         'صندوق سابقه اعلان‌ها در هدر با نشانگر پیام‌های خوانده‌نشده'
       ],
       userRoles: ['معلم', 'معاون مدرسه', 'مدیر آموزشگاه', 'اولیا'],
@@ -106,14 +106,14 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
     {
       id: 'student-dossier',
       category: 'آموزشی',
-      title: 'پرونده الکترونیک و کارپوشه ۳۶۰ درجه دانش‌آموز',
-      badge: 'یکپارچه منطقه‌ای',
-      description: 'پرونده جامع تحصیلی، انضباطی، سوابق سال‌های گذشته و اطلاعات تماس اولیا بدون خطر گم‌شدن سوابق.',
+      title: 'نمای پرونده تحصیلی دانش‌آموز',
+      badge: 'نمونه محلی',
+      description: 'نمایش داده‌های پرونده موجود در نمونه فرانت‌اند؛ داده‌ها در مرورگر ذخیره می‌شوند و همگام‌سازی منطقه‌ای فعال نیست.',
       details: [
-        'محاسبه دقیق معدل کل، نمرات مستمر و نوبت‌های اول و دوم',
+        'نمایش دفتر نمرات و کارنامه منتشرشده موجود؛ معدل رسمی از دفتر نمرات ساخته نمی‌شود',
         'دفترچه انضباطی با تفکیک موارد تشویقی، تذکرات شفاهی و کتبی',
         'سوابق تحصیلی سنوات گذشته در مقاطع قبلی (Past Years History)',
-        'قابلیت چاپ و خروجی رسمی کارنامه و پرونده با یک کلیک',
+        'چاپ صفحه از مرورگر؛ PDF اختصاصی کارنامه و پرونده در دسترس نیست',
         'امکان به‌روزرسانی شماره تماس و آدرس توسط ولی دانش‌آموز'
       ],
       userRoles: ['مدیر آموزشگاه', 'معاون', 'معلم', 'دانش‌آموز', 'اولیا'],
@@ -122,13 +122,13 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
     {
       id: 'question-bank',
       category: 'آموزشی',
-      title: 'بانک سوالات امتحانی اشتراکی شهرستان (Regional Question Bank)',
-      badge: 'عدالت آموزشی',
-      description: 'مخزن متمرکز اشتراک‌گذاری نمونه‌سوالات تستی و تشریحی میان تمام معلمان و مدارس شهرستان.',
+      title: 'بانک سوالات نمونه در مرورگر',
+      badge: 'نمونه محلی',
+      description: 'مدیریت پرسش‌های نمونه در همین نسخه فرانت‌اند؛ اشتراک‌گذاری میان دستگاه‌ها و مدرسه‌ها فعال نیست.',
       details: [
         'فرم استاندارد افزودن سوال با تعیین گزینه‌ها، کلید پاسخ و راه‌حل تشریحی',
         'فیلترهای پیشرفته بر اساس درس، پایه تحصیلی و درجه سختی (آسان، متوسط، سخت)',
-        'ماژول «سوال تمرینی روز» در میز کار دانش‌آموزان برای افزایش آمادگی',
+        'نمایش تمرین از بانک محلی موجود؛ این بخش موتور آزمون یا ذخیره پاسخ ندارد',
         'نشان تایید و اصالت طراح سوال به همراه نام مدرسه مبدا'
       ],
       userRoles: ['معلم', 'مدیر آموزشگاه', 'دانش‌آموز', 'مدیر پلتفرم'],
@@ -141,7 +141,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       badge: 'هسته‌ای',
       description: 'ساماندهی اتاق‌های کلاس، انتصاب دبیران راهنما و ثبت‌نام دانش‌آموزان در ۳ وضعیت فعال، فارغ‌التحصیل و انتقالی.',
       details: [
-        'تعریف کلاس با شماره اتاق، ظرفیت مجاز و رشته تحصیلی (ریاضی، تجربی، انسانی)',
+        'ثبت کلاس و نمایش ظرفیت/رشته؛ کنترل پرشدن ظرفیت پیاده‌سازی نشده است',
         'تب‌های تفکیک‌شده: دانش‌آموزان جاری، فارغ‌التحصیلان (با رتبه کنکور و دانشگاه) و انتقالی',
         'ثبت‌نام سریع با کد ملی و شماره تلفن سرپرست',
         'مدیریت انتقال دانش‌آموز به مدارس دیگر شهرستان با حفظ پیوستگی سوابق'
@@ -152,11 +152,11 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
     {
       id: 'schedule-planner',
       category: 'مدیریتی',
-      title: 'برنامه‌ریز هفتگی هوشمند دروس (Schedule Matrix)',
-      badge: 'بهینه‌ساز زمان',
-      description: 'ماتریس گرافیکی توزیع ساعات آموزشی از شنبه تا چهارشنبه در ۴ زنگ درسی استاندارد.',
+      title: 'برنامه هفتگی دروس',
+      badge: 'بررسی تداخل پایه',
+      description: 'ماتریس محلی برنامه هفتگی؛ ثبت تداخل کلاس و دبیر در روز و زنگ یکسان مسدود می‌شود.',
       details: [
-        'چیدمان بصری برنامه با نمایش تلاقی دبیران و کلاس‌ها',
+        'بررسی تداخل دبیر و کلاس در روز و زنگ یکسان هنگام ثبت برنامه',
         'نمایش سریع برنامه روزانه در داشبورد معلم و دانش‌آموز',
         'انتصاب آسان درس، دبیر و زمان شروع و پایان هر زنگ'
       ],
@@ -168,11 +168,11 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       category: 'آموزشی',
       title: 'دفتر نمرات مستمر، تکالیف و آزمون‌های آنلاین کلاسی',
       badge: 'ابزار معلم',
-      description: 'پنل‌های اختصاصی معلم برای ثبت نمرات نوبت اول/دوم، تخصیص تکالیف خانگی و زمان‌بندی کوییزهای آنلاین.',
+      description: 'ثبت ارزشیابی و تکلیف؛ آزمون فقط در تقویم برنامه‌ریزی می‌شود و موتور سؤال/شرکت آنلاین فعال نیست.',
       details: [
         'ورود دسته‌جمعی نمرات با تبدیل خودکار به فرمت استاندارد فارسی',
         'تعریف تکالیف درسی با سرفصل آموزشی و تاریخ مهلت تحویل',
-        'زمان‌بندی آزمون‌های آنلاین تستی با محاسبه خودکار بازه زمانی'
+        'زمان‌بندی آزمون بدون سؤال و بدون تصحیح خودکار'
       ],
       userRoles: ['معلم', 'دانش‌آموز', 'اولیا'],
       icon: <FileSpreadsheet className="w-5 h-5 text-teal-600" />
@@ -182,7 +182,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       category: 'مدیریتی',
       title: 'تفویض هوشمند و گرانولار اختیارات به معاونان (RBAC Delegation)',
       badge: 'انعطاف‌پذیری سازمانی',
-      description: 'امکان فعال یا غیرفعال‌سازی ۵ سطح دسترسی مجزا برای معاون آموزشگاه متناسب با ساختار واقعی مدارس.',
+      description: 'کنترل چند مجوز در رابط برای پیش‌نمایش نقش معاون؛ جایگزین احراز هویت و مجوز سمت سرور نیست.',
       details: [
         'مجوز مدیریت کلاس‌ها و ثبت‌نام دانش‌آموزان',
         'مجوز چیدمان و اصلاح برنامه هفتگی دروس',
@@ -197,11 +197,11 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       id: 'posts-events',
       category: 'ارتباطی',
       title: 'مدیریت رویدادها، اخبار و اطلاعیه‌های رسمی مدرسه',
-      badge: 'اطلاع‌رسانی',
-      description: 'انتشار اطلاعیه‌های فوری، اخبار عادی آموزشگاه و جلسات انجمن اولیا و مربیان با آپلود مستقیم تصویر پوستر.',
+      badge: 'ذخیره محلی',
+      description: 'ثبت اطلاعیه در نمونه محلی و نمایش آن در داشبورد؛ ارسال پیام یا اعلان بیرونی انجام نمی‌شود.',
       details: [
         'فیلتر بر اساس فوریت (فوری، عادی، رویداد فرهنگی)',
-        'پشتیبانی کامل از بارگذاری فایل و لینک پوستر',
+        'پیوست محلی در مرورگر با محدودیت اندازه هر فایل',
         'نمایش لحظه‌ای در بورد اخبار داشبورد مدیر، اولیا و دانش‌آموز'
       ],
       userRoles: ['مدیر آموزشگاه', 'معاون (مشروط)', 'عموم کاربران'],
@@ -211,12 +211,12 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       id: 'regional-kpis-sponsors',
       category: 'زیرساخت',
       title: 'داشبورد نظارت کلان شهرستان و مدیریت حامیان مالی (Edu-Ads)',
-      badge: 'مدل درآمدی پایدار',
-      description: 'مرکز فرماندهی اداره آموزش و پرورش منطقه با آمار تلفیقی مدارس و درآمدزایی از تبلیغات فرهنگی و آموزشی.',
+      badge: 'نمونه محلی',
+      description: 'نمایش نمونه‌ای شاخص‌های منطقه و بنر حامیان؛ آمار و درآمد واقعیِ متصل به مدارس وجود ندارد.',
       details: [
-        'پایش کلان شاخص‌های حضور، تعداد مدارس، دبیران و دانش‌آموزان',
-        'گزارش‌گیری مخابراتی هزینه‌های پیامک در برابر کانال بله',
-        'مدیریت کمپین‌های حامیان مالی آموزشی با فیلتر دقیق مخاطب هدف (اولیا، دبیران یا دانش‌آموزان)'
+        'شاخص‌ها از داده‌های نمونه همین مرورگر محاسبه می‌شوند',
+        'هزینه پیامک و بله سنجیده یا گزارش نمی‌شود',
+        'بنر حامی در رابط قابل نمایش است؛ هدف‌گیری تبلیغاتی یا فروش فعال نیست'
       ],
       userRoles: ['مدیر ارشد پلتفرم شهرستان'],
       icon: <TrendingUp className="w-5 h-5 text-rose-600" />
@@ -224,12 +224,12 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
     {
       id: 'role-quick-switch',
       category: 'زیرساخت',
-      title: 'ابزار سوییچ سریع میان ۶ پرسونای کاربری (Interactive Demo Tool)',
+      title: 'ابزار پیش‌نمایش شش نقش نمونه',
       badge: 'ویژه توسعه و تست',
-      description: 'امکان جابجایی بلادرنگ بین نقش‌های مدیر کل، مدیر، معاون، معلم، دانش‌آموز و ولی جهت ارزیابی کامل سیستم.',
+      description: 'ابزار توسعه برای پیش‌نمایش نقش‌ها در همین نشست مرورگر؛ ورود واقعی یا ارزیابی کامل سیستم نیست.',
       details: [
-        'همگام‌سازی لحظه‌ای وضعیت دیتای سراسری بین تمام نقش‌ها',
-        'مشاهده مستقیم اثر تغییرات ثبت‌شده در یک نقش بر روی نقش دیگر',
+        'نقش‌ها از داده‌های مشترک داخل همین نشست برنامه استفاده می‌کنند',
+        'تغییرات محلی ممکن است در نقش‌های نمونه همین مرورگر دیده شوند؛ دستگاه دیگری همگام نیست',
         'نوار دسترسی سریع پایین صفحه بهینه‌شده برای گوشی‌های هوشمند'
       ],
       userRoles: ['تمام کاربران و ارزیابان سیستم'],
@@ -247,24 +247,36 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
   });
 
   const handleCopySummary = () => {
-    const summaryText = `سامانه هوشمند قطب مدارس شهرستان — خلاصه امکانات:
-- مدیریت سال تحصیلی و ویزارد ارتقای پایه‌ها
-- حضور و غیاب تک‌لمسی با ارسال خودکار به پیام‌رسان بله و پیامک
-- کارپوشه جامع ۳۶۰ درجه و ریزنمرات رسمی
-- بانک سوالات اشتراکی منطقه با قابلیت طراحی و آزمون
-- ۶ پرسونای تفکیک‌شده کاربری و تفویض دسترسی به معاونان
-- پایش کلان شهرستان و مدیریت اسپانسرهای آموزشی`;
-    navigator.clipboard.writeText(summaryText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    const summaryText = `نمونه فرانت‌اند مدیریت مدرسه:
+- ثبت محلی داده‌های نمونه
+- سابقه اعلان آزمایشی؛ ارسال واقعی فعال نیست
+- بانک سوال محلی؛ موتور شرکت آنلاین در آزمون فعال نیست
+- پرداخت، پیام‌رسان، پیامک و همگام‌سازی ابری واقعی فعال نیست
+- مجوزهای رابط جایگزین کنترل امنیتی سمت سرور نیست`;
+    void navigator.clipboard?.writeText(summaryText).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }).catch(() => setCopied(false));
   };
 
   return (
-    <div
+    <AnimatePresence>
+    {isOpen && <motion.div
+      key="system-docs-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
       className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto w-full max-w-full"
       id="system-docs-modal"
     >
-      <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 m-auto">
+      <motion.div
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
+        className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] m-auto"
+      >
         {/* Modal Top Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-teal-800 via-teal-700 to-slate-800 text-white flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-3">
@@ -289,7 +301,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopySummary}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-teal-100 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5"
+              className="min-h-[44px] min-w-[44px] p-2 sm:px-3 sm:py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-teal-100 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5"
               title="کپی خلاصه متنی فیچرها"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
@@ -297,20 +309,24 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
             </button>
             <button
               onClick={() => window.print()}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-teal-100 hover:text-white text-xs font-bold transition-all hidden md:flex items-center gap-1.5"
-              title="چاپ یا ذخیره به صورت PDF"
+              className="min-h-[44px] min-w-[44px] p-2 sm:px-3 sm:py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-teal-100 hover:text-white text-xs font-bold transition-all hidden md:flex items-center gap-1.5"
+              title="چاپ این صفحه با مرورگر"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>چاپ مستندات</span>
+              <span>چاپ صفحه</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-teal-200 hover:text-white hover:bg-white/10 transition-colors"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-teal-200 hover:text-white hover:bg-white/10 transition-colors"
               title="بستن"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
+        </div>
+
+        <div role="note" className="mx-3 mt-3 sm:mx-5 p-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 text-xs leading-relaxed">
+          این نسخه، نمونه فرانت‌اند است. داده‌ها محلی‌اند؛ ورود امن، پایگاه داده ابری، ارسال واقعی پیام، درگاه پرداخت و اشتراک‌گذاری میان دستگاه‌ها فعال نیست. جدول دسترسی زیر رفتار رابط را نشان می‌دهد و کنترل امنیتی سمت سرور نیست.
         </div>
 
         {/* Tab Navigation Bar */}
@@ -542,11 +558,11 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
                         <td className="p-3 text-center text-teal-700 font-bold">👁️ پرونده فرزند</td>
                       </tr>
                       <tr className="bg-slate-50/50">
-                        <td className="p-3 font-bold text-slate-900">بانک سوالات اشتراکی منطقه</td>
+                        <td className="p-3 font-bold text-slate-900">بانک سوالات محلی نمونه</td>
                         <td className="p-3 text-center text-teal-700 font-bold">👁️ نظارت کلان</td>
                         <td className="p-3 text-center text-teal-700 font-bold">👁️ مشاهده</td>
                         <td className="p-3 text-center text-teal-700 font-bold">👁️ مشاهده</td>
-                        <td className="p-3 text-center text-emerald-700 font-bold">✅ طراحی و اشتراک</td>
+                        <td className="p-3 text-center text-emerald-700 font-bold">✅ افزودن به نمونه</td>
                         <td className="p-3 text-center text-teal-700 font-bold">👁️ تمرین روز</td>
                         <td className="p-3 text-center text-slate-400">—</td>
                       </tr>
@@ -652,7 +668,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
                     <span>نقشه راه اتصال به دیتابیس ابری (Cloud Backend Roadmap)</span>
                   </div>
                   <p className="text-xs text-teal-800 leading-relaxed">
-                    سامانه با رعایت جداسازی ماژولار کامپوننت‌ها (Decoupled Architecture) طراحی شده و کاملاً آماده اتصال به <strong>Google Cloud Firestore</strong> یا پایگاه داده رابطه‌ای <strong>PostgreSQL</strong> با Drizzle ORM است. کلیه اینترفیس‌های داده در `src/types.ts` با اسکیماهای جدول‌های SQL و کالکشن‌های NoSQL انطباق یک‌به‌یک دارند.
+                    این پروژه در وضعیت فعلی یک فرانت‌اند با داده محلی مرورگر است و backend یا قرارداد ذخیره‌سازی پایدار ندارد. پیش از انتخاب Firestore یا PostgreSQL باید مدل‌های دامنه، احراز هویت، جداسازی مدرسه و مهاجرت داده جداگانه طراحی شوند؛ typeهای فعلی تضمین‌کننده نگاشت یک‌به‌یک به پایگاه داده نیستند.
                   </p>
                 </div>
               </div>
@@ -665,43 +681,43 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                 <div>
                   <h4 className="font-black text-slate-900 text-base">
-                    ارزش تجاری، اقتصادی و مزیت رقابتی برای سرمایه‌گذاران
+                    فرضیه‌های محصول برای ارزیابی آینده
                   </h4>
                   <p className="text-xs text-slate-500 mt-1">
-                    چرا سامانه قطب مدارس شهرستان یک فرصت مقیاس‌پذیر در حوزه فناوری آموزشی (EdTech) است؟
+                    این نمونه شواهدی درباره درآمد، صرفه‌جویی یا برتری بازار ارائه نمی‌کند؛ موارد زیر فقط پرسش‌هایی برای اعتبارسنجی با مدرسه‌ها هستند.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
                   <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2">
-                    <span className="text-[11px] font-bold text-emerald-800 block">۱. کاهش ۷۰٪ هزینه‌ها</span>
-                    <h5 className="font-bold text-xs text-slate-900">جایگزینی پیامک گران با پیام‌رسان بله</h5>
+                    <span className="text-[11px] font-bold text-emerald-800 block">۱. هزینه اطلاع‌رسانی</span>
+                    <h5 className="font-bold text-xs text-slate-900">نیازمند اتصال و سنجش واقعی</h5>
                     <p className="text-[11px] text-slate-600 leading-relaxed">
-                      مدارس کشور سالانه مبالغ هنگفتی صرف پیامک‌های غیبت می‌کنند. اتصال به پیام‌رسان بومی «بله» این هزینه را به صفر نزدیک می‌کند.
+                      ارسال پیامک و بله در این نمونه فعال نیست؛ هیچ کاهش هزینه‌ای اندازه‌گیری نشده است.
                     </p>
                   </div>
 
                   <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-2xl space-y-2">
-                    <span className="text-[11px] font-bold text-teal-800 block">۲. مدل درآمدی دوگانه (B2G + B2B)</span>
-                    <h5 className="font-bold text-xs text-slate-900">قرارداد با مناطق و اشتراک مدارس</h5>
+                    <span className="text-[11px] font-bold text-teal-800 block">۲. مدل درآمدی</span>
+                    <h5 className="font-bold text-xs text-slate-900">قیمت‌گذاری هنوز اعتبارسنجی نشده</h5>
                     <p className="text-[11px] text-slate-600 leading-relaxed">
-                      فروش اشتراک سالانه نرم‌افزار به مدارس غیردولتی و تیزهوشان، همراه با قراردادهای کلان پایش منطقه‌ای با ادارات آموزش و پرورش.
+                      اشتراک مدارس یا قرارداد منطقه‌ای در محصول پیاده‌سازی یا آزمایش نشده است.
                     </p>
                   </div>
 
                   <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-2">
-                    <span className="text-[11px] font-bold text-indigo-800 block">۳. جریان درآمدی تبلیغات هدفمند</span>
-                    <h5 className="font-bold text-xs text-slate-900">اسپانسرینگ آموزشی و فرهنگی</h5>
+                    <span className="text-[11px] font-bold text-indigo-800 block">۳. حامیان آموزشی</span>
+                    <h5 className="font-bold text-xs text-slate-900">نیازمند سیاست و آزمون محصول</h5>
                     <p className="text-[11px] text-slate-600 leading-relaxed">
-                      ماژول اختصاصی جذب حامیان مالی (انتشارات کمک‌آموزشی، پلتفرم‌های کنکور و المپیاد) با فیلتر دقیق مخاطب بر اساس نقش.
+                      نمایش نمونه حامی در رابط وجود دارد؛ فروش تبلیغ، هدف‌گیری مخاطب و درآمد واقعی فعال نیست.
                     </p>
                   </div>
 
                   <div className="p-4 bg-purple-50/70 border border-purple-200 rounded-2xl space-y-2">
-                    <span className="text-[11px] font-bold text-purple-800 block">۴. تسریع نقدینگی و وصول شهریه</span>
-                    <h5 className="font-bold text-xs text-slate-900">اتوماسیون اقساط و رفع مطالبات</h5>
+                    <span className="text-[11px] font-bold text-purple-800 block">۴. فرایند مالی</span>
+                    <h5 className="font-bold text-xs text-slate-900">ثبت محلی و پرداخت نمایشی</h5>
                     <p className="text-[11px] text-slate-600 leading-relaxed">
-                      کاهش ۸۵٪ تاخیر در پرداخت شهریه و خدمات با تقسیط هوشمند، ثبت فیش، درگاه آنلاین و هشدارهای سررسید در پیام‌رسان بله.
+                      درگاه بانکی یا پیام‌رسان متصل نیست و داده‌ای برای ادعای کاهش تأخیر وجود ندارد.
                     </p>
                   </div>
                 </div>
@@ -709,24 +725,24 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                   <div className="flex items-center gap-2 font-bold text-xs text-slate-800">
                     <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                    <span>برتری نسبت به سامانه‌های سنتی (مانند سناد، همگام و شاد):</span>
+                    <span>موارد قابل ارزیابی در نمونه رابط:</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600">
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-                      <span>واکنش‌گرایی کامل و طراحی اول-موبایل بدون کندی</span>
+                      <span>رابط RTL و نوار ناوبری موبایل</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-                      <span>بانک سوالات اشتراکی و بومی قطب شهرستان</span>
+                      <span>بانک سوال نمونه در مرورگر</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-                      <span>تفکیک دقیق و مستقل ۶ پرسونای کاربری</span>
+                      <span>پیش‌نمایش شش نقش نمونه</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-                      <span>ویزارد اتوماتیک و بدون خطای تحویل سال تحصیلی</span>
+                      <span>روند تغییر سال با کنترل‌های محدود نمونه</span>
                     </div>
                   </div>
                 </div>
@@ -742,12 +758,13 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
           </div>
           <button
             onClick={onClose}
-            className="w-full sm:w-auto px-6 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-xs"
+            className="min-h-[44px] w-full sm:w-auto px-6 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-xs"
           >
             بستن راهنما
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>}
+    </AnimatePresence>
   );
 };

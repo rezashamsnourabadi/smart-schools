@@ -21,14 +21,13 @@ interface ClassManagerModalProps {
 }
 
 export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose }) => {
-  const { currentSchoolId, currentSchool, classes, students, addClass, deleteClass } = useApp();
+  const { currentSchoolId, currentSchool, classes, students, addClassGroup, deleteClassGroup } = useApp();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [name, setName] = useState('');
   const [grade, setGrade] = useState('دهم');
   const [major, setMajor] = useState('علوم تجربی');
   const [room, setRoom] = useState('');
-  const [capacity, setCapacity] = useState<number>(30);
   const [selectedClassForRoster, setSelectedClassForRoster] = useState<ClassGroup | null>(null);
 
   const schoolClasses = classes.filter((c) => c.schoolId === currentSchoolId);
@@ -37,13 +36,12 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
     e.preventDefault();
     if (!name.trim()) return;
 
-    addClass({
+    addClassGroup({
       schoolId: currentSchoolId,
       name: name.trim(),
       grade,
       major,
-      room: room.trim() || 'اتاق ۱۰۱',
-      studentCount: 0
+      room: room.trim()
     });
 
     setName('');
@@ -68,7 +66,7 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
                 مدیریت کلاس‌ها و گروه‌های درسی
               </h3>
               <p className="text-xs text-slate-400">
-                {currentSchool?.name} • تفکیک پایه‌ها، اتاق‌ها و ظرفیت کلاس‌ها
+                {currentSchool?.name} • تفکیک پایه‌ها و اتاق‌های کلاس
               </p>
             </div>
           </div>
@@ -186,7 +184,7 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {schoolClasses.map((cls) => {
               const classStudents = students.filter(
-                (s) => s.classGroupId === cls.id || s.grade === cls.grade
+                (s) => s.classGroupId === cls.id && s.schoolId === currentSchoolId && (!s.status || s.status === 'active')
               );
 
               return (
@@ -203,7 +201,7 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
                     </div>
 
                     <button
-                      onClick={() => deleteClass(cls.id)}
+                      onClick={() => deleteClassGroup(cls.id)}
                       className="text-slate-300 hover:text-rose-600 p-1.5 rounded-lg transition-colors"
                       title="حذف کلاس"
                     >
@@ -272,8 +270,8 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
                 {students
                   .filter(
                     (s) =>
-                      s.classGroupId === selectedClassForRoster.id ||
-                      s.grade === selectedClassForRoster.grade
+                      s.classGroupId === selectedClassForRoster.id &&
+                      s.schoolId === currentSchoolId && (!s.status || s.status === 'active')
                   )
                   .map((s, idx) => (
                     <div key={s.id} className="pt-2 flex items-center justify-between">

@@ -27,29 +27,30 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose }) =
     currentUser,
     currentRole,
     currentSchool,
-    students,
-    updateStudent,
+    currentStudent: child,
+    updateParentContact,
     sendNotification
   } = useApp();
 
   // If user is a parent or student, get the corresponding student record
-  const child = students.find((s) => s.id === 'std-1') || students[0];
 
   // Parent contact states
-  const [parentBale, setParentBale] = useState(child.parentBaleAccount || '@rezaei_parent');
-  const [parentPhone, setParentPhone] = useState(child.parentPhone || '09123456789');
-  const [emergencyPhone, setEmergencyPhone] = useState(child.emergencyPhone || '02188776655');
+  const [parentBale, setParentBale] = useState(child?.parentBaleAccount || '');
+  const [parentPhone, setParentPhone] = useState(child?.parentPhone || '');
+  const [emergencyPhone, setEmergencyPhone] = useState(child?.emergencyPhone || '');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const handleSaveParentContact = (e: React.FormEvent) => {
     e.preventDefault();
-    updateStudent(child.id, {
+    if (!child) return;
+    updateParentContact(child.id, {
       parentBaleAccount: parentBale.trim(),
       parentPhone: parentPhone.trim(),
       emergencyPhone: emergencyPhone.trim()
     });
     setSavedSuccess(true);
     sendNotification({
+      studentId: child.id,
       recipientName: currentUser.name,
       recipientPhone: parentPhone.trim(),
       studentName: child.name,
@@ -145,7 +146,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose }) =
           </div>
 
           {/* PARENT SPECIFIC: Bale Messenger & Contact Settings */}
-          {currentRole === 'parent' && (
+          {(currentRole === 'parent' || currentRole === 'student') && !child && <p role="status" className="p-4 text-sm">پرونده‌ای به این حساب در مدرسه انتخاب‌شده متصل نیست.</p>}
+          {currentRole === 'parent' && child && (
             <div className="space-y-3 bg-teal-50/50 p-4 rounded-2xl border border-teal-200">
               <div className="flex items-center justify-between border-b border-teal-100 pb-2">
                 <div className="flex items-center gap-2">
@@ -176,7 +178,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose }) =
                     <Smartphone className="w-4 h-4 text-slate-400 absolute left-2.5 top-3" />
                   </div>
                   <span className="text-[10px] text-slate-500 mt-1 block">
-                    اعلانات ورود، خروج و غیبت فرزند به صورت آنی به این شناسه در بله ارسال می‌شود.
+                    در این نسخه فقط سابقه اعلان آزمایشی ثبت می‌شود؛ ارسال واقعی به بله یا پیامک فعال نیست.
                   </span>
                 </div>
 
@@ -227,7 +229,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose }) =
           )}
 
           {/* STUDENT SPECIFIC: Details */}
-          {currentRole === 'student' && (
+          {currentRole === 'student' && child && (
             <div className="bg-cyan-50/60 p-4 rounded-2xl border border-cyan-200 space-y-2 text-xs">
               <div className="font-bold text-cyan-950 flex items-center gap-1.5 border-b border-cyan-200 pb-2">
                 <GraduationCap className="w-4 h-4 text-cyan-700" />

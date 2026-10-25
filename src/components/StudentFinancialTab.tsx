@@ -20,7 +20,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { Student, PaymentMethod } from '../types';
 import { toPersianDigits, formatPersianCurrency } from '../utils/persianUtils';
-import { createInitialStudentFinancialSummary } from '../data/mockFinanceData';
+import { readFinancialSummary } from '../utils/financialLedger';
 import { ParentPaymentModal } from './ParentPaymentModal';
 
 interface StudentFinancialTabProps {
@@ -30,25 +30,17 @@ interface StudentFinancialTabProps {
 export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ student }) => {
   const {
     currentRole,
-    activeVicePrincipalPermissions,
+    canManageSchool,
     recordStudentPayment,
     sendPaymentReminder,
     applyStudentDiscount
   } = useApp();
 
-  const canManage =
-    currentRole === 'principal' ||
-    currentRole === 'platform_admin' ||
-    (currentRole === 'vice_principal' && activeVicePrincipalPermissions.canManageFinances);
+  const canManage = canManageSchool('canManageFinances');
 
   const isParent = currentRole === 'parent';
 
-  const summary = student.financialSummary || createInitialStudentFinancialSummary(
-    student.id,
-    student.name,
-    student.grade,
-    'normal_partial'
-  );
+  const { summary, error: financialError } = readFinancialSummary(student.financialSummary);
 
   // Modals state
   const [showPayModal, setShowPayModal] = useState(false);
@@ -56,9 +48,10 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [showParentPayModal, setShowParentPayModal] = useState(false);
   const [selectedInstallmentId, setSelectedInstallmentId] = useState<string | undefined>();
+  const [actionError, setActionError] = useState('');
 
   // New payment form
-  const [payAmount, setPayAmount] = useState<number>(Math.min(summary.remainingDebt, 5000000) || 5000000);
+  const [payAmount, setPayAmount] = useState<number>(Math.min(summary.remainingDebt, 5000000));
   const [payMethod, setPayMethod] = useState<PaymentMethod>('pos');
   const [payTrackingCode, setPayTrackingCode] = useState<string>(() => Math.floor(100000 + Math.random() * 900000).toString());
   const [payFeeTitle, setPayFeeTitle] = useState<string>('شهریه مصوب آموزشگاه');
@@ -78,7 +71,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
     e.preventDefault();
     if (payAmount <= 0) return;
 
-    recordStudentPayment({
+    const result = recordStudentPayment({
       studentId: student.id,
       studentName: student.name,
       schoolId: student.schoolId,
@@ -90,7 +83,8 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
       recordedBy: currentRole === 'principal' ? 'مدیر آموزشگاه' : currentRole === 'vice_principal' ? 'معاون اجرایی' : 'کاربر سیستم',
       status: 'confirmed'
     });
-
+    if (!result.ok) { setActionError(result.error); return; }
+    setActionError('');
     setShowPayModal(false);
     setPayTrackingCode(Math.floor(100000 + Math.random() * 900000).toString());
   };
@@ -101,7 +95,9 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
     const targetFeeId = selectedFeeItemId || summary.assignedFees[0]?.feeItemId;
     if (!targetFeeId) return;
 
-    applyStudentDiscount(student.id, targetFeeId, discountAmount, discountReason);
+    const result = applyStudentDiscount(student.id, targetFeeId, discountAmount, discountReason);
+    if (!result.ok) { setActionError(result.error); return; }
+    setActionError('');
     setShowDiscountModal(false);
   };
 
@@ -138,6 +134,11 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
 
   return (
     <div className="space-y-4 sm:space-y-6" dir="rtl" id="student-financial-tab">
+      {financialError && <p role="alert" className="p-3 bg-rose-50 text-rose-800 rounded-xl text-sm">این پرونده نیاز به بررسی دارد: {financialError}</p>}
+      {!!summary.discounts?.length && <section aria-label="سوابق تخفیف" className="p-3 bg-white border border-slate-200 rounded-xl text-xs space-y-2">
+        <h3 className="font-bold">سوابق تخفیف</h3>
+        {summary.discounts.map((item) => <p key={item.id}>{formatPersianCurrency(item.amount)} • {item.reason} • {item.recordedBy} • {toPersianDigits(item.date)}</p>)}
+      </section>}
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
         <div className="bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-4">
@@ -201,7 +202,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
               className="min-h-[44px] w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
             >
               <CreditCard className="w-4 h-4" />
-              پرداخت آنلاین شهریه / ثبت فیش
+              پرداخت نمایشی شهریه / ثبت فیش
             </button>
           )}
 
@@ -211,7 +212,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
                 type="button"
                 id="btn-open-record-payment"
                 onClick={() => setShowPayModal(true)}
-                className="min-h-[42px] px-3 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="min-h-[44px] px-3 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 ثبت واریزی جدید
@@ -222,10 +223,10 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
                   type="button"
                   id="btn-open-payment-reminder"
                   onClick={() => setShowReminderModal(true)}
-                  className="min-h-[42px] px-3 py-2 bg-sky-50 text-sky-700 hover:bg-sky-100 active:bg-sky-200 border border-sky-200 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="min-h-[44px] px-3 py-2 bg-sky-50 text-sky-700 hover:bg-sky-100 active:bg-sky-200 border border-sky-200 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
-                  ارسال یادآوری بله / SMS
+                  ثبت یادآوری آزمایشی
                 </button>
               )}
 
@@ -233,7 +234,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
                 type="button"
                 id="btn-open-discount-modal"
                 onClick={() => setShowDiscountModal(true)}
-                className="min-h-[42px] px-3 py-2 bg-purple-50 text-purple-700 hover:bg-purple-100 active:bg-purple-200 border border-purple-200 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="min-h-[44px] px-3 py-2 bg-purple-50 text-purple-700 hover:bg-purple-100 active:bg-purple-200 border border-purple-200 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Percent className="w-4 h-4" />
                 اعمال تخفیف / بورسیه
@@ -343,7 +344,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
                       className="min-h-[44px] w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                     >
                       <CreditCard className="w-4 h-4" />
-                      <span>{isParent ? 'پرداخت آنلاین این قسط' : 'ثبت وصولی این قسط'}</span>
+                      <span>{isParent ? 'پرداخت آزمایشی این قسط' : 'ثبت وصولی این قسط'}</span>
                     </button>
                   ) : (
                     <div className="min-h-[38px] w-full bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
@@ -604,8 +605,8 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
                           ? 'کارت به کارت'
                           : txn.method === 'cheque'
                           ? 'چک صیادی'
-                          : txn.method === 'online_gateway'
-                          ? 'درگاه آنلاین'
+                          : txn.method === 'online'
+                          ? 'آنلاین نمایشی'
                           : 'فیش نقدی / واریز به حساب'}
                       </span>
                       {txn.status === 'confirmed' && (
@@ -614,6 +615,8 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
                           تایید شده
                         </span>
                       )}
+                      {txn.status !== 'confirmed' && <span className="text-[11px] text-amber-800">{txn.status === 'pending_verification' ? 'در انتظار تأیید مدرسه' : 'رد شده'}</span>}
+                      {txn.isSimulated && <span className="text-[11px] text-slate-500">آزمایشی</span>}
                     </div>
                     <div className="text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                       <span>بابت: {txn.feeTitle || 'شهریه مصوب'}</span>
@@ -651,13 +654,15 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
             </div>
 
             <form onSubmit={handleRecordPayment} className="space-y-4">
+              {actionError && <p role="alert" className="text-sm text-rose-800">{actionError}</p>}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  مبلغ پرداختی (ریال)
+                  مبلغ پرداختی (تومان)
                 </label>
                 <input
                   type="number"
-                  step="1000000"
+                  step="1"
+                  min="1"
                   value={payAmount}
                   onChange={(e) => setPayAmount(Number(e.target.value))}
                   className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-mono text-left focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
@@ -706,9 +711,9 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
                   >
                     <option value="pos">دستگاه پوز آموزشگاه</option>
                     <option value="card_to_card">کارت به کارت</option>
-                    <option value="online_gateway">درگاه پرداخت الکترونیکی</option>
+                    <option value="online">پرداخت آنلاین نمایشی</option>
                     <option value="cheque">چک صیادی</option>
-                    <option value="cash_deposit">فیش واریز نقدی به حساب</option>
+                    <option value="bank_receipt">فیش واریز نقدی به حساب</option>
                   </select>
                 </div>
 
@@ -755,7 +760,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
               <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
                 <Send className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>
-                  با ثبت این پرداخت، پیامک و اعلان پیام‌رسان بله به شماره اولیا ({toPersianDigits(student.parentPhone)}) به همراه شناسه پرداخت ارسال خواهد شد.
+                  پرداخت و اعلان در این نسخه فقط به‌صورت محلی ثبت می‌شوند؛ پیامک یا پیام بله ارسال نمی‌شود.
                 </span>
               </div>
 
@@ -799,6 +804,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
             </div>
 
             <form onSubmit={handleApplyDiscount} className="space-y-4">
+              {actionError && <p role="alert" className="text-sm text-rose-800">{actionError}</p>}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   سرفصل مورد نظر جهت اعمال تخفیف
@@ -818,7 +824,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  مبلغ تخفیف (ریال)
+                  مبلغ تخفیف (تومان)
                 </label>
                 <input
                   type="number"
@@ -878,18 +884,19 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2">
                 <Send className="w-5 h-5 text-sky-600" />
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base">ارسال پیام یادآوری تسویه شهریه</h3>
+                <h3 className="font-bold text-slate-800 text-sm sm:text-base">ثبت یادآوری آزمایشی تسویه شهریه</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowReminderModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                className="min-h-[44px] min-w-[44px] text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4">
+              <div className="space-y-4">
+                <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">در این نسخه فقط سابقه محلی اعلان ثبت می‌شود؛ پیام واقعی ارسال نمی‌شود.</p>
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
                 <div className="flex justify-between">
                   <span className="text-slate-500">گیرنده:</span>
@@ -911,7 +918,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  متن پیام ارسالی به پیام‌رسان بله و پیامک
+                  متن سابقه یادآوری آزمایشی
                 </label>
                 <textarea
                   rows={4}
@@ -925,7 +932,7 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
                 <button
                   type="button"
                   onClick={() => setShowReminderModal(false)}
-                  className="min-h-[40px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="min-h-[44px] px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-medium hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   انصراف
                 </button>
@@ -933,10 +940,10 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
                   type="button"
                   id="btn-confirm-send-reminder"
                   onClick={handleSendReminder}
-                  className="min-h-[40px] px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="min-h-[44px] px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
-                  تایید و ارسال فوری
+                  ثبت سابقه آزمایشی
                 </button>
               </div>
             </div>
