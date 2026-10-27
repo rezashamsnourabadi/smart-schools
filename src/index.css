@@ -52,3 +52,21 @@
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
 }
 
+/* Public landing: restrained motion and scoped styling keep the workspace unchanged. */
+.landing-page :where(a, summary):focus-visible {
+  outline: 2px solid #6b8660;
+  outline-offset: 5px;
+}
+.landing-page .landing-link:hover { color: #153e37; }
+.landing-page .landing-section { scroll-margin-top: 24px; }
+.landing-page summary::-webkit-details-marker { display: none; }
+.landing-preview-sheet { transform: rotate(-3deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .landing-hero-copy { animation: landing-enter 650ms ease-out both; }
+  .landing-preview { animation: landing-enter 800ms 100ms ease-out both; }
+}
+@keyframes landing-enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

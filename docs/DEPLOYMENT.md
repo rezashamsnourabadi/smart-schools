@@ -23,7 +23,7 @@ docker compose --env-file .env.production -f compose.production.yaml up -d postg
 docker compose --env-file .env.production -f compose.production.yaml --profile tools run --rm migrate
 ```
 
-پیش از اجرای app، bucket خصوصی و حساب سرویس S3 را در MinIO ایجاد کنید. storage-init نسخه‌بندی bucket را فعال می‌کند و به مجوز عملیاتی مربوط نیاز دارد. نخستین مدیر با node build/server/cli.js bootstrap-admin در کانتینر ابزار و متغیرهای BOOTSTRAP امن ساخته می‌شود. ورود مدیر تولید نیازمند سرویس پیامک تنظیم‌شده است.
+پیش از اجرای app، bucket خصوصی و حساب سرویس S3 را در MinIO ایجاد کنید. storage-init نسخه‌بندی bucket را فعال می‌کند و به مجوز عملیاتی مربوط نیاز دارد. نخستین مدیر با node build/server/cli.js bootstrap-admin در کانتینر ابزار و متغیرهای BOOTSTRAP امن ساخته می‌شود. ورود با رمز مدیر در تولید به پیامک وابسته نیست؛ روش پیامکی و فعال‌سازی/بازیابی به سرویس تنظیم‌شده نیاز دارند.
 
 ```sh
 docker compose --env-file .env.production -f compose.production.yaml up -d app worker

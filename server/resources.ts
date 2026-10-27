@@ -306,11 +306,19 @@ export async function resourceRoutes(app:FastifyInstance) {
   app.patch('/api/v1/resources/:kind/:id',async request=>{
     const kind=resourceName.parse((request.params as {kind:string}).kind) as Resource;
     const id=z.uuid().parse((request.params as {id:string}).id);
-    const {member,school,year,user}=await scope(request,kind!=='academicYears');
+    const {member,school,year,user}=await scope(request,!['academicYears','banners'].includes(kind));
     if(!manage(member,kind))deny();
     const input=z.object({version:z.number().int().positive(),changes:z.record(z.string(),z.unknown())}).strict().parse(request.body);
-    requireValue(kind in resourceSchemas && !['schools','banners'].includes(kind),'از مسیر عملیات اختصاصی استفاده کنید.');
+    requireValue(kind in resourceSchemas && kind!=='schools','از مسیر عملیات اختصاصی استفاده کنید.');
     return transaction(async tx=>{
+      if(kind==='banners') {
+        const row=(await tx.query("SELECT * FROM regional_content WHERE id=$1 AND kind='banners' FOR UPDATE",[id])).rows[0];
+        requireValue(row,'بنر پیدا نشد.',404);requireValue(row.version===input.version,'بنر تغییر کرده؛ دوباره بارگذاری کنید.',409);
+        const changes=resourceSchemas.banners.partial().parse(input.changes);
+        const updated=(await tx.query('UPDATE regional_content SET data=data||$1::jsonb,version=version+1 WHERE id=$2 RETURNING *',[changes,id])).rows[0];
+        await audit(tx,user.id,null,'update:banners',id);
+        return {...updated.data,id,version:updated.version};
+      }
       if(kind==='academicYears') {
         const row=await tx.query('SELECT * FROM academic_years WHERE id=$1 AND school_id=$2 FOR UPDATE',[id,school]);requireValue(row.rowCount,'سال پیدا نشد.',404);
         requireValue(row.rows[0].version===input.version,'نسخه سال تغییر کرده است.',409);

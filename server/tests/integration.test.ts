@@ -22,7 +22,7 @@ async function actor(role:string,school?:string,profileId?:string,studentId?:str
   const row=await pool.query('INSERT INTO users(username,name,phone,password_hash,phone_verified) VALUES($1,$2,$3,$4,true) RETURNING id',[username,username,'09123456789',await hashPassword('test-password-1234')]);
   const id=row.rows[0].id;users.push(id);
   const member=await pool.query('INSERT INTO memberships(user_id,role,school_id,profile_id,student_id,permissions) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[id,role,school||null,profileId||null,studentId||null,perms]);
-  const secret=randomUUID(),csrf=randomUUID();await pool.query("INSERT INTO sessions(id,user_id,csrf,expires_at,mfa) VALUES($1,$2,$3,now()+interval '1 day',true)",[digest(secret),id,csrf]);
+  const secret=randomUUID(),csrf=randomUUID();await pool.query("INSERT INTO sessions(id,user_id,csrf,expires_at,privileged) VALUES($1,$2,$3,now()+interval '1 day',true)",[digest(secret),id,csrf]);
   return {id,membership:member.rows[0].id,cookie:`school-session=${secret}`,csrf,school,username};
 }
 async function call(a:Actor,path:string,method='GET',body?:unknown,key=randomUUID(),expected=200) {
@@ -169,9 +169,11 @@ test('PostgreSQL-backed workflows and security',async t=>{
     await call(principal,'/commands/report-card','POST',{studentId:student.id,version:(await call(principal,`/students/${student.id}`)).version,card});assert.equal((await call(parent,`/students/${student.id}`)).reportCards.length,0);
     await call(principal,'/commands/report-card','POST',{studentId:student.id,version:(await call(principal,`/students/${student.id}`)).version,card:{...card,isPublished:true}});assert.equal((await call(parent,`/students/${student.id}`)).reportCards[0].gpa,18);
   });
-  await t.test('password login, MFA single-use, revocation and generic invalid credentials',async()=>{
+  await t.test('independent password and SMS login, single-use codes and revocation',async()=>{
     const login=await app.inject({url:'/api/v1/auth/login',method:'POST',payload:{username:principal.username,password:'test-password-1234'}});assert.equal(login.statusCode,200,login.body);
-    const challengeId=login.json().challengeId;assert.ok(challengeId);assert.equal(login.cookies.length,0);
+    assert.equal(login.json().authenticated,true);assert.equal(login.json().challengeId,undefined);assert.equal(login.cookies.length,1);
+    const sent=await app.inject({url:'/api/v1/auth/challenge',method:'POST',payload:{username:principal.username,purpose:'login'}});assert.equal(sent.statusCode,200,sent.body);
+    const challengeId=sent.json().challengeId;assert.ok(challengeId);assert.equal(sent.cookies.length,0);
     const {code}=JSON.parse(await readFile(`.local/otp/${challengeId}.json`,'utf8'));
     const verify=await app.inject({url:'/api/v1/auth/verify',method:'POST',payload:{challengeId,code}});assert.equal(verify.statusCode,200,verify.body);
     const repeated=await app.inject({url:'/api/v1/auth/verify',method:'POST',payload:{challengeId,code}});assert.equal(repeated.statusCode,401);

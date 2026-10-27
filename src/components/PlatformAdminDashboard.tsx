@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {AccountsModal} from './AccountsModal';
-import { School, SchoolType } from '../types';
+import { BannerAd, School, SchoolType } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
+import {safeExternalUrl} from '../utils/externalLinks';
 import {
   Building2,
   Users,
@@ -35,6 +36,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
     banners,
     toggleBannerStatus,
     addBannerAd,
+    updateBannerAd,
     announcements,
     addAnnouncement,
     addSchool,
@@ -61,6 +63,9 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
   const [adSponsor, setAdSponsor] = useState('');
   const [adBadge, setAdBadge] = useState('رویداد آموزشی');
   const [adLink, setAdLink] = useState('اطلاعات بیشتر و ثبت‌نام');
+  const [adLinkUrl,setAdLinkUrl]=useState('');
+  const [editingBannerId,setEditingBannerId]=useState<string|null>(null);
+  const [adError,setAdError]=useState('');
   const [adAudience, setAdAudience] = useState<'all' | 'students' | 'parents' | 'teachers'>('all');
 
   // New District Announcement state
@@ -99,20 +104,31 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
     setSchPrincipal('');
   };
 
+  const openBannerEditor=(banner?:BannerAd)=>{
+    setEditingBannerId(banner?.id||null);setAdTitle(banner?.title||'');setAdDesc(banner?.description||'');setAdSponsor(banner?.sponsorName||'');
+    setAdBadge(banner?.badge||'رویداد آموزشی');setAdLink(banner?.linkText||'اطلاعات بیشتر و ثبت‌نام');setAdLinkUrl(banner?.linkUrl||'');
+    setAdAudience(banner?.targetAudience.includes('all')?'all':banner?.targetAudience[0]||'all');setAdError('');setShowAddBanner(true);
+  };
   const handleCreateBanner = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adTitle.trim() || !adSponsor.trim()) return;
-
-    const saved1 = await addBannerAd({
+    const linkUrl=safeExternalUrl(adLinkUrl);
+    if(!linkUrl){setAdError('آدرس مقصد را با http:// یا https:// وارد کنید.');return;}
+    setAdError('');
+    const existing=banners.find(banner=>banner.id===editingBannerId);
+    const data:Omit<BannerAd,'id'|'clicksCount'>={
       title: adTitle,
       description: adDesc,
       sponsorName: adSponsor,
       targetAudience: adAudience === 'all' ? ['all', 'students', 'parents', 'teachers'] : [adAudience],
       linkText: adLink,
-      category: 'آموزشی',
+      linkUrl,
+      category: existing?.category||'آموزشی',
       badge: adBadge,
-      isActive: true
-    }); if (!saved1.ok) return;
+      isActive: existing?.isActive??true
+    };
+    const saved1 = editingBannerId?await updateBannerAd(editingBannerId,data):await addBannerAd(data);
+    if (!saved1.ok) return;
 
     setShowAddBanner(false);
     setAdTitle('');
@@ -374,7 +390,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
               </p>
             </div>
             <button
-              onClick={() => setShowAddBanner(true)}
+              onClick={() => openBannerEditor()}
               className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
             >
               <PlusCircle className="w-3.5 h-3.5" />
@@ -393,6 +409,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                     {ban.badge}
                   </span>
                   <div className="flex items-center gap-2">
+                    <button id={`edit-banner-${ban.id}`} onClick={()=>openBannerEditor(ban)} className="min-h-11 rounded-xl px-2.5 text-xs font-bold text-teal-800 hover:bg-teal-50">ویرایش</button>
                     <span className="text-xs text-slate-400">
                       {toPersianDigits(ban.clicksCount)} کلیک / بازدید
                     </span>
@@ -416,7 +433,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
 
                 <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
                   <span>حامی: {ban.sponsorName}</span>
-                  <span className="text-teal-700 font-semibold">{ban.linkText}</span>
+                  {safeExternalUrl(ban.linkUrl)?<a href={safeExternalUrl(ban.linkUrl)} target="_blank" rel="noopener noreferrer sponsored" className="min-h-11 inline-flex items-center gap-1 text-teal-700 font-semibold">{ban.linkText}<ExternalLink className="size-3" aria-hidden="true"/></a>:<span className="text-amber-700">آدرس مقصد تعیین نشده</span>}
                 </div>
               </div>
             ))}
@@ -634,12 +651,12 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
       {/* Modal: Add Banner / Sponsor */}
       {showAddBanner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-right animate-in fade-in zoom-in-95">
+          <div id="banner-editor-modal" className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4 text-right animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-teal-600" />
                 <h3 className="font-bold text-sm text-slate-900">
-                  تعریف بنر تبلیغاتی یا حامی آموزشی منطقه
+                  {editingBannerId?'ویرایش بنر و آدرس مقصد':'تعریف بنر تبلیغاتی یا حامی آموزشی منطقه'}
                 </h3>
               </div>
               <button
@@ -723,6 +740,12 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                 </div>
               </div>
 
+              <div>
+                <label htmlFor="ad-link-url" className="block font-semibold text-slate-700 mb-1">آدرس مقصد تبلیغ</label>
+                <input id="ad-link-url" type="url" inputMode="url" dir="ltr" required maxLength={2048} placeholder="https://example.com" value={adLinkUrl} onChange={e=>setAdLinkUrl(e.target.value)} className="min-h-11 w-full px-3 py-2 border border-slate-200 rounded-xl"/>
+                <p className="mt-2 text-[11px] leading-6 text-slate-500">کلیک روی کارت یا دکمه، این آدرس را در تب جدید باز می‌کند.</p>
+              </div>
+              {adError&&<p role="alert" className="rounded-xl bg-rose-50 p-3 text-rose-800">{adError}</p>}
               <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
@@ -735,7 +758,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold transition-all shadow-xs"
                 >
-                  فعال‌سازی بنر در هاب
+                  {editingBannerId?'ذخیره تغییرات':'فعال‌سازی بنر در هاب'}
                 </button>
               </div>
             </form>

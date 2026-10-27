@@ -15,7 +15,7 @@ try {
       const user=await tx.query('INSERT INTO users(username,name,phone,password_hash,phone_verified) VALUES($1,$2,$3,$4,true) RETURNING id',[input.username,input.name,input.phone,await hashPassword(input.password)]);
       await tx.query("INSERT INTO memberships(user_id,role) VALUES($1,'platform_admin')",[user.rows[0].id]);
     });
-    console.log('Administrator created. Login requires a second factor.');
+    console.log('Administrator created. Login with the password or a verified SMS code.');
   } else if(command==='storage-init') {
     try{await storage.send(new CreateBucketCommand({Bucket:config.S3_BUCKET}));}catch(e){if(!['BucketAlreadyOwnedByYou','BucketAlreadyExists'].includes((e as Error).name))throw e;}
     await storage.send(new PutBucketVersioningCommand({Bucket:config.S3_BUCKET,VersioningConfiguration:{Status:'Enabled'}}));

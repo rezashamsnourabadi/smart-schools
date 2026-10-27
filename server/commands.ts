@@ -23,7 +23,7 @@ export async function enqueue(tx:Tx,school:string,year:string,student:Entity,inp
 export async function commandRoutes(app:FastifyInstance) {
   app.post('/api/v1/commands/:action',async request=>{
     const action=(request.params as {action:string}).action;
-    const {member,school,year,user}=await scope(request,true);
+    const {member,school,year,user}=await scope(request,!['banner-click','banner-status'].includes(action));
     const body=z.record(z.string(),z.unknown()).parse(request.body);
     const need=(p:Parameters<typeof allowed>[1])=>{if(!allowed(member,p))deny();};
     return transaction(async tx=>{

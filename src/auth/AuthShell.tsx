@@ -3,6 +3,7 @@ import {request,RequestError} from '../api/client';
 import type {AuthState} from './AuthProvider';
 import {Status} from './Status';
 import {LoginPage} from './LoginPage';
+import {showLoginPath} from './navigation';
 const ConnectedApp=lazy(()=>import('../ConnectedApp'));
 
 /** Authentication boots before loading the dashboard query/cache runtime. */
@@ -14,6 +15,7 @@ export function AuthShell(){
     finally{if(!signal?.aborted)setLoading(false);}
   },[]);
   useEffect(()=>{const controller=new AbortController();void read(controller.signal);return()=>controller.abort();},[read]);
+  useEffect(()=>{if(!loading&&!error&&!session)showLoginPath();},[loading,error,session]);
   if(loading)return <Status text="در حال بررسی ورود…"/>;
   if(error)return <Status text={error} onRetry={()=>void read()}/>;
   if(!session)return <LoginPage onSuccess={()=>void read()}/>;

@@ -8,8 +8,9 @@ import { pool, query, transaction } from './db';
 import { ApiError, deny, requireValue } from './errors';
 import type { UserRole, VicePrincipalPermissions } from '../src/types';
 import {seal} from './secrets';
+import {isAllowedOrigin} from './origin';
 
-export interface Identity { id: string; username: string; name: string; phone: string; csrf: string; mfa: boolean }
+export interface Identity { id: string; username: string; name: string; phone: string; csrf: string; privileged: boolean; authMethod: 'password' | 'sms' }
 export interface Membership { id: string; school_id: string | null; role: UserRole; profile_id: string | null; student_id: string | null; permissions: Partial<VicePrincipalPermissions> }
 declare module 'fastify' { interface FastifyRequest { identity: Identity | null; authorizedMembership: Membership | null } }
 const cookieName = config.NODE_ENV === 'production' ? '__Host-school-session' : 'school-session';
@@ -30,10 +31,12 @@ async function verifyPassword(hash:string|null|undefined,password:string){const 
 function setCookie(reply: FastifyReply, value: string) {
   reply.setCookie(cookieName, value, { path: '/', httpOnly: true, secure: config.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 86400 });
 }
-async function session(userId: string, mfa: boolean, reply: FastifyReply) {
+async function session(userId: string, method: 'password' | 'sms', reply: FastifyReply) {
   const secret = randomBytes(32).toString('base64url');
   const csrf = randomBytes(32).toString('base64url');
-  await query("INSERT INTO sessions(id,user_id,csrf,expires_at,mfa) VALUES($1,$2,$3,now()+CASE WHEN $4 THEN interval '12 hours' ELSE interval '7 days' END,$4)", [digest(secret), userId, csrf, mfa]);
+  await query(`WITH account_scope AS (SELECT EXISTS(SELECT 1 FROM memberships WHERE user_id=$2 AND active AND role IN ('principal','platform_admin')) AS privileged)
+    INSERT INTO sessions(id,user_id,csrf,expires_at,privileged,auth_method)
+    SELECT $1,$2,$3,now()+CASE WHEN privileged THEN interval '12 hours' ELSE interval '7 days' END,privileged,$4 FROM account_scope`, [digest(secret), userId, csrf, method]);
   setCookie(reply, secret);
   return { authenticated: true, csrf };
 }
@@ -63,8 +66,8 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   const secret = request.cookies[cookieName];
   if (!secret) return;
   const memberId=request.headers['x-membership-id']?z.uuid().parse(request.headers['x-membership-id']):null;
-  const result = await query<Identity&{last_seen:Date;membership:Membership|null}>(`SELECT u.id,u.username,u.name,u.phone,s.csrf,s.mfa,s.last_seen,CASE WHEN m.id IS NULL THEN NULL ELSE jsonb_build_object('id',m.id,'school_id',m.school_id,'role',m.role,'profile_id',m.profile_id,'student_id',m.student_id,'permissions',m.permissions) END AS membership FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN memberships m ON m.id=$2 AND m.user_id=u.id AND m.active
-    WHERE s.id=$1 AND u.active AND s.expires_at>now() AND s.last_seen>now()-CASE WHEN s.mfa THEN interval '30 minutes' ELSE interval '8 hours' END`, [digest(secret),memberId]);
+  const result = await query<Identity&{last_seen:Date;membership:Membership|null}>(`SELECT u.id,u.username,u.name,u.phone,s.csrf,s.privileged,s.auth_method AS "authMethod",s.last_seen,CASE WHEN m.id IS NULL THEN NULL ELSE jsonb_build_object('id',m.id,'school_id',m.school_id,'role',m.role,'profile_id',m.profile_id,'student_id',m.student_id,'permissions',m.permissions) END AS membership FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN memberships m ON m.id=$2 AND m.user_id=u.id AND m.active
+    WHERE s.id=$1 AND u.active AND s.expires_at>now() AND s.last_seen>now()-CASE WHEN s.privileged THEN interval '30 minutes' ELSE interval '8 hours' END`, [digest(secret),memberId]);
   if (!result.rowCount) { reply.clearCookie(cookieName, { path: '/' }); return; }
   const {last_seen,membership,...identity}=result.rows[0];request.identity=identity;request.authorizedMembership=membership;
   if(Date.now()-new Date(last_seen).getTime()>5*60*1000)await query("UPDATE sessions SET last_seen=now() WHERE id=$1 AND last_seen<now()-interval '5 minutes'", [digest(secret)]);
@@ -79,7 +82,6 @@ export async function membership(request: FastifyRequest): Promise<Membership> {
   const cached=request.authorizedMembership?.id===id?request.authorizedMembership:null;
   const member=cached||(await query<Membership>('SELECT * FROM memberships WHERE id=$1 AND user_id=$2 AND active', [id, user.id])).rows[0];
   if(!member)return deny();
-  if ((member.role === 'principal' || member.role === 'platform_admin') && !user.mfa) deny();
   return member;
 }
 export async function authRoutes(app: FastifyInstance) {
@@ -89,7 +91,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.addHook('preHandler', async request => {
     if (['GET','HEAD','OPTIONS'].includes(request.method)) return;
     const origin = request.headers.origin;
-    if (origin && origin !== config.APP_ORIGIN) deny();
+    if (origin && !isAllowedOrigin(origin, config.APP_ORIGIN, config.NODE_ENV)) deny();
     if (request.identity) {
       const token = request.headers['x-csrf-token'];
       if (typeof token !== 'string' || token.length !== request.identity.csrf.length || !timingSafeEqual(Buffer.from(token), Buffer.from(request.identity.csrf))) throw new ApiError(403, 'CSRF', 'اعتبار درخواست تأیید نشد.');
@@ -112,13 +114,11 @@ export async function authRoutes(app: FastifyInstance) {
     // Always do a password hash operation, including unknown usernames.
     const valid = await verifyPassword(user?.password_hash,input.password);
     if (!valid || !user.phone_verified) throw new ApiError(401, 'INVALID_CREDENTIALS', 'شناسه یا رمز صحیح نیست یا حساب فعال نشده است.');
-    const managers = await query("SELECT 1 FROM memberships WHERE user_id=$1 AND active AND role IN ('principal','platform_admin')", [user.id]);
-    if (managers.rowCount) return { authenticated: false, ...await challenge(user.id, 'mfa', user.phone) };
-    return session(user.id, false, reply);
+    return session(user.id, 'password', reply);
   });
   app.post('/api/v1/auth/challenge', { config: { rateLimit: { max: 5, timeWindow: '15 minutes',keyGenerator:(req:FastifyRequest)=>`challenge:${digest(String((req.body as {username?:unknown})?.username||'').trim().toLowerCase())}` } } }, async request => {
-    const input = z.object({ username, purpose: z.enum(['activate','recover']) }).strict().parse(request.body);
-    const result = await query('SELECT id,phone FROM users WHERE username=$1 AND active', [input.username]);
+    const input = z.object({ username, purpose: z.enum(['login','activate','recover']) }).strict().parse(request.body);
+    const result = await query("SELECT id,phone FROM users WHERE username=$1 AND active AND ($2<>'login' OR phone_verified)", [input.username,input.purpose]);
     try{return await challenge(result.rows[0]?.id || null, input.purpose, result.rows[0]?.phone);}
     catch(error){if(error instanceof ApiError&&error.statusCode===429)return challenge(null,input.purpose);throw error;}
   });
@@ -127,16 +127,16 @@ export async function authRoutes(app: FastifyInstance) {
     const result = await transaction(async tx => {
       const found = await tx.query('SELECT * FROM challenges WHERE id=$1 FOR UPDATE', [input.challengeId]);
       const row = found.rows[0];
-      if (!row || row.consumed || row.attempts >= 5 || new Date(row.expires_at).getTime() <= Date.now()) return null;
+      if (!row || !['login','activate','recover','phone'].includes(row.purpose) || row.consumed || row.attempts >= 5 || new Date(row.expires_at).getTime() <= Date.now()) return null;
       await tx.query('UPDATE challenges SET attempts=attempts+1 WHERE id=$1', [row.id]);
       if (!row.user_id || !timingSafeEqual(Buffer.from(digest(input.code)), Buffer.from(row.code_hash))) return null;
-      const active = await tx.query('SELECT id FROM users WHERE id=$1 AND active FOR UPDATE', [row.user_id]);
+      const active = await tx.query("SELECT id FROM users WHERE id=$1 AND active AND ($2<>'login' OR phone_verified) FOR UPDATE", [row.user_id,row.purpose]);
       if (!active.rowCount) return null;
       if(row.purpose==='phone'){
         requireValue(requireAuth(request).id===row.user_id,'این کد متعلق به حساب شما نیست.',403);
         await tx.query('UPDATE users SET phone=$1,phone_verified=true WHERE id=$2',[row.metadata.phone,row.user_id]);
         await tx.query('DELETE FROM sessions WHERE user_id=$1',[row.user_id]);
-      } else if (row.purpose !== 'mfa') {
+      } else if (row.purpose === 'activate' || row.purpose === 'recover') {
         requireValue(input.password, 'رمز جدید الزامی است.');
         await tx.query('UPDATE users SET password_hash=$1,phone_verified=true WHERE id=$2', [await hashPassword(input.password), row.user_id]);
         await tx.query('DELETE FROM sessions WHERE user_id=$1', [row.user_id]);
@@ -145,8 +145,8 @@ export async function authRoutes(app: FastifyInstance) {
       return row;
     });
     if (!result) throw new ApiError(401, 'INVALID_CODE', 'کد معتبر نیست یا منقضی شده است.');
-    if (result.purpose !== 'mfa') {reply.clearCookie(cookieName,{path:'/'});return { authenticated: false, passwordChanged:result.purpose!=='phone',phoneChanged:result.purpose==='phone' };}
-    return session(result.user_id, true, reply);
+    if (result.purpose !== 'login') {reply.clearCookie(cookieName,{path:'/'});return { authenticated: false, passwordChanged:result.purpose!=='phone',phoneChanged:result.purpose==='phone' };}
+    return session(result.user_id, 'sms', reply);
   });
   app.post('/api/v1/auth/logout', async (request, reply) => {
     requireAuth(request);

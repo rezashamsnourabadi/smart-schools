@@ -14,9 +14,11 @@ npm run storage:init
 npm run dev
 ```
 
-برنامه روی `http://localhost:3000` است. API داخلی روی 3001 و پراکسی `/api/v1` در همان مبدأ است. worker اعلان را جدا با `npm run worker` اجرا کنید.
+صفحه معرفی برنامه روی `http://localhost:3000` و ورود روی `http://localhost:3000/login` است و پس از ورود مسیر `/dashboard/<role>` نمایش داده می‌شود. API داخلی روی 3001 و پراکسی `/api/v1` در همان مبدأ است. worker اعلان را جدا با `npm run worker` اجرا کنید.
 
-نخستین مدیر با تنظیم امن متغیرهای BOOTSTRAP_USERNAME، BOOTSTRAP_NAME، BOOTSTRAP_PHONE و BOOTSTRAP_PASSWORD و فرمان `npm run admin:create` ساخته می‌شود. رمز حداقل 12 نویسه است و رمز پیش‌فرض وجود ندارد. متغیرها را پس از اجرا پاک کنید. مدیران تأیید دوم دارند.
+برای ورود از گوشی در همان شبکه، در حالت `NODE_ENV=development` آدرس `http://<IP لپ‌تاپ>:3000/login` را باز کنید. IPهای واقعی شبکه همین میزبان برای Origin توسعه مجازند؛ نیازی به تغییر APP_ORIGIN برای جابه‌جایی بین گوشی و localhost نیست. محیط تولید فقط مبدأ HTTPS تنظیم‌شده را می‌پذیرد.
+
+نخستین مدیر با تنظیم امن متغیرهای BOOTSTRAP_USERNAME، BOOTSTRAP_NAME، BOOTSTRAP_PHONE و BOOTSTRAP_PASSWORD و فرمان `npm run admin:create` ساخته می‌شود. رمز حداقل 12 نویسه است و رمز پیش‌فرض وجود ندارد. متغیرها را پس از اجرا پاک کنید. ورود همه نقش‌ها با انتخاب رمز عبور یا کد پیامکی مستقل انجام می‌شود؛ کد دوم پس از رمز اجباری نیست.
 
 داده آزمایشی فقط با فرمان صریح `npm run db:seed` ساخته می‌شود؛ در تولید ممنوع است. مشخصات حساب‌های توسعه در `.local/browser-fixture.json` و کد پیامکی محلی در `.local/otp/<challengeId>.json` هستند؛ هیچ‌کدام از وب ارائه نمی‌شوند.
 

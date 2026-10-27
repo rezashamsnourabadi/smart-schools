@@ -333,6 +333,7 @@ export interface BannerAd {
   sponsorName: string;
   targetAudience: ('all' | 'students' | 'parents' | 'teachers')[];
   linkText: string;
+  linkUrl?: string;
   category: 'آموزشی' | 'فرهنگی' | 'کتابخوانی' | 'فناوری' | 'خدمات شهری';
   badge: string;
   isActive: boolean;

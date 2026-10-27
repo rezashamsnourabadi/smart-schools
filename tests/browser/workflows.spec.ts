@@ -5,11 +5,12 @@ const fixture=JSON.parse(await readFile('.local/browser-fixture.json','utf8')) a
 for(const role of ['platform_admin','principal','vice_principal','teacher','student','parent']) {
   test(`${role}: real login, role boundary and responsive dashboard`,async({page})=>{
     const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
-    await page.goto('/');await expect(page.locator('#login-page')).toBeVisible();
+    await page.goto('/login');await expect(page.locator('#login-page')).toBeVisible();
     await page.locator('#login-username').fill(fixture.users[role].username);await page.locator('#login-password').fill(fixture.password);
     const login=page.waitForResponse(r=>r.url().endsWith('/api/v1/auth/login'));await page.locator('#login-submit').click();const result=await(await login).json();
-    if(result.challengeId){const {code}=JSON.parse(await readFile(`.local/otp/${result.challengeId}.json`,'utf8'));await page.locator('#login-otp').fill(code);await page.locator('#login-submit').click();}
+    expect(result.authenticated).toBe(true);expect(result.challengeId).toBeUndefined();
     await expect(page.locator('#main-header')).toBeVisible();await expect(page.locator(`#role-switch-${role}`)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/dashboard/${role}$`));
     await expect(page.locator('#role-quick-switcher button')).toHaveCount(1);
     for(const width of [1280,390,360]){
       await page.setViewportSize({width,height:800});await expect(page.locator('#main-header')).toBeVisible();
@@ -21,10 +22,10 @@ for(const role of ['platform_admin','principal','vice_principal','teacher','stud
       await page.locator('#open-accounts').click();await expect(page.locator('#accounts-modal')).toBeVisible();await page.getByRole('button',{name:'بستن',exact:true}).click();
     }
     expect(errors).toEqual([]);
-    await page.locator('#logout-btn').click();await expect(page.locator('#login-page')).toBeVisible();
+    await page.locator('#logout-btn').click();await expect(page.locator('#login-page')).toBeVisible();await expect(page).toHaveURL(/\/login$/);
   });
 }
 test('login keeps its form when the connection fails',async({page})=>{
-  await page.goto('/');await page.locator('#login-username').fill(fixture.users.student.username);await page.locator('#login-password').fill(fixture.password);
+  await page.goto('/login');await page.locator('#login-username').fill(fixture.users.student.username);await page.locator('#login-password').fill(fixture.password);
   await page.route('**/api/v1/auth/login',r=>r.abort('internetdisconnected'));await page.locator('#login-submit').click();await expect(page.getByRole('alert')).toBeVisible();await expect(page.locator('#login-username')).toHaveValue(fixture.users.student.username);
 });

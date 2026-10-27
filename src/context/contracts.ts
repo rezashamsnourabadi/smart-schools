@@ -96,6 +96,7 @@ export interface AppContextType {
   ) => AttendanceActionResult;
   addQuestionBankItem: (item: Omit<QuestionBankItem, 'id' | 'createdAt' | 'usageCount'>) => void;
   addBannerAd: (banner: Omit<BannerAd, 'id' | 'clicksCount'>) => void;
+  updateBannerAd: (id: string, changes: Partial<Omit<BannerAd, 'id' | 'clicksCount'>>) => void;
   toggleBannerStatus: (bannerId: string) => void;
   clickBanner: (bannerId: string) => void;
   addAnnouncement: (announcement: Omit<Announcement, 'id' | 'date'>) => void;
