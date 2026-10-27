@@ -18,7 +18,14 @@ type RemoteApp=Omit<AppContextType,ActionName>&AsyncActions&{loadResource:(kind:
 const Context=createContext<RemoteApp|null>(null);
 const denied:VicePrincipalPermissions={canManageAnnouncements:false,canManageSchedule:false,canManageStudentsAndClasses:false,canViewFullDossier:false,canLogDisciplinary:false,canManageFinances:false};
 const baseResources=['schools','classes','students','schedule','announcements','banners','notifications'];
-const roleResources:Partial<Record<UserRole,string[]>>={teacher:['homework','exams'],student:['homework','homeworkSubmissions','exams','questionBank'],parent:['homework','exams'],principal:[],vice_principal:[],platform_admin:['questionBank']};
+const roleResources:Partial<Record<UserRole,string[]>>={teacher:[],student:['homework','homeworkSubmissions','exams','questionBank'],parent:['homework','exams'],principal:[],vice_principal:[],platform_admin:['questionBank']};
+const independentResourceRefresh:Partial<Record<string,readonly string[]>>={
+  announcements:['announcements'],questionBank:['questionBank'],banners:['banners'],
+  homework:['homework'],exams:['exams'],homeworkSubmissions:['homeworkSubmissions','homework']
+};
+const independentCommandRefresh:Partial<Record<string,readonly string[]>>={
+  'banner-status':['banners'],'pin-announcement':['announcements']
+};
 export const AppProvider=({children}:{children:React.ReactNode})=>{
   const auth=useAuth(),client=useQueryClient();const [yearId,setYear]=useState('');
   const [modules,setModules]=useState<string[]>([]),[pages,setPages]=useState<Record<string,PageState>>({});
@@ -35,7 +42,8 @@ export const AppProvider=({children}:{children:React.ReactNode})=>{
   const resources=useMemo(()=>Array.from(new Set([...baseResources,...roleResources[auth.member.role]||[],...modules])).filter(k=>auth.member.role!=='platform_admin'||['schools','banners','announcements','questionBank'].includes(k)),[auth.member.role,modules]);
   const queries=useQueries({queries:resources.map(kind=>{
     const page=pages[kind]||{offset:0,search:''};
-    return {queryKey:['resource',scope.membershipId,activeYear?.id,kind,page,modules.includes('feeItems')],enabled:!!metadata.data,queryFn:({signal}:{signal:AbortSignal})=>request<Page>(`/resources/${kind}?${new URLSearchParams({limit:'25',offset:String(page.offset),search:page.search,...(kind==='students'&&modules.includes('feeItems'))?{includeFinance:'true'}:{},...page.classId?{classId:page.classId}:{}})}`,{scope:effectiveScope,signal}),staleTime:30000,retry:false};
+    const includeFinance=kind==='students'&&modules.includes('feeItems');
+    return {queryKey:['resource',scope.membershipId,activeYear?.id,kind,page,...(kind==='students'?[includeFinance]:[])],enabled:!!metadata.data,queryFn:({signal}:{signal:AbortSignal})=>request<Page>(`/resources/${kind}?${new URLSearchParams({limit:'25',offset:String(page.offset),search:page.search,...includeFinance?{includeFinance:'true'}:{},...page.classId?{classId:page.classId}:{}})}`,{scope:effectiveScope,signal}),staleTime:30000,retry:false};
   })});
   const collections:Record<string,Record<string,unknown>[]>=Object.fromEntries(['schools','classes','students','schedule','announcements','banners','notifications','grades','homework','homeworkSubmissions','exams','teachers','vicePrincipals','feeItems','questionBank','attendanceSessions'].map(k=>[k,[]]));
   resources.forEach((kind,i)=>{collections[kind]=queries[i].data?.items||[];});
@@ -58,7 +66,16 @@ export const AppProvider=({children}:{children:React.ReactNode})=>{
     try{
       const result=await request<Record<string,unknown>>(path,{method,body,scope:effectiveScope,key,headers});
       retryKeys.current.delete(fingerprint);
-      await client.invalidateQueries({predicate:q=>q.queryKey[0]!=='auth'});
+      const [,group,name]=path.split('/');
+      const refreshKinds=group==='resources'?independentResourceRefresh[name]:group==='commands'?independentCommandRefresh[name]:undefined;
+      if(refreshKinds){
+        // A committed write succeeds independently of the subsequent list refresh.
+        void client.invalidateQueries({predicate:q=>q.queryKey[0]==='resource'&&q.queryKey[1]===scope.membershipId&&q.queryKey[2]===activeYear?.id&&refreshKinds.includes(String(q.queryKey[3]))}).catch(()=>{
+          // Fetch errors remain visible through the existing query error/retry UI.
+        });
+      }else{
+        await client.invalidateQueries({predicate:q=>q.queryKey[0]!=='auth'});
+      }
       setToast({title:'عملیات ثبت شد',message:'اطلاعات با موفقیت در سرور ذخیره شد.',type:'success'});return {ok:true,...result};
     }catch(e){const error=e instanceof Error?e.message:'ثبت ممکن نشد.';setToast({title:'ثبت انجام نشد',message:error,type:'warning'});return {ok:false,error};}
     finally{setBusy(false);}
