@@ -49,7 +49,7 @@ export const SponsorBannerCard: React.FC<Props> = ({
 
           <button
             id={`banner-action-btn-${currentBanner.id}`}
-            onClick={() => clickBanner(currentBanner.id)}
+            onClick={async () => await clickBanner(currentBanner.id)}
             className="self-end sm:self-center shrink-0 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 active:scale-95"
           >
             <span>{currentBanner.linkText}</span>
@@ -92,7 +92,7 @@ export const SponsorBannerCard: React.FC<Props> = ({
         <div className="flex items-center justify-end shrink-0 pt-1 sm:pt-0">
           <button
             id={`banner-action-btn-${currentBanner.id}`}
-            onClick={() => clickBanner(currentBanner.id)}
+            onClick={async () => await clickBanner(currentBanner.id)}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95"
           >
             <span>{currentBanner.linkText}</span>

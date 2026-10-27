@@ -1,3 +1,4 @@
+import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
@@ -11,7 +12,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource } from '../context/AppContext';
 import { ScheduleSlot } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
 
@@ -39,6 +40,9 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
   onClose,
   canEdit = true
 }) => {
+  useResource('schedule');
+  useResource('teachers');
+  useResource('classes');
   const shouldReduceMotion = useReducedMotion();
   const { schedule, classes, teachers, currentSchoolId, addScheduleSlot, deleteScheduleSlot } = useApp();
   const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
@@ -56,13 +60,13 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
   const availableTeachers = teachers.filter((teacher) => teacher.schoolId === currentSchoolId && !!currentClass && teacher.assignedClassIds.includes(currentClass.id));
   const selectedTeacher = availableTeachers.find((teacher) => teacher.id === selectedTeacherId);
 
-  const handleAddSlot = (e: React.FormEvent) => {
+  const handleAddSlot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !selectedTeacher) { setFormError('درس و دبیر مجاز برای این کلاس را انتخاب کنید.'); return; }
 
     const periodTime = PERIOD_TIMES.find((p) => p.period === period) || PERIOD_TIMES[0];
 
-    const result = addScheduleSlot({
+    const result = await addScheduleSlot({
       schoolId: currentSchoolId,
       classGroupId: selectedClassId,
       className: currentClass?.name || 'کلاس درس',
@@ -97,6 +101,7 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
         className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl m-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
+        <ResourcePager kind="schedule"/>
         {/* Header */}
         <div className="bg-slate-900 text-white p-3.5 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -273,7 +278,7 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
 
                               {canEdit && (
                                 <button
-                                  onClick={() => deleteScheduleSlot(slot.id)}
+                                  onClick={async () => await deleteScheduleSlot(slot.id)}
                                   className="absolute top-1 left-1 p-1 text-slate-300 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                   title="حذف این زنگ"
                                 >

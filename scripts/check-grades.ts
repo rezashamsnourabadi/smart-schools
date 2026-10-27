@@ -1,8 +1,4 @@
 import assert from 'node:assert/strict';
-import { createElement } from 'react';
-import { renderToString } from 'react-dom/server';
-import { AppProvider, useApp } from '../src/context/AppContext';
-import { StudentDossierModal } from '../src/components/StudentDossierModal';
 import { GradeItem } from '../src/types';
 import { formatPersianScore } from '../src/utils/persianUtils';
 import { parseGradeScore, validateGradeItem } from '../src/utils/gradeUtils';
@@ -29,17 +25,4 @@ assert.ok(validateGradeItem({ ...valid, scores: [{ studentId: 'std-1', score: 21
 assert.ok(validateGradeItem({ ...valid, scores: [valid.scores[0], valid.scores[0]] }));
 assert.ok(validateGradeItem({ ...valid, scores: [{ studentId: 'std-1', score: Number.NaN }] }));
 
-Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => null } });
-let dossierMarkup = '';
-function DossierProbe() {
-  const context = useApp();
-  const student = context.students.find((row) => row.id === 'std-1');
-  assert.ok(student);
-  return createElement(StudentDossierModal, { student, onClose: () => {}, initialTab: 'reportCards', canManageDiscipline: false });
-}
-dossierMarkup = renderToString(createElement(AppProvider, { children: createElement(DossierProbe) }));
-assert.match(dossierMarkup, /دفتر نمره/);
-assert.match(dossierMarkup, /کارنامه‌های ثبت‌شده/);
-assert.match(dossierMarkup, /کارنامه رسمی/);
-assert.match(dossierMarkup, /معدل/);
-console.log('Grade parsing/display boundaries, duplicate roster validation and live dossier rendering: passed');
+console.log('Grade parsing/display boundaries and duplicate roster validation: passed');

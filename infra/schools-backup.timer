@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily school backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Asia/Tehran
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

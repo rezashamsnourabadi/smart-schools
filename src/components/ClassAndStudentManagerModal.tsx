@@ -20,9 +20,9 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource } from '../context/AppContext';
 import { Student, ClassGroup } from '../types';
-import { toPersianDigits, toEnglishDigits } from '../utils/persianUtils';
+import { toPersianDigits, toEnglishDigits, getSchoolDate, getCurrentAcademicYearTitle } from '../utils/persianUtils';
 
 interface ClassAndStudentManagerModalProps {
   onClose: () => void;
@@ -35,6 +35,8 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
   onOpenDossier,
   canManageClasses = true
 }) => {
+  useResource('classes');
+  useResource('students');
   const {
     classes,
     students,
@@ -67,7 +69,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
   const [transferringSchoolStudent, setTransferringSchoolStudent] = useState<Student | null>(null);
 
   // Graduate Form State
-  const [gradYear, setGradYear] = useState('۱۴۰۴-۱۴۰۵');
+  const [gradYear, setGradYear] = useState(() => getCurrentAcademicYearTitle());
   const [gradUni, setGradUni] = useState('');
   const [gradMajor, setGradMajor] = useState('');
   const [gradRank, setGradRank] = useState('');
@@ -75,7 +77,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
 
   // School Transfer Form State
   const [destSchool, setDestSchool] = useState('');
-  const [transferDate, setTransferDate] = useState('۱۴۰۵/۰۶/۲۳');
+  const [transferDate, setTransferDate] = useState(() => getSchoolDate());
   const [transferReason, setTransferReason] = useState('تغییر محل سکونت خانواده');
 
   // New Student Form States
@@ -139,13 +141,13 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
     return matchesSearch;
   });
 
-  const handleCreateStudent = (e: React.FormEvent) => {
+  const handleCreateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stdName.trim() || !stdNationalCode.trim()) return;
 
     const targetClass = classes.find((c) => c.id === stdClassId);
 
-    addStudent({
+    const saved0 = await addStudent({
       schoolId: currentSchoolId,
       classGroupId: stdClassId,
       name: stdName,
@@ -162,7 +164,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
       grade: targetClass?.grade || 'پایه دهم',
       fieldOfStudy: targetClass?.major || 'ریاضی و فیزیک',
       studentNumber: `۴۰۲${Math.floor(1000 + Math.random() * 9000)}`
-    });
+    }); if (!saved0.ok) return;
 
     setStdName('');
     setStdNationalCode('');
@@ -172,39 +174,39 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
     setShowAddStudentModal(false);
   };
 
-  const handleCreateClass = (e: React.FormEvent) => {
+  const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClassName.trim()) return;
 
-    addClassGroup({
+    const saved1 = await addClassGroup({
       schoolId: currentSchoolId,
       name: newClassName,
       grade: newClassGrade,
       major: newClassField,
       room: newClassRoom
-    });
+    }); if (!saved1.ok) return;
 
     setNewClassName('');
     setShowAddClassModal(false);
   };
 
-  const handleTransfer = (newClassId: string) => {
+  const handleTransfer = async (newClassId: string) => {
     if (transferringStudent) {
-      transferStudentClass(transferringStudent.id, newClassId);
+      const saved2 = await transferStudentClass(transferringStudent.id, newClassId); if (!saved2.ok) return;
       setTransferringStudent(null);
     }
   };
 
-  const handleConfirmGraduation = (e: React.FormEvent) => {
+  const handleConfirmGraduation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!graduatingStudent) return;
-    markStudentGraduated(graduatingStudent.id, {
+    const saved3 = await markStudentGraduated(graduatingStudent.id, {
       year: gradYear,
       university: gradUni.trim() || undefined,
       major: gradMajor.trim() || undefined,
       rank: gradRank.trim() || undefined,
       notes: gradNotes.trim() || undefined
-    });
+    }); if (!saved3.ok) return;
     setGraduatingStudent(null);
     setGradUni('');
     setGradMajor('');
@@ -212,14 +214,14 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
     setGradNotes('');
   };
 
-  const handleConfirmSchoolTransfer = (e: React.FormEvent) => {
+  const handleConfirmSchoolTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!transferringSchoolStudent || !destSchool.trim()) return;
-    markStudentTransferred(transferringSchoolStudent.id, {
+    const saved4 = await markStudentTransferred(transferringSchoolStudent.id, {
       destinationSchoolName: destSchool.trim(),
       date: transferDate,
       reason: transferReason.trim()
-    });
+    }); if (!saved4.ok) return;
     setTransferringSchoolStudent(null);
     setDestSchool('');
   };
@@ -411,7 +413,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
                               id={`pending-class-select-${student.id}`}
                               aria-label={`کلاس مقصد ${student.name}`}
                               defaultValue=""
-                              onChange={(event) => { if (event.target.value) markStudentActive(student.id, event.target.value); }}
+                              onChange={async (event) => { if (event.target.value) { const saved5 = await markStudentActive(student.id, event.target.value); if (!saved5.ok) return; } }}
                               className="min-h-11 w-full sm:w-auto rounded-xl border border-slate-300 px-3 text-sm bg-white"
                             >
                               <option value="" disabled>انتخاب کلاس مقصد</option>
@@ -506,9 +508,9 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
 
                               {/* Delete */}
                               <button
-                                onClick={() => {
+                                onClick={async () => {
                                   if (window.confirm(`آیا از حذف پرونده ${std.name} از مدرسه اطمینان دارید؟`)) {
-                                    removeStudent(std.id);
+                                    const saved6 = await removeStudent(std.id); if (!saved6.ok) return;
                                   }
                                 }}
                                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
@@ -559,7 +561,7 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
                             <div>
                               <h4 className="font-bold text-slate-900 text-sm">{std.name}</h4>
                               <div className="text-xs text-slate-500">
-                                کد ملی: <span className="font-mono">{toPersianDigits(std.nationalCode)}</span> • سال فراغت: {toPersianDigits(std.graduationDetails?.year || '۱۴۰۳-۱۴۰۴')}
+                                کد ملی: <span className="font-mono">{toPersianDigits(std.nationalCode)}</span> • سال فراغت: {toPersianDigits(std.graduationDetails?.year || '—')}
                               </div>
                             </div>
                           </div>
@@ -611,9 +613,9 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
                           </a>
 
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               const targetClass = classes[0]?.id || '';
-                              markStudentActive(std.id, targetClass);
+                              const saved7 = await markStudentActive(std.id, targetClass); if (!saved7.ok) return;
                             }}
                             className="px-2.5 py-1.5 text-slate-600 hover:text-teal-700 hover:bg-teal-50 border border-slate-200 rounded-xl text-xs font-semibold"
                             title="بازگشت به وضعیت دانش‌آموز در حال تحصیل"
@@ -694,9 +696,9 @@ export const ClassAndStudentManagerModal: React.FC<ClassAndStudentManagerModalPr
                         </button>
 
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             const targetClass = classes[0]?.id || '';
-                            markStudentActive(std.id, targetClass);
+                            const saved8 = await markStudentActive(std.id, targetClass); if (!saved8.ok) return;
                           }}
                           className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-teal-200"
                         >

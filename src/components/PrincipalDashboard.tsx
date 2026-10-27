@@ -1,5 +1,6 @@
+import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource } from '../context/AppContext';
 import {
   Building2,
   Users,
@@ -56,8 +57,11 @@ export const PrincipalDashboard: React.FC<Props> = ({
   onOpenAcademicYearModal,
   onOpenFinanceModal
 }) => {
+  useResource('attendanceSessions');
   const {
     currentSchool,
+    dashboard,
+    dailyAbsences: absentRecords,
     classes,
     students,
     attendanceSessions,
@@ -78,7 +82,6 @@ export const PrincipalDashboard: React.FC<Props> = ({
   );
 
   const todaySessions = attendanceSessions.filter((session) => session.schoolId === currentSchool?.id && normalizeSchoolDate(session.date) === schoolClock.date);
-  const absentRecords = dailyAbsences(schoolStudents, todaySessions, schoolClock.date);
 
   const handleStudentClick = (student: Student) => {
     if (onOpenStudentDossier) {
@@ -99,10 +102,11 @@ export const PrincipalDashboard: React.FC<Props> = ({
   };
 
   const dailySummary = schoolAttendance(schoolStudents, todaySessions, currentSchool?.id || '', schoolClock.date);
-  const attendanceRate = dailySummary.rate;
+  const attendanceRate = dashboard.recorded ? dashboard.attendanceRate : undefined;
 
   return (
     <div className="space-y-4 sm:space-y-5" id="principal-dashboard-view">
+      <ResourcePager kind="dailyAbsences"/>
       {/* Modern School Administrative Header & Pulse Bar */}
       <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -141,7 +145,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
             <span>{toPersianDigits(schoolClock.dateLabel)}</span>
             <span className="text-slate-300">|</span>
             <Clock className="w-3.5 h-3.5 text-teal-600" />
-            <span className="font-bold text-slate-800">زنگ ۲ (۰۹:۳۰ - ۱۱:۰۰)</span>
+            <span className="font-bold text-slate-800">{toPersianDigits(schoolClock.time)}</span>
           </div>
         </div>
 
@@ -156,7 +160,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
               <span className="text-xl font-mono font-black text-emerald-950">
                 {attendanceRate === undefined ? '—' : `${toPersianDigits(attendanceRate)}٪`}
               </span>
-              <span className="text-[10px] text-emerald-700 font-medium">{toPersianDigits(dailySummary.recordedCount)} ثبت روزانه</span>
+              <span className="text-[10px] text-emerald-700 font-medium">{toPersianDigits(dashboard.recorded ?? 0)} ثبت روزانه</span>
             </div>
           </div>
 
@@ -167,7 +171,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
             </div>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-mono font-black text-rose-950">
-                {toPersianDigits(absentRecords.length)}
+                {toPersianDigits(dashboard.absent ?? 0)}
               </span>
               <span className="text-[10px] text-rose-700 font-medium">اطلاع به بله</span>
             </div>
@@ -180,7 +184,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
             </div>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-mono font-black text-teal-950">
-                {toPersianDigits(schoolClasses.length)}
+                {toPersianDigits(dashboard.classes ?? 0)}
               </span>
               <span className="text-[10px] text-teal-700 font-medium">کلاس فعال</span>
             </div>
@@ -193,7 +197,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
             </div>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-mono font-black text-indigo-950">
-                {toPersianDigits(schoolStudents.length)}
+                {toPersianDigits(dashboard.students ?? 0)}
               </span>
               <span className="text-[10px] text-indigo-700 font-medium">نفر</span>
             </div>
@@ -209,7 +213,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
             <div>
               <span className="font-bold">نمای سال تحصیلی: </span>
               <span>
-                {toPersianDigits(activeAcademicYear?.title || '')} انتخاب شده است. داده‌های همه بخش‌ها هنوز به تفکیک سال ذخیره نمی‌شوند؛ این نما آرشیو کامل نیست و عملیات آموزشی و پرونده‌ای مسدود است.
+                {toPersianDigits(activeAcademicYear?.title || '')} انتخاب شده است. داده‌های این نما مربوط به سال انتخاب‌شده‌اند. سوابق سال غیرجاری فقط خواندنی هستند.
               </span>
             </div>
           </div>
@@ -396,7 +400,7 @@ export const PrincipalDashboard: React.FC<Props> = ({
               }`}
             >
               <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-              <span>دارای غیبت امروز ({toPersianDigits(absentRecords.length)})</span>
+              <span>دارای غیبت امروز ({toPersianDigits(dashboard.absent ?? 0)})</span>
             </button>
 
             <button

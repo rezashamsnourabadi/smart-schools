@@ -1,5 +1,6 @@
+import { notificationStatusLabel } from '../utils/notifications';
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource } from '../context/AppContext';
 import {
   CheckCircle2,
   AlertCircle,
@@ -36,9 +37,12 @@ export const ParentDashboard: React.FC<Props> = ({
   onOpenStudentDossier,
   onOpenProfileModal
 }) => {
+  useResource('grades');
   const {
     currentSchool,
     currentUser,
+    grades,
+    activeAcademicYear,
     notifications,
     currentStudent: child,
     announcements,
@@ -50,6 +54,8 @@ export const ParentDashboard: React.FC<Props> = ({
 
   // Child info
   if (!child) return <p id="parent-no-linked-student" role="status" className="p-6 bg-white rounded-2xl">پرونده‌ای برای فرزند این حساب در مدرسه انتخاب‌شده یافت نشد.</p>;
+  const latestCard=child.reportCards.filter(card=>card.isPublished).at(-1);
+  const latestGrades=grades.flatMap(grade=>grade.scores.filter(score=>score.studentId===child.id).map(score=>({id:grade.id,title:`${grade.subject} (${grade.title})`,score:score.score}))).slice(0,5);
 
   // Check if there is any attendance alert for the child today
   const childNotifications = notifications;
@@ -129,7 +135,7 @@ export const ParentDashboard: React.FC<Props> = ({
           <div>
             <span className="text-[11px] text-indigo-800 font-bold block">معدل ترم گذشته</span>
             <span className="text-sm font-mono font-black text-indigo-950">
-              {toPersianDigits('۱۹.۶۵')} (رتبه ممتاز)
+              {latestCard ? toPersianDigits(latestCard.gpa) : 'ثبت نشده'}
             </span>
           </div>
         </div>
@@ -143,7 +149,7 @@ export const ParentDashboard: React.FC<Props> = ({
             <div>
               <span className="text-[11px] text-teal-800 font-bold block">شناسه متصل در بله</span>
               <span className="text-xs font-mono font-bold text-teal-950">
-                {child.parentBaleAccount || '@rezaei_parent'}
+                {child.parentBaleAccount || 'ثبت نشده'}
               </span>
             </div>
           </div>
@@ -293,7 +299,7 @@ export const ParentDashboard: React.FC<Props> = ({
                         {ntf.type === 'attendance_absent' ? '🚨 اعلام غیبت در کلاس' : 'اطلاعیه مدرسه'}
                       </span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 font-bold">
-                        ثبت آزمایشی با {ntf.platform}
+                        {notificationStatusLabel(ntf.status)} • {ntf.platform}
                       </span>
                     </div>
                     <p className="text-slate-600 text-[11px] leading-relaxed">
@@ -318,22 +324,12 @@ export const ParentDashboard: React.FC<Props> = ({
                 <Award className="w-5 h-5 text-amber-500" />
                 <h3 className="font-bold text-sm text-slate-900">آخرین نمرات ثبت‌شده</h3>
               </div>
-              <span className="text-[11px] text-slate-500">پاییز ۱۴۰۴</span>
+              <span className="text-[11px] text-slate-500">{toPersianDigits(activeAcademicYear?.title||'')}</span>
             </div>
 
             <div className="space-y-2 text-xs">
-              <div className="p-3 rounded-2xl bg-slate-50 flex justify-between items-center">
-                <span className="text-slate-700">هندسه ۱ (آزمون ماهانه مهر):</span>
-                <span className="font-bold text-slate-900 font-mono text-sm">{toPersianDigits('۱۹.۵')}</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-slate-50 flex justify-between items-center">
-                <span className="text-slate-700">فیزیک ۱ (کوییز کلاسی):</span>
-                <span className="font-bold text-slate-900 font-mono text-sm">{toPersianDigits('۲۰')}</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-slate-50 flex justify-between items-center">
-                <span className="text-slate-700">نمره انضباط تا امروز:</span>
-                <span className="font-bold text-emerald-700 font-mono text-sm">{toPersianDigits('۲۰')}</span>
-              </div>
+              {latestGrades.length ? latestGrades.map(grade=><div key={grade.id} className="p-3 rounded-2xl bg-slate-50 flex justify-between items-center"><span className="text-slate-700">{grade.title}</span><span className="font-bold text-slate-900 font-mono text-sm">{toPersianDigits(grade.score)}</span></div>) : <p className="text-slate-500">نمره‌ای ثبت نشده است.</p>}
+              <div className="p-3 rounded-2xl bg-slate-50 flex justify-between items-center"><span>انضباط آخرین کارنامه</span><span>{latestCard ? toPersianDigits(latestCard.disciplineScore) : 'ثبت نشده'}</span></div>
             </div>
 
             <div className="pt-3 border-t border-slate-100 space-y-2">

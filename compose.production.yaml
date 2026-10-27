@@ -1,0 +1,91 @@
+name: smart-schools-production
+x-app: &app
+  image: smart-schools:local
+  build: .
+  environment: &environment
+    NODE_ENV: production
+    APP_ORIGIN: ${APP_ORIGIN:?HTTPS origin required}
+    DATABASE_URL: ${DATABASE_URL:?Runtime school_app URL required}
+    REDIS_URL: redis://redis:6379
+    SESSION_SECRET: ${SESSION_SECRET:?Private random session secret required}
+    S3_ENDPOINT: http://storage:9000
+    S3_REGION: us-east-1
+    S3_BUCKET: school-private
+    S3_ACCESS_KEY: ${S3_ACCESS_KEY:?Private storage account required}
+    S3_SECRET_KEY: ${S3_SECRET_KEY:?Private storage password required}
+    SMS_WEBHOOK_URL: ${SMS_WEBHOOK_URL:-}
+    SMS_WEBHOOK_TOKEN: ${SMS_WEBHOOK_TOKEN:-}
+    BALE_BOT_TOKEN: ${BALE_BOT_TOKEN:-}
+    METRICS_TOKEN: ${METRICS_TOKEN:-}
+    TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:?Set only the TLS proxy or Docker gateway CIDRs}
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  networks: [private,egress]
+services:
+  app:
+    <<: *app
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/v1/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  worker:
+    <<: *app
+    command: [node, build/server/worker.js]
+    depends_on: [postgres,redis]
+  migrate:
+    <<: *app
+    profiles: [tools]
+    restart: "no"
+    command: [node, build/server/migrate.js]
+    environment:
+      <<: *environment
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Owner URL required for migrations only}
+  postgres:
+    image: postgres@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: schools
+      POSTGRES_USER: school_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Private owner password required}
+      SCHOOL_APP_PASSWORD: ${SCHOOL_APP_PASSWORD:?Private runtime password required}
+    volumes:
+      - production-db:/var/lib/postgresql/data
+      - ./infra/init-production.sh:/docker-entrypoint-initdb.d/001-role.sh:ro
+    networks: [private]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U school_owner -d schools"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
+    restart: unless-stopped
+    command: [redis-server,--appendonly,"yes",--maxmemory-policy,noeviction]
+    volumes: [production-redis:/data]
+    networks: [private]
+  storage:
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    restart: unless-stopped
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Separate storage administrator required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Separate storage administrator password required}
+    ports: ["127.0.0.1:${BACKUP_STORAGE_PORT:-59010}:9000"]
+    volumes: [production-files:/data]
+    networks: [private]
+networks:
+  private: {internal: true}
+  egress: {}
+volumes:
+  production-db:
+  production-redis:
+  production-files:

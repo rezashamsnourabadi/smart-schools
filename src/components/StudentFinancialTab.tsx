@@ -67,11 +67,11 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
     `ولی محترم دانش‌آموز ${student.name}؛ با سلام و احترام، طبق سوابق مالی آموزشگاه، مانده بدهی معوق شهریه مبلغ ${formatPersianCurrency(summary.remainingDebt)} می‌باشد. خواهشمند است جهت تسویه حساب اقدام فرمایید.`
   );
 
-  const handleRecordPayment = (e: React.FormEvent) => {
+  const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (payAmount <= 0) return;
 
-    const result = recordStudentPayment({
+    const result = await recordStudentPayment({
       studentId: student.id,
       studentName: student.name,
       schoolId: student.schoolId,
@@ -89,20 +89,20 @@ export const StudentFinancialTab: React.FC<StudentFinancialTabProps> = ({ studen
     setPayTrackingCode(Math.floor(100000 + Math.random() * 900000).toString());
   };
 
-  const handleApplyDiscount = (e: React.FormEvent) => {
+  const handleApplyDiscount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (discountAmount <= 0) return;
     const targetFeeId = selectedFeeItemId || summary.assignedFees[0]?.feeItemId;
     if (!targetFeeId) return;
 
-    const result = applyStudentDiscount(student.id, targetFeeId, discountAmount, discountReason);
+    const result = await applyStudentDiscount(student.id, targetFeeId, discountAmount, discountReason);
     if (!result.ok) { setActionError(result.error); return; }
     setActionError('');
     setShowDiscountModal(false);
   };
 
-  const handleSendReminder = () => {
-    sendPaymentReminder(student.id, reminderMessage);
+  const handleSendReminder = async () => {
+    const saved0 = await sendPaymentReminder(student.id, reminderMessage); if (!saved0.ok) return;
     setShowReminderModal(false);
   };
 

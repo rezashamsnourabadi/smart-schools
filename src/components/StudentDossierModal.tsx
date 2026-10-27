@@ -20,8 +20,10 @@ import {
   Send,
   CreditCard
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { Student, DisciplinaryRecord } from '../types';
+import { useApp, useResource } from '../context/AppContext';
+import { Student, DisciplinaryRecord, GradeItem, AttendanceSession } from '../types';
+import {useStudentRecords} from '../api/hooks';
+import {ReportCardEditor} from './ReportCardEditor';
 import { toPersianDigits, formatPersianScore, normalizeSchoolDate } from '../utils/persianUtils';
 import { StudentFinancialTab } from './StudentFinancialTab';
 import { attendanceLabel } from '../utils/attendance';
@@ -41,7 +43,12 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   canManageDiscipline = true,
   initialTab = 'profile'
 }) => {
-  const { classes, grades, updateParentContact, addDisciplinaryRecord, currentUser, currentRole, canManageSchool, attendanceSessions, schoolClock } = useApp();
+  const { classes, updateParentContact, addDisciplinaryRecord, currentUser, currentRole, canManageSchool, schoolClock } = useApp();
+  const [gradeOffset,setGradeOffset]=useState(0),[attendanceOffset,setAttendanceOffset]=useState(0);
+  const [cardEditorOpen,setCardEditorOpen]=useState(false);
+  const gradeQuery=useStudentRecords<GradeItem>(student.id,'grades',gradeOffset);
+  const attendanceQuery=useStudentRecords<AttendanceSession>(student.id,'attendanceSessions',attendanceOffset);
+  const grades=gradeQuery.data?.items||[],attendanceSessions=attendanceQuery.data?.items||[];
   const canViewFinances = currentRole === 'parent' || currentRole === 'student' || canManageSchool('canManageFinances');
   const [activeTab, setActiveTab] = useState<'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances'>(initialTab === 'finances' && !canViewFinances ? 'profile' : initialTab);
   
@@ -60,26 +67,26 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
 
   const studentClass = classes.find((c) => c.id === student.classGroupId);
 
-  const handleSaveContact = () => {
-    updateParentContact(student.id, {
+  const handleSaveContact = async () => {
+    const saved0 = await updateParentContact(student.id, {
       address: editAddress,
       emergencyPhone: editEmergencyPhone,
       parentPhone: editParentPhone,
       parentBaleAccount: editBale
-    });
+    }); if (!saved0.ok) return;
     setIsEditingContact(false);
   };
 
-  const handleAddDiscipline = (e: React.FormEvent) => {
+  const handleAddDiscipline = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDiscTitle.trim()) return;
-    addDisciplinaryRecord(student.id, {
+    const saved1 = await addDisciplinaryRecord(student.id, {
       type: newDiscType,
       title: newDiscTitle,
       note: newDiscNote,
       date: schoolClock.date,
       recordedBy: currentUser.name
-    });
+    }); if (!saved1.ok) return;
     setNewDiscTitle('');
     setNewDiscNote('');
     setShowAddDiscipline(false);
@@ -209,6 +216,9 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50">
+          {cardEditorOpen&&<ReportCardEditor student={student} onClose={()=>setCardEditorOpen(false)}/>}
+          {activeTab==='reportCards'&&currentRole==='principal'&&<button id="edit-official-report-card" className="min-h-11 mb-3 px-4 rounded-xl bg-teal-700 text-white font-bold text-sm" onClick={()=>setCardEditorOpen(true)}>ثبت یا انتشار کارنامه مدرسه</button>}
+          {['reportCards','attendance'].includes(activeTab)&&(()=>{const query=activeTab==='reportCards'?gradeQuery:attendanceQuery,offset=activeTab==='reportCards'?gradeOffset:attendanceOffset,setOffset=activeTab==='reportCards'?setGradeOffset:setAttendanceOffset;return <div className="flex flex-wrap items-center gap-3 mb-4 text-xs">{query.error?<span role="alert" className="text-rose-800">{query.error.message}</span>:<span role="status">{query.isFetching?'در حال دریافت…':`${toPersianDigits(query.data?.total||0)} مورد`}</span>}<button disabled={query.isFetching||offset===0} onClick={()=>setOffset(Math.max(0,offset-25))} className="min-h-11 px-3 bg-white rounded-xl border border-slate-200">قبلی</button><button disabled={query.isFetching||offset+25>=(query.data?.total||0)} onClick={()=>setOffset(offset+25)} className="min-h-11 px-3 bg-white rounded-xl border border-slate-200">بعدی</button></div>;})()}
           {/* TAB 1: Profile & Contacts */}
           {activeTab === 'profile' && (
             <div className="space-y-4">

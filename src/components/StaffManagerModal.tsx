@@ -1,3 +1,4 @@
+import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
 import {
   X,
@@ -19,7 +20,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource } from '../context/AppContext';
 import { VicePrincipalPermissions, VicePrincipalProfile, TeacherProfile } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
 
@@ -54,6 +55,9 @@ const VP_ROLE_SUGGESTIONS = [
 ];
 
 export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose }) => {
+  useResource('teachers');
+  useResource('vicePrincipals');
+  useResource('classes');
   const {
     currentSchoolId,
     classes,
@@ -148,13 +152,13 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
     }
   ];
 
-  const handleToggleVPPermission = (vpId: string, key: keyof VicePrincipalPermissions) => {
+  const handleToggleVPPermission = async (vpId: string, key: keyof VicePrincipalPermissions) => {
     const targetVP = vicePrincipals.find((vp) => vp.id === vpId);
     if (!targetVP) return;
     const currentVal = targetVP.permissions[key];
-    updateVicePrincipalProfilePermissions(vpId, {
+    const saved0 = await updateVicePrincipalProfilePermissions(vpId, {
       [key]: !currentVal
-    });
+    }); if (!saved0.ok) return;
   };
 
   // VP Add/Edit Handlers
@@ -183,26 +187,26 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
     setShowAddVPModal(true);
   };
 
-  const handleSaveVP = (e: React.FormEvent) => {
+  const handleSaveVP = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vpName.trim()) return;
 
     if (editingVP) {
-      updateVicePrincipal(editingVP.id, {
+      const saved1 = await updateVicePrincipal(editingVP.id, {
         name: vpName.trim(),
         phone: vpPhone.trim() || '۰۹۱۲-۰۰۰-۰۰۰۰',
         roleTitle: vpRoleTitle.trim(),
         permissions: vpPermissions
-      });
+      }); if (!saved1.ok) return;
     } else {
-      addVicePrincipal({
+      const saved2 = await addVicePrincipal({
         name: vpName.trim(),
         phone: vpPhone.trim() || '۰۹۱۲-۰۰۰-۰۰۰۰',
         roleTitle: vpRoleTitle.trim(),
         schoolId: currentSchoolId,
         avatarBg: 'bg-teal-600',
         permissions: vpPermissions
-      });
+      }); if (!saved2.ok) return;
     }
     setShowAddVPModal(false);
   };
@@ -253,20 +257,20 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
     }
   };
 
-  const handleSaveTeacher = (e: React.FormEvent) => {
+  const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tName.trim()) return;
 
     if (editingTeacher) {
-      updateTeacher(editingTeacher.id, {
+      const saved3 = await updateTeacher(editingTeacher.id, {
         name: tName.trim(),
         phone: tPhone.trim() || '۰۹۱۲-۰۰۰-۰۰۰۰',
         roleTitle: tRoleTitle.trim(),
         teachingSubjects: tSubjects.length > 0 ? tSubjects : ['عمومی'],
         assignedClassIds: tAssignedClassIds
-      });
+      }); if (!saved3.ok) return;
     } else {
-      addTeacher({
+      const saved4 = await addTeacher({
         name: tName.trim(),
         phone: tPhone.trim() || '۰۹۱۲-۰۰۰-۰۰۰۰',
         roleTitle: tRoleTitle.trim(),
@@ -274,23 +278,23 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
         avatarBg: 'bg-indigo-600',
         teachingSubjects: tSubjects.length > 0 ? tSubjects : ['عمومی'],
         assignedClassIds: tAssignedClassIds
-      });
+      }); if (!saved4.ok) return;
     }
     setShowAddTeacherModal(false);
   };
 
   // Convert Role Handlers
-  const handleConfirmConvertToVP = (e: React.FormEvent) => {
+  const handleConfirmConvertToVP = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!convertingTeacher) return;
-    convertTeacherToVicePrincipal(convertingTeacher.id, targetVPRole);
+    const saved5 = await convertTeacherToVicePrincipal(convertingTeacher.id, targetVPRole); if (!saved5.ok) return;
     setConvertingTeacher(null);
   };
 
-  const handleConfirmConvertToTeacher = (e: React.FormEvent) => {
+  const handleConfirmConvertToTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!convertingVP) return;
-    convertVicePrincipalToTeacher(convertingVP.id, targetTSubjects, targetTClasses);
+    const saved6 = await convertVicePrincipalToTeacher(convertingVP.id, targetTSubjects, targetTClasses); if (!saved6.ok) return;
     setConvertingVP(null);
   };
 
@@ -378,6 +382,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
           </div>
         </div>
 
+        <ResourcePager kind={activeTab === 'teachers' ? 'teachers' : 'vicePrincipals'}/>
         {/* Content Area */}
         <div className="p-3 sm:p-5 overflow-y-auto space-y-4 flex-1 bg-slate-50">
           {/* TAB 1: VICE PRINCIPALS */}
@@ -466,9 +471,9 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                           </button>
 
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               if (confirm(`آیا از حذف ${vp.name} از کادر معاونین اطمینان دارید؟`)) {
-                                deleteVicePrincipal(vp.id);
+                                const saved7 = await deleteVicePrincipal(vp.id); if (!saved7.ok) return;
                               }
                             }}
                             title="حذف معاون"
@@ -645,9 +650,9 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                           </button>
 
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               if (confirm(`آیا از حذف ${teacher.name} از کادر دبیران اطمینان دارید؟`)) {
-                                deleteTeacher(teacher.id);
+                                const saved8 = await deleteTeacher(teacher.id); if (!saved8.ok) return;
                               }
                             }}
                             title="حذف دبیر"

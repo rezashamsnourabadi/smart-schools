@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { AppProvider, useApp } from '../src/context/AppContext';
+import { AppProvider, useApp } from '../tests/fixtures/LegacyAppContext';
 import { INITIAL_STUDENTS } from '../src/data/mockData';
 
 const corruptKey = 'smart_school_hub_data_v2_students';

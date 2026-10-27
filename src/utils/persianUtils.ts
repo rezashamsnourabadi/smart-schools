@@ -11,6 +11,12 @@ export function getSchoolDate(now = new Date()): string {
   return `${part('year')}/${part('month')}/${part('day')}`;
 }
 
+export function getCurrentAcademicYearTitle(now = new Date()): string {
+  const [year, month] = getSchoolDate(now).split('/').map(Number);
+  const start = month >= 7 ? year : year - 1;
+  return `${start}-${start + 1}`;
+}
+
 export interface SchoolClock { date: string; time: string; dayOfWeek: string; dateLabel: string; minuteOfDay: number }
 
 export function getSchoolClock(now = new Date()): SchoolClock {

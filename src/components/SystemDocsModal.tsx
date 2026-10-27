@@ -59,13 +59,13 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       category: 'مالی و اداری',
       title: 'مدیریت مالی، شهریه، اقساط، سرفصل‌های مصوب و صندوق آموزشگاه',
       badge: 'جدید و جامع',
-      description: 'نمونه فرانت‌اند برای تعرفه، ثبت فیش، محاسبه مانده و ثبت اعلان آزمایشی؛ اتصال بانکی و پیام واقعی فعال نیست.',
+      description: 'تعرفه، رسید، تخفیف و مانده در پایگاه داده ثبت می‌شوند؛ پرداخت آنلاین به اتصال درگاه نیاز دارد.',
       details: [
         'تعریف نامحدود سرفصل‌های درآمدی با قابلیت اجباری/اختیاری بودن و تخصیص به پایه‌ها',
         'جدول هوشمند اقساط و موعد سررسید با نشانگر وضعیت بدهکار، معوقه و تسویه‌شده',
-        'ثبت محلی رسیدهای نمونه با شماره پیگیری و کنترل مانده',
+        'ثبت رسیدها در سرور با شماره پیگیری و کنترل مانده',
         'سامانه تخفیفات و بورسیه (فرزند فرهنگیان، سادات، حافظان قرآن، تخفیف پرداخت نقدی)',
-        'ثبت محلی یادآوری؛ ارسال پیامک یا بله انجام نمی‌شود',
+        'ثبت درخواست یادآوری در صف؛ ارسال به تنظیم ارائه‌دهنده وابسته است',
         'تب اختصاصی در پرونده جامع دانش‌آموز (Dossier) و کارت هوشمند در پنل اولیا'
       ],
       userRoles: ['مدیر آموزشگاه', 'معاون (مشروط)', 'اولیا'],
@@ -76,7 +76,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       category: 'مدیریتی',
       title: 'مدیریت سال و تقویم تحصیلی و ویزارد ارتقا (Academic Rollover)',
       badge: 'جدید و بومی',
-      description: 'مدیریت محلی سال تحصیلی؛ تغییر سال فقط برای پرونده‌های واجد شرایط و پس از تأیید اجرا می‌شود.',
+      description: 'مدیریت سال تحصیلی در پایگاه داده؛ تغییر سال فقط برای پرونده‌های واجد شرایط و پس از تأیید اجرا می‌شود.',
       details: [
         'پیشنهاد ارتقا فقط بر اساس کارنامه نوبت دوم معتبر و منتشرشده',
         'پیشنهاد فارغ‌التحصیلی فقط برای دانش‌آموز واجد شرایط پایه دوازدهم',
@@ -91,12 +91,12 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       id: 'attendance-bale',
       category: 'ارتباطی',
       title: 'حضور و غیاب کلاسی و پیش‌نویس اعلان',
-      badge: 'محلی و آزمایشی',
-      description: 'ثبت محلی وضعیت زنگ و ساخت سابقه اعلان برای نمایش؛ اتصال بله و پیامک واقعی فعال نیست.',
+      badge: 'متصل به سرور',
+      description: 'ثبت وضعیت زنگ و اصلاحات در پایگاه داده؛ اعلان در همان تراکنش وارد صف می‌شود.',
       details: [
         'تشخیص هوشمند زنگ جاری و نمایش لیست دانش‌آموزان کلاس فعال',
         'دکمه تک‌لمسی «همه حاضرند» برای صرفه‌جویی زمان آغاز کلاس',
-        'تولید متن اعلان آزمایشی با زمان و نام مدرسه',
+        'تولید درخواست اعلان با زمان و نام مدرسه',
         'سنجش هزینه پیام‌رسانی نیازمند اتصال و داده واقعی است',
         'صندوق سابقه اعلان‌ها در هدر با نشانگر پیام‌های خوانده‌نشده'
       ],
@@ -107,7 +107,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       id: 'student-dossier',
       category: 'آموزشی',
       title: 'نمای پرونده تحصیلی دانش‌آموز',
-      badge: 'نمونه محلی',
+      badge: 'متصل به سرور',
       description: 'نمایش داده‌های پرونده موجود در نمونه فرانت‌اند؛ داده‌ها در مرورگر ذخیره می‌شوند و همگام‌سازی منطقه‌ای فعال نیست.',
       details: [
         'نمایش دفتر نمرات و کارنامه منتشرشده موجود؛ معدل رسمی از دفتر نمرات ساخته نمی‌شود',
@@ -123,12 +123,12 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       id: 'question-bank',
       category: 'آموزشی',
       title: 'بانک سوالات نمونه در مرورگر',
-      badge: 'نمونه محلی',
+      badge: 'متصل به سرور',
       description: 'مدیریت پرسش‌های نمونه در همین نسخه فرانت‌اند؛ اشتراک‌گذاری میان دستگاه‌ها و مدرسه‌ها فعال نیست.',
       details: [
         'فرم استاندارد افزودن سوال با تعیین گزینه‌ها، کلید پاسخ و راه‌حل تشریحی',
         'فیلترهای پیشرفته بر اساس درس، پایه تحصیلی و درجه سختی (آسان، متوسط، سخت)',
-        'نمایش تمرین از بانک محلی موجود؛ این بخش موتور آزمون یا ذخیره پاسخ ندارد',
+        'نمایش تمرین از بانک سؤال موجود؛ این بخش موتور آزمون یا ذخیره پاسخ ندارد',
         'نشان تایید و اصالت طراح سوال به همراه نام مدرسه مبدا'
       ],
       userRoles: ['معلم', 'مدیر آموزشگاه', 'دانش‌آموز', 'مدیر پلتفرم'],
@@ -154,7 +154,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       category: 'مدیریتی',
       title: 'برنامه هفتگی دروس',
       badge: 'بررسی تداخل پایه',
-      description: 'ماتریس محلی برنامه هفتگی؛ ثبت تداخل کلاس و دبیر در روز و زنگ یکسان مسدود می‌شود.',
+      description: 'برنامه هفتگی متصل به سرور؛ ثبت تداخل کلاس و دبیر در روز و زنگ یکسان مسدود می‌شود.',
       details: [
         'بررسی تداخل دبیر و کلاس در روز و زنگ یکسان هنگام ثبت برنامه',
         'نمایش سریع برنامه روزانه در داشبورد معلم و دانش‌آموز',
@@ -182,7 +182,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       category: 'مدیریتی',
       title: 'تفویض هوشمند و گرانولار اختیارات به معاونان (RBAC Delegation)',
       badge: 'انعطاف‌پذیری سازمانی',
-      description: 'کنترل چند مجوز در رابط برای پیش‌نمایش نقش معاون؛ جایگزین احراز هویت و مجوز سمت سرور نیست.',
+      description: 'مجوزهای معاون توسط مدیر واگذار و در سرور برای هر عملیات بررسی می‌شوند.',
       details: [
         'مجوز مدیریت کلاس‌ها و ثبت‌نام دانش‌آموزان',
         'مجوز چیدمان و اصلاح برنامه هفتگی دروس',
@@ -197,11 +197,11 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       id: 'posts-events',
       category: 'ارتباطی',
       title: 'مدیریت رویدادها، اخبار و اطلاعیه‌های رسمی مدرسه',
-      badge: 'ذخیره محلی',
-      description: 'ثبت اطلاعیه در نمونه محلی و نمایش آن در داشبورد؛ ارسال پیام یا اعلان بیرونی انجام نمی‌شود.',
+      badge: 'ذخیره در سرور',
+      description: 'ثبت اطلاعیه در متصل به سرور و نمایش آن در داشبورد؛ ارسال پیام یا اعلان بیرونی انجام نمی‌شود.',
       details: [
         'فیلتر بر اساس فوریت (فوری، عادی، رویداد فرهنگی)',
-        'پیوست محلی در مرورگر با محدودیت اندازه هر فایل',
+        'پیوست خصوصی در سرور با محدودیت اندازه هر فایل',
         'نمایش لحظه‌ای در بورد اخبار داشبورد مدیر، اولیا و دانش‌آموز'
       ],
       userRoles: ['مدیر آموزشگاه', 'معاون (مشروط)', 'عموم کاربران'],
@@ -211,7 +211,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       id: 'regional-kpis-sponsors',
       category: 'زیرساخت',
       title: 'داشبورد نظارت کلان شهرستان و مدیریت حامیان مالی (Edu-Ads)',
-      badge: 'نمونه محلی',
+      badge: 'متصل به سرور',
       description: 'نمایش نمونه‌ای شاخص‌های منطقه و بنر حامیان؛ آمار و درآمد واقعیِ متصل به مدارس وجود ندارد.',
       details: [
         'شاخص‌ها از داده‌های نمونه همین مرورگر محاسبه می‌شوند',
@@ -229,7 +229,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       description: 'ابزار توسعه برای پیش‌نمایش نقش‌ها در همین نشست مرورگر؛ ورود واقعی یا ارزیابی کامل سیستم نیست.',
       details: [
         'نقش‌ها از داده‌های مشترک داخل همین نشست برنامه استفاده می‌کنند',
-        'تغییرات محلی ممکن است در نقش‌های نمونه همین مرورگر دیده شوند؛ دستگاه دیگری همگام نیست',
+        'داده از سرور با مجوز همان نقش و مدرسه دریافت می‌شود',
         'نوار دسترسی سریع پایین صفحه بهینه‌شده برای گوشی‌های هوشمند'
       ],
       userRoles: ['تمام کاربران و ارزیابان سیستم'],
@@ -248,9 +248,9 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
 
   const handleCopySummary = () => {
     const summaryText = `نمونه فرانت‌اند مدیریت مدرسه:
-- ثبت محلی داده‌های نمونه
-- سابقه اعلان آزمایشی؛ ارسال واقعی فعال نیست
-- بانک سوال محلی؛ موتور شرکت آنلاین در آزمون فعال نیست
+- ثبت داده در پایگاه داده
+- صف اعلان؛ ارسال وابسته به تنظیم سرویس
+- بانک سوال متصل؛ موتور شرکت آنلاین در آزمون فعال نیست
 - پرداخت، پیام‌رسان، پیامک و همگام‌سازی ابری واقعی فعال نیست
 - مجوزهای رابط جایگزین کنترل امنیتی سمت سرور نیست`;
     void navigator.clipboard?.writeText(summaryText).then(() => {
@@ -326,7 +326,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
         </div>
 
         <div role="note" className="mx-3 mt-3 sm:mx-5 p-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 text-xs leading-relaxed">
-          این نسخه، نمونه فرانت‌اند است. داده‌ها محلی‌اند؛ ورود امن، پایگاه داده ابری، ارسال واقعی پیام، درگاه پرداخت و اشتراک‌گذاری میان دستگاه‌ها فعال نیست. جدول دسترسی زیر رفتار رابط را نشان می‌دهد و کنترل امنیتی سمت سرور نیست.
+          ورود و دسترسی در سرور بررسی می‌شوند و داده در پایگاه داده ذخیره می‌شود. ارسال بیرونی و پرداخت آنلاین به تنظیم سرویس نیاز دارند. جدول زیر خلاصه دسترسی‌هاست؛ مجوز دقیق به عضویت و محدوده مدرسه بستگی دارد.
         </div>
 
         {/* Tab Navigation Bar */}
@@ -558,7 +558,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
                         <td className="p-3 text-center text-teal-700 font-bold">👁️ پرونده فرزند</td>
                       </tr>
                       <tr className="bg-slate-50/50">
-                        <td className="p-3 font-bold text-slate-900">بانک سوالات محلی نمونه</td>
+                        <td className="p-3 font-bold text-slate-900">بانک سوالات متصل به سرور</td>
                         <td className="p-3 text-center text-teal-700 font-bold">👁️ نظارت کلان</td>
                         <td className="p-3 text-center text-teal-700 font-bold">👁️ مشاهده</td>
                         <td className="p-3 text-center text-teal-700 font-bold">👁️ مشاهده</td>
@@ -653,11 +653,11 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
                       <span>معماری مدیریت وضعیت و داده‌ها</span>
                     </div>
                     <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
-                      <li><strong>Single Source of Truth:</strong> استفاده از Context API یکپارچه در `AppContext.tsx`.</li>
+                      <li><strong>Single Source of Truth:</strong> PostgreSQL و API؛ دریافت وضعیت سرور با TanStack Query.</li>
                       <li><strong>Strict Persian Digits:</strong> ذخیره مقادیر محاسباتی به صورت ASCII و رندرینگ مجزا با `toPersianDigits`.</li>
-                      <li><strong>Non-Destructive Rollover:</strong> موتور تحویل سال با انجماد در `pastYearHistory`.</li>
+                      <li><strong>Non-Destructive Rollover:</strong> ثبت‌نام مستقل هر سال و حفظ اطلاعات سال قبل در پایگاه داده.</li>
                       <li><strong>دفتر کل مالی و حسابداری (Financial Ledger):</strong> اسناد مالی، اقساط، تخفیف‌ها و فیش‌های پرداختی در ساختار تراکنشی با کد پیگیری یکتا.</li>
-                      <li><strong>Local Persistence:</strong> ذخیره‌سازی محلی با نسخه ۲ کلید کشوری.</li>
+                      <li><strong>Server Persistence:</strong> ذخیره در PostgreSQL با جداسازی مدرسه و سال.</li>
                     </ul>
                   </div>
                 </div>
@@ -665,10 +665,10 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
                 <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-2xl space-y-2">
                   <div className="flex items-center gap-2 font-bold text-xs text-teal-900">
                     <Sparkles className="w-4 h-4 text-teal-700" />
-                    <span>نقشه راه اتصال به دیتابیس ابری (Cloud Backend Roadmap)</span>
+                    <span>بک‌اند و استقرار</span>
                   </div>
                   <p className="text-xs text-teal-800 leading-relaxed">
-                    این پروژه در وضعیت فعلی یک فرانت‌اند با داده محلی مرورگر است و backend یا قرارداد ذخیره‌سازی پایدار ندارد. پیش از انتخاب Firestore یا PostgreSQL باید مدل‌های دامنه، احراز هویت، جداسازی مدرسه و مهاجرت داده جداگانه طراحی شوند؛ typeهای فعلی تضمین‌کننده نگاشت یک‌به‌یک به پایگاه داده نیستند.
+                    بک‌اند Fastify، PostgreSQL، Redis و فایل خصوصی S3 پیاده‌سازی شده‌اند. محیط محلی و بسته استقرار مستقل آماده‌اند؛ اتصال سرویس‌ها و انتشار عمومی پس از تنظیم اطلاعات عملیاتی انجام می‌شود.
                   </p>
                 </div>
               </div>
@@ -709,13 +709,13 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
                     <span className="text-[11px] font-bold text-indigo-800 block">۳. حامیان آموزشی</span>
                     <h5 className="font-bold text-xs text-slate-900">نیازمند سیاست و آزمون محصول</h5>
                     <p className="text-[11px] text-slate-600 leading-relaxed">
-                      نمایش نمونه حامی در رابط وجود دارد؛ فروش تبلیغ، هدف‌گیری مخاطب و درآمد واقعی فعال نیست.
+                      مدیریت حامی در رابط و سرور وجود دارد؛ فروش تبلیغ، هدف‌گیری مخاطب و درآمد واقعی فعال نیست.
                     </p>
                   </div>
 
                   <div className="p-4 bg-purple-50/70 border border-purple-200 rounded-2xl space-y-2">
                     <span className="text-[11px] font-bold text-purple-800 block">۴. فرایند مالی</span>
-                    <h5 className="font-bold text-xs text-slate-900">ثبت محلی و پرداخت نمایشی</h5>
+                    <h5 className="font-bold text-xs text-slate-900">ثبت مالی و تأیید رسید</h5>
                     <p className="text-[11px] text-slate-600 leading-relaxed">
                       درگاه بانکی یا پیام‌رسان متصل نیست و داده‌ای برای ادعای کاهش تأخیر وجود ندارد.
                     </p>

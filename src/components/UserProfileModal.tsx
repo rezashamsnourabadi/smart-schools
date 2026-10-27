@@ -17,12 +17,14 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { toPersianDigits } from '../utils/persianUtils';
+import {SecuritySettings} from './SecuritySettings';
 
 interface UserProfileModalProps {
   onClose: () => void;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose }) => {
+  const [securityOpen,setSecurityOpen]=useState(false);
   const {
     currentUser,
     currentRole,
@@ -40,24 +42,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose }) =
   const [emergencyPhone, setEmergencyPhone] = useState(child?.emergencyPhone || '');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  const handleSaveParentContact = (e: React.FormEvent) => {
+  const handleSaveParentContact = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!child) return;
-    updateParentContact(child.id, {
+    const saved0 = await updateParentContact(child.id, {
       parentBaleAccount: parentBale.trim(),
       parentPhone: parentPhone.trim(),
       emergencyPhone: emergencyPhone.trim()
-    });
+    }); if (!saved0.ok) return;
     setSavedSuccess(true);
-    sendNotification({
-      studentId: child.id,
-      recipientName: currentUser.name,
-      recipientPhone: parentPhone.trim(),
-      studentName: child.name,
-      message: `ولی محترم؛ مشخصات ارتباطی و شناسه بله شما با موفقیت در سامانه هوشمند دانا به‌روزرسانی شد.`,
-      type: 'general',
-      platform: 'bale'
-    });
     setTimeout(() => setSavedSuccess(false), 3500);
   };
 
@@ -86,6 +79,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose }) =
         className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200 m-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {securityOpen&&<SecuritySettings onClose={()=>setSecurityOpen(false)}/>}
+        <button id="open-security-settings" onClick={()=>setSecurityOpen(true)} className="min-h-11 px-4 text-sm font-bold text-teal-800">امنیت حساب و تغییر رمز</button>
         {/* Header with avatar banner */}
         <div className="bg-linear-to-r from-teal-800 to-slate-900 text-white p-5 relative">
           <button

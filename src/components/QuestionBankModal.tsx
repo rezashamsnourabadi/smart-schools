@@ -1,6 +1,7 @@
+import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource } from '../context/AppContext';
 import { QuestionBankItem } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
 import { AddQuestionModal } from './AddQuestionModal';
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
+  useResource('questionBank');
   const shouldReduceMotion = useReducedMotion();
   const { questionBank } = useApp();
 
@@ -127,6 +129,7 @@ export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
           </div>
         </div>
 
+        <ResourcePager kind="questionBank"/>
         {/* Search and Filters Bar */}
         <div className="p-4 border-b border-slate-200 bg-white space-y-3 shrink-0">
           <div className="flex flex-col sm:flex-row gap-2.5">

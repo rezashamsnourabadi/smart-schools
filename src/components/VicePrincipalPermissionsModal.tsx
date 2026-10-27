@@ -34,12 +34,12 @@ export const VicePrincipalPermissionsModal: React.FC<VicePrincipalPermissionsMod
 
   const selectedVP = vicePrincipals.find((vp) => vp.id === selectedVPId) || vicePrincipals[0];
 
-  const handleToggle = (key: keyof VicePrincipalPermissions) => {
+  const handleToggle = async (key: keyof VicePrincipalPermissions) => {
     if (!selectedVP) return;
     const currentVal = selectedVP.permissions[key];
-    updateVicePrincipalProfilePermissions(selectedVP.id, {
+    const saved0 = await updateVicePrincipalProfilePermissions(selectedVP.id, {
       [key]: !currentVal
-    });
+    }); if (!saved0.ok) return;
   };
 
   const permissionItems: { key: keyof VicePrincipalPermissions; title: string; desc: string }[] = [

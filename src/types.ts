@@ -375,7 +375,7 @@ export interface NotificationLog {
   recipientName: string;
   recipientPhone: string;
   platform: 'بله' | 'ایتا' | 'پیامک';
-  status: 'simulated' | 'sent' | 'delivered';
+  status: 'simulated' | 'queued' | 'sent' | 'delivered' | 'unavailable' | 'failed';
   message: string;
   timestamp: string;
   schoolName: string;

@@ -42,11 +42,11 @@ export const AddQuestionModal: React.FC<Props> = ({
     onClose();
   };
 
-  const handleCreateQuestion = (e: React.FormEvent) => {
+  const handleCreateQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!qTitle.trim() || !qContent.trim()) return;
 
-    addQuestionBankItem({
+    const saved0 = await addQuestionBankItem({
       title: qTitle.trim(),
       content: qContent.trim(),
       subject: qSubject.trim() || 'عمومی',
@@ -62,7 +62,7 @@ export const AddQuestionModal: React.FC<Props> = ({
       authorSchool: currentSchool?.name || 'مدارس شهرستان',
       isSharedRegional: true,
       tags: [qSubject.trim() || 'عمومی', qGrade, 'طراحی همکاران منطقه']
-    });
+    }); if (!saved0.ok) return;
 
     handleResetAndClose();
   };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import {AccountsModal} from './AccountsModal';
 import { School, SchoolType } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
 import {
@@ -25,8 +26,10 @@ interface Props {
 }
 
 export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) => {
+  const [accountSchoolId,setAccountSchoolId]=useState<string|null>(null);
   const {
     schools,
+    dashboard,
     setCurrentSchoolId,
     setCurrentRole,
     banners,
@@ -66,18 +69,18 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
   const [ancTarget, setAncTarget] = useState<'all' | 'teachers' | 'parents' | 'students'>('all');
 
   // Calculate totals
-  const totalStudents = schools.reduce((acc, s) => acc + s.studentCount, 0);
-  const totalTeachers = schools.reduce((acc, s) => acc + s.teacherCount, 0);
-  const totalSubmittedSchools = schools.filter((s) => s.todayAttendanceSubmitted).length;
+  const totalStudents = dashboard.students || 0;
+  const totalTeachers = dashboard.teachers || 0;
+  const totalSubmittedSchools = dashboard.submittedSchools || 0;
   const avgAttendance = Math.round(
-    schools.reduce((acc, s) => acc + s.attendanceRateToday, 0) / schools.length
+    schools.reduce((acc, s) => acc + s.attendanceRateToday, 0) / Math.max(1, schools.length)
   );
 
-  const handleCreateSchool = (e: React.FormEvent) => {
+  const handleCreateSchool = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!schName.trim() || !schCode.trim()) return;
 
-    addSchool({
+    const saved0 = await addSchool({
       name: schName,
       code: schCode,
       type: schType,
@@ -88,7 +91,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
       teacherCount: parseInt(schTeachers) || 15,
       classesCount: Math.ceil((parseInt(schStudents) || 200) / 25),
       accentColor: 'indigo'
-    });
+    }); if (!saved0.ok) return;
 
     setShowAddSchool(false);
     setSchName('');
@@ -96,11 +99,11 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
     setSchPrincipal('');
   };
 
-  const handleCreateBanner = (e: React.FormEvent) => {
+  const handleCreateBanner = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adTitle.trim() || !adSponsor.trim()) return;
 
-    addBannerAd({
+    const saved1 = await addBannerAd({
       title: adTitle,
       description: adDesc,
       sponsorName: adSponsor,
@@ -109,7 +112,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
       category: 'آموزشی',
       badge: adBadge,
       isActive: true
-    });
+    }); if (!saved1.ok) return;
 
     setShowAddBanner(false);
     setAdTitle('');
@@ -117,11 +120,11 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
     setAdSponsor('');
   };
 
-  const handleCreateAnnouncement = (e: React.FormEvent) => {
+  const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ancTitle.trim() || !ancContent.trim()) return;
 
-    addAnnouncement({
+    const saved2 = await addAnnouncement({
       schoolId: 'all',
       title: ancTitle,
       content: ancContent,
@@ -129,32 +132,32 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
       senderName: 'مهندس رضا رضایی',
       target: ancTarget,
       priority: 'important'
-    });
+    }); if (!saved2.ok) return;
 
     setAncTitle('');
     setAncContent('');
   };
 
   const handleInspectSchool = (schoolId: string) => {
-    setCurrentSchoolId(schoolId);
-    setCurrentRole('principal');
+    setAccountSchoolId(schoolId);
   };
 
   return (
     <div className="space-y-6" id="platform-admin-view">
+      {accountSchoolId&&<AccountsModal initialSchoolId={accountSchoolId} onClose={()=>setAccountSchoolId(null)}/>}
       {/* Header Banner */}
       <div className="bg-linear-to-r from-slate-900 via-slate-800 to-rose-950 text-white p-6 rounded-3xl shadow-lg relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/30">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>پیش‌نمایش مدیر پلتفرم • داده نمونه محلی</span>
+              <span>مدیریت پلتفرم • مدارس متصل به سرور</span>
             </div>
             <h1 className="text-2xl font-black tracking-tight">
-              نمای منطقه‌ای مدارس نمونه
+              نمای منطقه‌ای مدارس
             </h1>
             <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-              داده‌ها و اعلان‌های این پنل نمونه‌اند و به مدرسه‌ها یا کاربران واقعی متصل نیستند.
+              مدیریت مدارس و آمار ثبت‌شده در سامانه. ارسال پیام به تنظیم سرویس پیام‌رسان وابسته است.
             </p>
           </div>
 
@@ -269,7 +272,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
           }`}
         >
           <Megaphone className="w-4 h-4" />
-          <span>بخشنامه‌های نمونه</span>
+          <span>بخشنامه‌های منطقه</span>
         </button>
       </div>
 
@@ -349,7 +352,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span>ورود به پنل مدرسه</span>
+                    <span>مدیریت حساب مدیر</span>
                   </button>
                 </div>
               </div>
@@ -394,7 +397,7 @@ export const PlatformAdminDashboard: React.FC<Props> = ({ onOpenQuestionBank }) 
                       {toPersianDigits(ban.clicksCount)} کلیک / بازدید
                     </span>
                     <button
-                      onClick={() => toggleBannerStatus(ban.id)}
+                      onClick={async () => await toggleBannerStatus(ban.id)}
                       className={`text-xs font-bold px-2.5 py-1 rounded-md transition-colors ${
                         ban.isActive
                           ? 'bg-emerald-100 text-emerald-800'

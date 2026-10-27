@@ -20,8 +20,8 @@ import {
   Trash2,
   FileText
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { toPersianDigits } from '../utils/persianUtils';
+import { useApp, useResource } from '../context/AppContext';
+import { toPersianDigits, getSchoolDate } from '../utils/persianUtils';
 import { MAX_LOCAL_ATTACHMENT_BYTES, MAX_LOCAL_ATTACHMENT_LABEL } from '../utils/localAttachments';
 
 interface TeacherHomeworkAndExamModalProps {
@@ -29,6 +29,10 @@ interface TeacherHomeworkAndExamModalProps {
 }
 
 export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalProps> = ({ onClose }) => {
+  useResource('homework');
+  useResource('homeworkSubmissions');
+  useResource('exams');
+  useResource('classes');
   const shouldReduceMotion = useReducedMotion();
   const {
     classes,
@@ -50,10 +54,10 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
 
   // Homework form states
   const [hwClassId, setHwClassId] = useState(classes[0]?.id || '');
-  const [hwSubject, setHwSubject] = useState('ریاضی ۱');
+  const [hwSubject, setHwSubject] = useState(currentUser.teachingSubjects?.[0] || '');
   const [hwTitle, setHwTitle] = useState('');
   const [hwDesc, setHwDesc] = useState('');
-  const [hwDueDate, setHwDueDate] = useState('۱۴۰۵/۰۶/۲۸');
+  const [hwDueDate, setHwDueDate] = useState(() => getSchoolDate());
   const [hwUploadedFile, setHwUploadedFile] = useState<{
     name: string;
     size: string;
@@ -96,25 +100,25 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
 
   // Exam form states
   const [exClassId, setExClassId] = useState(classes[0]?.id || '');
-  const [exSubject, setExSubject] = useState('ریاضی ۱');
+  const [exSubject, setExSubject] = useState(currentUser.teachingSubjects?.[0] || '');
   const [exTitle, setExTitle] = useState('');
-  const [exDate, setExDate] = useState('۱۴۰۵/۰۶/۳۰');
+  const [exDate, setExDate] = useState(() => getSchoolDate());
   const [exTime, setExTime] = useState('۱۰:۰۰');
   const [exDuration, setExDuration] = useState(45);
 
-  const handleSaveGrade = (submissionId: string) => {
+  const handleSaveGrade = async (submissionId: string) => {
     const draft = gradingDrafts[submissionId];
     if (!draft || draft.score === undefined || isNaN(draft.score)) return;
-    gradeHomeworkSubmission(submissionId, draft.score, draft.feedback || '');
+    const saved0 = await gradeHomeworkSubmission(submissionId, draft.score, draft.feedback || ''); if (!saved0.ok) return;
   };
 
-  const handleAddHw = (e: React.FormEvent) => {
+  const handleAddHw = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!hwTitle.trim()) return;
 
     const targetClass = classes.find((c) => c.id === hwClassId);
 
-    addHomework({
+    const saved1 = await addHomework({
       schoolId: currentSchoolId,
       classGroupId: hwClassId,
       className: targetClass?.name || 'کلاس درس',
@@ -128,7 +132,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
       teacherName: currentUser.name,
       totalStudents: targetClass?.studentCount || 30,
       attachments: hwUploadedFile ? [hwUploadedFile] : undefined
-    });
+    }); if (!saved1.ok) return;
 
     setHwTitle('');
     setHwDesc('');
@@ -136,13 +140,13 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
     setShowAddHw(false);
   };
 
-  const handleAddExam = (e: React.FormEvent) => {
+  const handleAddExam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!exTitle.trim()) return;
 
     const targetClass = classes.find((c) => c.id === exClassId);
 
-    addOnlineExam({
+    const saved2 = await addOnlineExam({
       schoolId: currentSchoolId,
       classGroupId: exClassId,
       className: targetClass?.name || 'کلاس درس',
@@ -155,7 +159,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
       totalScore: 0,
       status: 'scheduled',
       questions: []
-    });
+    }); if (!saved2.ok) return;
 
     setExTitle('');
     setShowAddExam(false);
@@ -323,7 +327,7 @@ export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalPr
                   >
                     <UploadCloud className="w-4 h-4 text-slate-400" />
                     <span className="text-xs text-slate-600 font-medium">
-                      فایل تا {MAX_LOCAL_ATTACHMENT_LABEL} (ذخیره محلی مرورگر)
+                      فایل تا {MAX_LOCAL_ATTACHMENT_LABEL} (فایل خصوصی)
                     </span>
                   </label>
                 ) : (

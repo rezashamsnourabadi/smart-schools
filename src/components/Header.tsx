@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import { notificationStatusLabel } from '../utils/notifications';
+import React, { useState, lazy, Suspense } from 'react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../auth/AuthProvider';
+const AccountsModal = lazy(() => import('./AccountsModal').then(module => ({default:module.AccountsModal})));
 import {
   GraduationCap,
   Building2,
@@ -23,6 +26,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsModal }) => {
+  const auth = useAuth();
+  const [accountsOpen,setAccountsOpen]=useState(false);
   const {
     currentRole,
     currentSchool,
@@ -145,6 +150,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
 
           {/* Left Actions: Date, SMS/Bale Bell, Profile, Reset */}
           <div className="flex items-center space-x-reverse space-x-2 sm:space-x-3">
+            {['principal','platform_admin'].includes(currentRole)&&<button id="open-accounts" onClick={()=>setAccountsOpen(true)} className="min-h-11 px-3 text-xs rounded-xl bg-teal-50 text-teal-800 font-bold">حساب‌ها</button>}
+            {accountsOpen&&<Suspense fallback={<span role="status">در حال بارگذاری…</span>}><AccountsModal onClose={()=>setAccountsOpen(false)}/></Suspense>}
             {/* Academic Year Badge */}
             <div
               className={`hidden lg:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl border font-bold ${
@@ -194,7 +201,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
                   <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
                       <MessageSquare className="w-4 h-4 text-teal-600" />
-                      <span>اعلان‌های آزمایشی ثبت‌شده؛ ارسال واقعی انجام نمی‌شود</span>
+                      <span>وضعیت ارسال اعلان‌ها؛ ارسال بیرونی به تنظیم سرویس پیام‌رسان وابسته است</span>
                     </div>
                     <span className="text-[11px] text-slate-500 font-mono font-bold">
                       {toPersianDigits(notifications.length)} پیام
@@ -210,7 +217,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-slate-800">{ntf.studentName}</span>
                             <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-teal-50 text-teal-700 font-medium">
-                              شبیه‌سازی {ntf.platform}
+                              {notificationStatusLabel(ntf.status)} • {ntf.platform}
                             </span>
                           </div>
                           <p className="text-slate-600 text-[11px] leading-relaxed line-clamp-2">
@@ -229,11 +236,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
             </div>
 
             {/* Reset sample data button */}
-            {currentRole === 'platform_admin' && <button
-              id="reset-demo-data-btn"
-              onClick={resetAllData}
+            {<button
+              id="logout-btn"
+              onClick={() => void auth.logout()}
               className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-              title="بازگردانی داده‌های پیش‌فرض نمونه"
+              title="خروج از حساب"
             >
               <RotateCcw className="w-4 h-4" />
             </button>}
@@ -297,7 +304,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsMo
       {isViewingNonCurrentYear && (
         <div className="border-t border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-            <p className="leading-relaxed">نمای سال {toPersianDigits(activeAcademicYear?.title || '')} انتخاب شده است. داده‌های همه بخش‌ها هنوز به تفکیک سال ذخیره نمی‌شوند؛ این نما آرشیو کامل نیست و عملیات آموزشی و پرونده‌ای مسدود است.</p>
+            <p className="leading-relaxed">نمای سال {toPersianDigits(activeAcademicYear?.title || '')} انتخاب شده است. داده‌های این نما مربوط به سال انتخاب‌شده‌اند. سوابق سال غیرجاری فقط خواندنی هستند.</p>
             <button id="return-current-year-header" onClick={returnToCurrentAcademicYear} className="min-h-11 shrink-0 rounded-xl bg-amber-700 px-4 font-bold text-white hover:bg-amber-800">بازگشت به سال فعال</button>
           </div>
         </div>

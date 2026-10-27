@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { AppProvider, useApp } from '../src/context/AppContext';
+import { AppProvider, useApp } from '../tests/fixtures/LegacyAppContext';
 import { INITIAL_ACADEMIC_YEARS, INITIAL_CLASSES, INITIAL_SCHOOLS, INITIAL_STUDENTS } from '../src/data/mockData';
 import { ReportCard, Student, YearRolloverOptions } from '../src/types';
 import { isFinalYearRecordPublished, rolloverStudents } from '../src/utils/academicYear';

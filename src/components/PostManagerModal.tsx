@@ -1,3 +1,4 @@
+import { ResourcePager } from './ResourcePager';
 import React, { useState, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
@@ -23,7 +24,7 @@ import {
   PinOff,
   Edit3
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource } from '../context/AppContext';
 import { Announcement, PostType, PostAttachment } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
 import { MAX_LOCAL_ATTACHMENT_BYTES, MAX_LOCAL_ATTACHMENT_LABEL } from '../utils/localAttachments';
@@ -37,6 +38,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
   onClose,
   canPublish = true
 }) => {
+  useResource('announcements');
   const shouldReduceMotion = useReducedMotion();
   const {
     announcements,
@@ -130,7 +132,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
@@ -146,7 +148,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
       : [];
 
     if (editingPost) {
-      updateAnnouncement(editingPost.id, {
+      const saved0 = await updateAnnouncement(editingPost.id, {
         type: postType,
         title: title.trim(),
         content: content.trim(),
@@ -158,9 +160,9 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
               attachments: attachments.length > 0 ? attachments : editingPost.attachments
             }
           : {})
-      });
+      }); if (!saved0.ok) return;
     } else {
-      addAnnouncement({
+      const saved1 = await addAnnouncement({
         schoolId: currentSchoolId,
         type: postType,
         title: title.trim(),
@@ -171,7 +173,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
         priority,
         coverImage: uploadedFile && uploadedFile.type === 'image' ? uploadedFile.dataUrl : undefined,
         attachments: attachments.length > 0 ? attachments : undefined
-      });
+      }); if (!saved1.ok) return;
     }
 
     handleCancelForm();
@@ -191,6 +193,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
         className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 m-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        <ResourcePager kind="announcements"/>
         {/* Header */}
         <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -526,7 +529,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   {canPublish && (
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => togglePinAnnouncement(post.id)}
+                        onClick={async () => await togglePinAnnouncement(post.id)}
                         className={`p-1.5 rounded-lg transition-colors ${
                           post.isPinned
                             ? 'text-amber-700 bg-amber-100 hover:bg-amber-200'
@@ -546,7 +549,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                       </button>
 
                       <button
-                        onClick={() => deleteAnnouncement(post.id)}
+                        onClick={async () => await deleteAnnouncement(post.id)}
                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                         title="حذف مطلب"
                       >

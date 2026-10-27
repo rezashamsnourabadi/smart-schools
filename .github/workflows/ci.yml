@@ -1,0 +1,47 @@
+name: Verify
+on: [push, pull_request]
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      APP_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgres://school_app:local-app-password@127.0.0.1:55432/schools
+      MIGRATION_DATABASE_URL: postgres://school_owner:local-owner-password@127.0.0.1:55432/schools
+      REDIS_URL: redis://127.0.0.1:56379
+      S3_ENDPOINT: http://127.0.0.1:59000
+      S3_ACCESS_KEY: local-storage
+      S3_SECRET_KEY: local-storage-password
+      SESSION_SECRET: ci-only-isolated-secret-never-use-in-production
+      PLAYWRIGHT_BROWSERS_PATH: .local/browsers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+          cache: npm
+      - run: npm ci
+      - run: docker compose up -d --wait
+      - run: npm run db:migrate && npm run storage:init
+      - run: npm run lint_applet && npm run compile_applet && npm run build:server
+      - run: npm run test:legacy && npm run test:api
+      - run: npm run db:seed
+      - run: npx playwright install --with-deps chromium
+      - name: Browser workflows
+        run: |
+          npm run dev > /tmp/school-dev.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/v1/ready >/dev/null; then break; fi
+            sleep 1
+          done
+          npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-diagnostics
+          path: |
+            playwright-report
+            test-results
+      - run: docker compose down
+        if: always()

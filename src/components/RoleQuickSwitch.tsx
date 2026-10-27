@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../auth/AuthProvider';
 import { UserRole } from '../types';
 import {
   ShieldAlert,
@@ -72,10 +73,12 @@ const ROLES_LIST: RoleOption[] = [
 
 export const RoleQuickSwitch: React.FC = () => {
   const { currentRole, setCurrentRole } = useApp();
+  const auth = useAuth();
 
   return (
     <section className="bg-slate-900 text-white py-2 sm:py-2.5 border-b border-slate-800 shrink-0" id="role-quick-switcher">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        {auth.memberships.length > 1 && <select id="membership-selector" aria-label="انتخاب مدرسه، نقش یا فرزند" value={auth.member.id} onChange={e=>auth.select(e.target.value)} className="min-h-11 max-w-full bg-slate-800 text-white rounded-xl px-3 mb-2 text-xs">{auth.memberships.map(member=><option key={member.id} value={member.id}>{member.school_name || 'مدیریت منطقه'} — {ROLES_LIST.find(r=>r.role===member.role)?.title} {member.label || ''}</option>)}</select>}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
           {/* Label */}
           <div className="flex items-center justify-between gap-2">
@@ -87,14 +90,14 @@ export const RoleQuickSwitch: React.FC = () => {
                 سوئیچ سریع نقش کاربری:
               </span>
               <span className="text-[11px] text-slate-400 hidden xl:inline">
-                (تغییر بین ۶ پرسونای سامانه)
+                (دسترسی‌های اختصاص‌یافته به حساب شما)
               </span>
             </div>
           </div>
 
           {/* Quick Buttons - Single scrollable row on mobile/landscape, grid on desktop */}
           <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-0.5 lg:grid lg:grid-cols-6 lg:gap-2">
-            {ROLES_LIST.map((item) => {
+            {ROLES_LIST.filter(item => auth.memberships.some(member => member.role === item.role)).map((item) => {
               const Icon = item.icon;
               const isActive = currentRole === item.role;
               return (
@@ -102,7 +105,7 @@ export const RoleQuickSwitch: React.FC = () => {
                   key={item.role}
                   id={`role-switch-${item.role}`}
                   onClick={() => setCurrentRole(item.role)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-right transition-all text-xs font-medium border shrink-0 whitespace-nowrap ${
+                  className={`min-h-11 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-right transition-all text-xs font-medium border shrink-0 whitespace-nowrap ${
                     isActive
                       ? `${item.badgeColor} border-transparent shadow-sm ring-2 ring-white/20 font-bold scale-[1.02]`
                       : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'

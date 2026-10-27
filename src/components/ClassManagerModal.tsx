@@ -1,3 +1,4 @@
+import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
 import {
   X,
@@ -12,7 +13,7 @@ import {
   School,
   GraduationCap
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource } from '../context/AppContext';
 import { ClassGroup } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
 
@@ -21,6 +22,8 @@ interface ClassManagerModalProps {
 }
 
 export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose }) => {
+  useResource('classes');
+  useResource('students');
   const { currentSchoolId, currentSchool, classes, students, addClassGroup, deleteClassGroup } = useApp();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -32,17 +35,17 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
 
   const schoolClasses = classes.filter((c) => c.schoolId === currentSchoolId);
 
-  const handleCreateClass = (e: React.FormEvent) => {
+  const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    addClassGroup({
+    const saved0 = await addClassGroup({
       schoolId: currentSchoolId,
       name: name.trim(),
       grade,
       major,
       room: room.trim()
-    });
+    }); if (!saved0.ok) return;
 
     setName('');
     setRoom('');
@@ -55,6 +58,7 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
         className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl m-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
+        <ResourcePager kind="classes"/>
         {/* Header */}
         <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -201,7 +205,7 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
                     </div>
 
                     <button
-                      onClick={() => deleteClassGroup(cls.id)}
+                      onClick={async () => await deleteClassGroup(cls.id)}
                       className="text-slate-300 hover:text-rose-600 p-1.5 rounded-lg transition-colors"
                       title="حذف کلاس"
                     >

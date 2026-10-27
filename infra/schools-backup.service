@@ -1,0 +1,10 @@
+[Unit]
+Description=Encrypted school database and object backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/smart-schools
+EnvironmentFile=/opt/smart-schools/.env.backup
+ExecStart=/usr/bin/node build/server/backup.js create

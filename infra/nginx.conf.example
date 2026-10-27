@@ -1,0 +1,15 @@
+server {
+    listen 443 ssl;
+    server_name schools.example.ir;
+    ssl_certificate /etc/letsencrypt/live/schools.example.ir/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/schools.example.ir/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 3m;
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 30s;
+    }
+}

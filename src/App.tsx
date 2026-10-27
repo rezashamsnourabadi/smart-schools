@@ -1,29 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { RoleQuickSwitch } from './components/RoleQuickSwitch';
 import { NotificationToast } from './components/NotificationToast';
-import { TeacherDashboard } from './components/TeacherDashboard';
-import { PlatformAdminDashboard } from './components/PlatformAdminDashboard';
-import { PrincipalDashboard } from './components/PrincipalDashboard';
-import { VicePrincipalDashboard } from './components/VicePrincipalDashboard';
-import { StudentDashboard } from './components/StudentDashboard';
-import { ParentDashboard } from './components/ParentDashboard';
-import { QuestionBankModal } from './components/QuestionBankModal';
-import { StudentDossierModal } from './components/StudentDossierModal';
-import { SchedulePlannerModal } from './components/SchedulePlannerModal';
-import { ClassManagerModal } from './components/ClassManagerModal';
-import { StudentManagerModal } from './components/StudentManagerModal';
-import { UserProfileModal } from './components/UserProfileModal';
-import { PostManagerModal } from './components/PostManagerModal';
-import { StaffManagerModal } from './components/StaffManagerModal';
-import { VicePrincipalPermissionsModal } from './components/VicePrincipalPermissionsModal';
-import { TeacherGradeEntryModal } from './components/TeacherGradeEntryModal';
-import { TeacherHomeworkAndExamModal } from './components/TeacherHomeworkAndExamModal';
-import { AcademicYearManagerModal } from './components/AcademicYearManagerModal';
-import { FinanceManagerModal } from './components/FinanceManagerModal';
-import { SystemDocsModal } from './components/SystemDocsModal';
+const TeacherDashboard = lazy(() => import('./components/TeacherDashboard').then(module => ({ default: module.TeacherDashboard })));
+const PlatformAdminDashboard = lazy(() => import('./components/PlatformAdminDashboard').then(module => ({ default: module.PlatformAdminDashboard })));
+const PrincipalDashboard = lazy(() => import('./components/PrincipalDashboard').then(module => ({ default: module.PrincipalDashboard })));
+const VicePrincipalDashboard = lazy(() => import('./components/VicePrincipalDashboard').then(module => ({ default: module.VicePrincipalDashboard })));
+const StudentDashboard = lazy(() => import('./components/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
+const ParentDashboard = lazy(() => import('./components/ParentDashboard').then(module => ({ default: module.ParentDashboard })));
+const QuestionBankModal = lazy(() => import('./components/QuestionBankModal').then(module => ({ default: module.QuestionBankModal })));
+const StudentDossierModal = lazy(() => import('./components/StudentDossierModal').then(module => ({ default: module.StudentDossierModal })));
+const SchedulePlannerModal = lazy(() => import('./components/SchedulePlannerModal').then(module => ({ default: module.SchedulePlannerModal })));
+const ClassManagerModal = lazy(() => import('./components/ClassManagerModal').then(module => ({ default: module.ClassManagerModal })));
+const StudentManagerModal = lazy(() => import('./components/StudentManagerModal').then(module => ({ default: module.StudentManagerModal })));
+const UserProfileModal = lazy(() => import('./components/UserProfileModal').then(module => ({ default: module.UserProfileModal })));
+const PostManagerModal = lazy(() => import('./components/PostManagerModal').then(module => ({ default: module.PostManagerModal })));
+const StaffManagerModal = lazy(() => import('./components/StaffManagerModal').then(module => ({ default: module.StaffManagerModal })));
+const VicePrincipalPermissionsModal = lazy(() => import('./components/VicePrincipalPermissionsModal').then(module => ({ default: module.VicePrincipalPermissionsModal })));
+const TeacherGradeEntryModal = lazy(() => import('./components/TeacherGradeEntryModal').then(module => ({ default: module.TeacherGradeEntryModal })));
+const TeacherHomeworkAndExamModal = lazy(() => import('./components/TeacherHomeworkAndExamModal').then(module => ({ default: module.TeacherHomeworkAndExamModal })));
+const AcademicYearManagerModal = lazy(() => import('./components/AcademicYearManagerModal').then(module => ({ default: module.AcademicYearManagerModal })));
+const FinanceManagerModal = lazy(() => import('./components/FinanceManagerModal').then(module => ({ default: module.FinanceManagerModal })));
+const SystemDocsModal = lazy(() => import('./components/SystemDocsModal').then(module => ({ default: module.SystemDocsModal })));
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { GraduationCap, BookOpen } from 'lucide-react';
 import { Student } from './types';
@@ -222,28 +222,28 @@ const AppContent: React.FC = () => {
       </AnimatePresence>
 
       {/* Regional Question Bank Modal */}
-      <QuestionBankModal
+      {isQuestionBankOpen && <QuestionBankModal
         isOpen={isQuestionBankOpen}
         onClose={() => setIsQuestionBankOpen(false)}
-      />
+      />}
 
       {/* Academic Year Management Modal */}
-      <AcademicYearManagerModal
+      {isAcademicYearModalOpen && <AcademicYearManagerModal
         isOpen={isAcademicYearModalOpen && currentRole === 'principal'}
         onClose={() => setIsAcademicYearModalOpen(false)}
-      />
+      />}
 
       {/* School Financial & Tuition Management Modal */}
-      <FinanceManagerModal
+      {isFinanceModalOpen && <FinanceManagerModal
         isOpen={isFinanceModalOpen && canManageSchool('canManageFinances')}
         onClose={() => setIsFinanceModalOpen(false)}
-      />
+      />}
 
       {/* System Docs & Feature Catalog Modal */}
-      <SystemDocsModal
+      {isDocsModalOpen && <SystemDocsModal
         isOpen={isDocsModalOpen}
         onClose={() => setIsDocsModalOpen(false)}
-      />
+      />}
 
       {/* Floating notifications for local simulated events */}
       <NotificationToast />
@@ -271,7 +271,7 @@ const AppContent: React.FC = () => {
               <span>مستندات و کاتالوگ جامع امکانات</span>
             </button>
             <span className="text-slate-300">•</span>
-            <span>نمونه فرانت‌اند مدیریت مدارس، با داده محلی مرورگر</span>
+            <span>سامانه مدیریت مدارس — اطلاعات متصل به سرور</span>
           </div>
         </div>
       </footer>
@@ -287,7 +287,7 @@ const AppWorkspace = () => {
 export default function App() {
   return (
     <AppProvider>
-      <AppWorkspace />
+      <Suspense fallback={<p role="status" className="p-6 text-center text-slate-600">در حال بارگذاری بخش موردنظر…</p>}><AppWorkspace /></Suspense>
     </AppProvider>
   );
 }

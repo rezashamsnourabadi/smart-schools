@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@theme { --font-sans: 'Vazirmatn', system-ui, sans-serif; }
+
+@media (pointer: coarse) {
+  button, select, [role="button"], [role="tab"] { min-height: 44px; min-width: 44px; }
+}
 
 @layer base {
   html {

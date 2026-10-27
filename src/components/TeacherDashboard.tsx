@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Award, BookOpen, CalendarDays, CheckCheck, Eye, FileQuestion, MessageSquare, PlusCircle, Search, Send, Users } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource, useClassRoster } from '../context/AppContext';
+import {useAttendanceSession} from '../api/hooks';
 import { AttendanceStatus, Student } from '../types';
 import { attendanceKey, attendanceLabels, isSlotLive, schoolTimeMinutes } from '../utils/attendance';
 import { normalizeSchoolDate, toEnglishDigits, toPersianDigits } from '../utils/persianUtils';
@@ -22,7 +23,7 @@ const colors: Record<AttendanceStatus, string> = {
 const nextStatus: Record<AttendanceStatus, AttendanceStatus> = { present: 'absent', absent: 'late', late: 'excused', excused: 'present' };
 
 export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenGradeEntryModal, onOpenHomeworkExamModal, onOpenStudentDossier }) => {
-  const { currentSchool, currentUser, students, schedule, attendanceSessions, submitAttendance, setSelectedStudentForDossier, schoolClock, activeAcademicYear } = useApp();
+  const { currentSchool, currentUser, schedule, attendanceSessions, submitAttendance, setSelectedStudentForDossier, schoolClock, activeAcademicYear, busy } = useApp();
   const [activeTab, setActiveTab] = useState<'attendance' | 'schedule'>('attendance');
   const [selectedSlotId, setSelectedSlotId] = useState('');
   const [drafts, setDrafts] = useState<Record<string, Record<string, AttendanceStatus>>>({});
@@ -32,8 +33,11 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenGr
   const [feedback, setFeedback] = useState<{ error: boolean; text: string } | null>(null);
   const todaySlots = schedule.filter((slot) => slot.dayOfWeek === schoolClock.dayOfWeek).slice().sort((a, b) => a.period - b.period || a.className.localeCompare(b.className, 'fa'));
   const currentSlot = todaySlots.find((slot) => slot.id === selectedSlotId) || todaySlots.find((slot) => isSlotLive(slot, schoolClock)) || todaySlots[0];
+  const roster = useClassRoster(currentSlot?.classGroupId);
+  const students = roster.data?.items || [];
   const key = currentSlot ? attendanceKey({ ...currentSlot, date: schoolClock.date }) || '' : '';
-  const existingSession = attendanceSessions.find((session) => attendanceKey(session) === key);
+  const sessionQuery=useAttendanceSession(currentSlot?.id);
+  const existingSession = sessionQuery.data;
   const classStudents = students.filter((student) => student.classGroupId === currentSlot?.classGroupId && (!student.status || student.status === 'active'));
   const attendanceMap = Object.fromEntries(classStudents.map((student) => [student.id, drafts[key]?.[student.id] || existingSession?.records.find((row) => row.studentId === student.id)?.status || 'present'])) as Record<string, AttendanceStatus>;
   const search = toEnglishDigits(query).trim();
@@ -41,14 +45,14 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenGr
   const count = (status: AttendanceStatus) => classStudents.filter((student) => attendanceMap[student.id] === status).length;
   const dirty = !existingSession || classStudents.some((student) => attendanceMap[student.id] !== existingSession.records.find((row) => row.studentId === student.id)?.status);
   const start = currentSlot ? schoolTimeMinutes(currentSlot.startTime) : undefined;
-  const canSubmit = !!currentSlot && !!classStudents.length && start !== undefined && schoolClock.minuteOfDay >= start && !!activeAcademicYear?.isCurrent && activeAcademicYear.status === 'active' && dirty;
+  const canSubmit = !busy && !roster.isPending && !roster.error && !sessionQuery.isPending && !sessionQuery.error && !!currentSlot && !!classStudents.length && start !== undefined && schoolClock.minuteOfDay >= start && !!activeAcademicYear?.isCurrent && activeAcademicYear.status === 'active' && dirty;
   const toggle = (studentId: string) => {
     setDrafts((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [studentId]: nextStatus[attendanceMap[studentId]] } }));
     setFeedback(null);
   };
-  const submit = () => {
-    if (!currentSlot) return;
-    const result = submitAttendance(currentSlot.id, classStudents.map((student) => ({ studentId: student.id, status: attendanceMap[student.id], note: existingSession?.records.find((row) => row.studentId === student.id)?.note })), platform);
+  const submit = async () => {
+    if (!currentSlot || busy || roster.isPending || roster.error || sessionQuery.isPending || sessionQuery.error) return;
+    const result = await submitAttendance(currentSlot.id, classStudents.map((student) => ({ studentId: student.id, status: attendanceMap[student.id], note: existingSession?.records.find((row) => row.studentId === student.id)?.note })), platform);
     if (!result.ok) { setFeedback({ error: true, text: result.error }); return; }
     setDrafts((prev) => { const next = { ...prev }; delete next[key]; return next; });
     setFeedback({ error: false, text: result.changed ? `ثبت شد؛ ${toPersianDigits(result.notificationsSent)} اعلان آزمایشی جدید.` : 'این جلسه قبلاً با همین اطلاعات ثبت شده است.' });
@@ -99,6 +103,7 @@ export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenGr
           </ul>
           {!filtered.length && <p role="status" className="p-4 text-sm text-slate-500">دانش‌آموزی با این جستجو پیدا نشد.</p>}
           {existingSession && <p className="text-xs text-slate-600 leading-6">آخرین ثبت: {toPersianDigits(existingSession.updatedAt || existingSession.submittedAt)} • {toPersianDigits(existingSession.sentNotificationsCount)} اعلان آزمایشی در سابقه این جلسه</p>}
+          {(roster.error||sessionQuery.error)&&<p role="alert" className="p-3 rounded-xl text-sm bg-rose-50 text-rose-800">{roster.error?.message||sessionQuery.error?.message}</p>}
           {feedback && <p role={feedback.error ? 'alert' : 'status'} className={`p-3 rounded-xl text-sm ${feedback.error ? 'bg-rose-50 text-rose-800' : 'bg-emerald-50 text-emerald-900'}`}>{feedback.text}</p>}
           <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] md:bottom-4 z-30 p-3 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center gap-2">
             <label className="flex items-center gap-2 text-xs text-slate-700 sm:flex-1"><MessageSquare className="size-4 text-teal-700 shrink-0" /><span>اعلان خودکار</span><select id="attendance-notification-channel" aria-label="کانال اعلان خودکار" value={platform} onChange={(event) => setPlatform(event.target.value === 'sms' ? 'sms' : 'bale')} className="min-h-11 flex-1 sm:flex-none px-3 rounded-xl border border-slate-200 bg-white"><option value="bale">بله، با جایگزین پیامک</option><option value="sms">پیامک</option></select></label>

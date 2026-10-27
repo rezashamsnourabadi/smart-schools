@@ -110,11 +110,11 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenSt
     }
   };
 
-  const handleSendHomework = (e: React.FormEvent) => {
+  const handleSendHomework = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeHwForSubmit || !submissionText.trim()) return;
 
-    submitHomework({
+    const saved0 = await submitHomework({
       homeworkId: activeHwForSubmit.id,
       studentId: currentStudent.id,
       studentName: currentStudent.name,
@@ -122,7 +122,7 @@ export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenSt
       attachments: studentUploadedFile
         ? [{ name: studentUploadedFile.name, type: studentUploadedFile.type, url: studentUploadedFile.url }]
         : []
-    });
+    }); if (!saved0.ok) return;
 
     setSubmissionText('');
     setStudentUploadedFile(null);

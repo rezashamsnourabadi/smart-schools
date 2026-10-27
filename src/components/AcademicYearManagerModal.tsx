@@ -20,7 +20,7 @@ import {
   RotateCcw,
   Check
 } from 'lucide-react';
-import { toPersianDigits } from '../utils/persianUtils';
+import { toPersianDigits, getCurrentAcademicYearTitle } from '../utils/persianUtils';
 import { AcademicTermId, AcademicYear } from '../types';
 import { isFinalYearRecordPublished } from '../utils/academicYear';
 
@@ -49,7 +49,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
   const [activeTab, setActiveTab] = useState<'overview' | 'rollover' | 'create'>('overview');
 
   // Rollover wizard state
-  const currentTitle = activeAcademicYear?.title || '۱۴۰۴-۱۴۰۵';
+  const currentTitle = activeAcademicYear?.title || getCurrentAcademicYearTitle();
   const getNextYearDefault = () => {
     const parts = currentTitle.split('-');
     if (parts.length === 2) {
@@ -59,7 +59,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
         return toPersianDigits(`${p1 + 1}-${p2 + 1}`);
       }
     }
-    return '۱۴۰۵-۱۴۰۶';
+    return getCurrentAcademicYearTitle();
   };
 
   const [newYearTitle, setNewYearTitle] = useState(getNextYearDefault());
@@ -84,8 +84,8 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
   const eleventhGradersCount = eligibleStudents.filter((s) => s.grade.includes('یازدهم') || s.grade.includes('11')).length;
   const twelfthGradersCount = eligibleStudents.filter((s) => s.grade.includes('دوازدهم') || s.grade.includes('12')).length;
 
-  const handleExecuteRollover = () => {
-    const result = rolloverAcademicYear({
+  const handleExecuteRollover = async () => {
+    const result = await rolloverAcademicYear({
       newYearTitle: newYearTitle.trim() || getNextYearDefault(),
       promoteStudents,
       graduateTwelfthGraders,
@@ -97,14 +97,14 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
     setActiveTab('overview');
   };
 
-  const handleCreatePlannedYear = (e: React.FormEvent) => {
+  const handleCreatePlannedYear = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createYearTitle.trim()) return;
 
     const startPart = createYearTitle.split('-')[0] || '۱۴۰۵';
     const endPart = createYearTitle.split('-')[1] || '۱۴۰۶';
 
-    addAcademicYear({
+    const saved0 = await addAcademicYear({
       title: createYearTitle.trim(),
       startDate: createStartDate || `${startPart}/۰۷/۰۱`,
       endDate: createEndDate || `${endPart}/۰۶/۳۱`,
@@ -116,7 +116,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
         { id: 'summer', title: 'دوره تابستان', startDate: `${endPart}/۰۴/۰۱`, endDate: `${endPart}/۰۶/۳۱`, isCurrent: false }
       ],
       description: createDesc.trim() || `سال تحصیلی پیشنهادی (${createYearTitle.trim()})`
-    });
+    }); if (!saved0.ok) return;
 
     setCreateYearTitle('');
     setCreateDesc('');
@@ -254,7 +254,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                         return (
                           <button
                             key={term.id}
-                            onClick={() => setActiveTermId(term.id)}
+                            onClick={async () => await setActiveTermId(term.id)}
                             className={`p-2.5 rounded-2xl text-right transition-all border ${
                               isSelected
                                 ? 'bg-white text-teal-950 border-white shadow-xs font-bold'

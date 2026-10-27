@@ -1,3 +1,4 @@
+import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
 import {
   X,
@@ -19,9 +20,9 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource } from '../context/AppContext';
 import { Student, ClassGroup } from '../types';
-import { toPersianDigits, toEnglishDigits } from '../utils/persianUtils';
+import { toPersianDigits, toEnglishDigits, getSchoolDate, getCurrentAcademicYearTitle } from '../utils/persianUtils';
 
 interface StudentManagerModalProps {
   onClose: () => void;
@@ -34,6 +35,8 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
   onOpenDossier,
   initialTab = 'active'
 }) => {
+  useResource('students');
+  useResource('classes');
   const {
     classes,
     students,
@@ -62,7 +65,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
   const [transferringSchoolStudent, setTransferringSchoolStudent] = useState<Student | null>(null);
 
   // Graduate Form State
-  const [gradYear, setGradYear] = useState('۱۴۰۴-۱۴۰۵');
+  const [gradYear, setGradYear] = useState(() => getCurrentAcademicYearTitle());
   const [gradUni, setGradUni] = useState('');
   const [gradMajor, setGradMajor] = useState('');
   const [gradRank, setGradRank] = useState('');
@@ -70,7 +73,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
   // School Transfer Form State
   const [destSchool, setDestSchool] = useState('');
-  const [transferDate, setTransferDate] = useState('۱۴۰۵/۰۶/۲۳');
+  const [transferDate, setTransferDate] = useState(() => getSchoolDate());
   const [transferReason, setTransferReason] = useState('تغییر محل سکونت خانواده');
 
   // New Student Form States
@@ -122,7 +125,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
     return matchName || matchNat || matchUni || matchMajor || matchDest;
   });
 
-  const handleCreateOrLinkStudent = (e: React.FormEvent) => {
+  const handleCreateOrLinkStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stdName.trim() || !stdNationalCode.trim()) return;
 
@@ -141,7 +144,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
       setEnrollmentError('تاریخ تولد، نام ولی، شماره دانش‌آموزی و شماره تماس ولی را وارد کنید.');
       return;
     }
-      addStudent({
+      const saved0 = await addStudent({
         ...details,
         schoolId: currentSchoolId,
         classGroupId: stdClassId,
@@ -153,7 +156,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
         grade: targetClass.grade,
         fieldOfStudy: targetClass.major || '',
         status: 'active'
-      });
+      }); if (!saved0.ok) return;
 
     setStdName('');
     setStdNationalCode('');
@@ -165,16 +168,16 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
     setShowAddStudentModal(false);
   };
 
-  const handleConfirmGraduation = (e: React.FormEvent) => {
+  const handleConfirmGraduation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!graduatingStudent) return;
-    markStudentGraduated(graduatingStudent.id, {
-      year: gradYear.trim() || '۱۴۰۴-۱۴۰۵',
+    const saved1 = await markStudentGraduated(graduatingStudent.id, {
+      year: gradYear.trim() || getCurrentAcademicYearTitle(),
       university: gradUni.trim() || 'نامشخص / آزاد',
       major: gradMajor.trim() || 'عمومی',
       rank: gradRank.trim() || undefined,
       notes: gradNotes.trim() || undefined
-    });
+    }); if (!saved1.ok) return;
     setGraduatingStudent(null);
     setGradUni('');
     setGradMajor('');
@@ -182,14 +185,14 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
     setGradNotes('');
   };
 
-  const handleConfirmTransferSchool = (e: React.FormEvent) => {
+  const handleConfirmTransferSchool = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!transferringSchoolStudent) return;
-    markStudentTransferred(transferringSchoolStudent.id, {
+    const saved2 = await markStudentTransferred(transferringSchoolStudent.id, {
       destinationSchoolName: destSchool.trim() || 'آموزشگاه جدید / در حال استعلام',
       date: transferDate.trim() || '۱۴۰۵/۰۶/۲۳',
       reason: transferReason.trim() || 'انتقال تحصیلی'
-    });
+    }); if (!saved2.ok) return;
     setTransferringSchoolStudent(null);
     setDestSchool('');
     setTransferReason('تغییر محل سکونت خانواده');
@@ -286,6 +289,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
           )}
         </div>
 
+        <ResourcePager kind="students"/>
         {/* Filter & Search Bar */}
         <div className="p-3 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="relative flex-1 min-w-[200px]">
@@ -417,7 +421,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
                       {(activeTab === 'graduated' || activeTab === 'transferred') && (
                         <button
-                          onClick={() => markStudentActive(std.id, std.classGroupId)}
+                          onClick={async () => await markStudentActive(std.id, std.classGroupId)}
                           className="px-2.5 py-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-xl text-xs font-semibold flex items-center gap-1"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
@@ -539,7 +543,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
 
                           {(activeTab === 'graduated' || activeTab === 'transferred') && (
                             <button
-                              onClick={() => markStudentActive(std.id, std.classGroupId)}
+                              onClick={async () => await markStudentActive(std.id, std.classGroupId)}
                               className="px-2 py-1 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-lg text-xs font-semibold flex items-center gap-1"
                               title="بازگردانی به دانش‌آموز فعال"
                             >

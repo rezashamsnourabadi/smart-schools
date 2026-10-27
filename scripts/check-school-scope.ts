@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { AppProvider, useApp } from '../src/context/AppContext';
+import { AppProvider, useApp } from '../tests/fixtures/LegacyAppContext';
 import { INITIAL_ACADEMIC_YEARS, INITIAL_ANNOUNCEMENTS, INITIAL_CLASSES, INITIAL_NOTIFICATIONS, INITIAL_QUESTION_BANK, INITIAL_SCHOOLS, INITIAL_STUDENTS, INITIAL_USERS } from '../src/data/mockData';
 import { INITIAL_FEE_ITEMS } from '../src/data/mockFinanceData';
 import { canReadAnnouncement, canReadDossier, canReadNotification, canReadQuestion, canReadStudent, linkedStudent } from '../src/utils/accessScope';

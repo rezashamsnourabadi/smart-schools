@@ -48,8 +48,8 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
     }
     return Math.min(summary.remainingDebt, 5000000);
   });
-  const [payMethod, setPayMethod] = useState<PaymentMethod>('online');
-  const [receiptNumber, setReceiptNumber] = useState<string>(() => Math.floor(10000000 + Math.random() * 90000000).toString());
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('bank_receipt');
+  const [receiptNumber, setReceiptNumber] = useState<string>('');
   const [parentNote, setParentNote] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [paymentError, setPaymentError] = useState('');
@@ -60,19 +60,19 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
     if (financialError) { setPaymentError(financialError); return; }
 
     if (payMethod === 'online') {
-      setActiveStep('gateway');
+      setPaymentError('درگاه پرداخت هنوز فعال نشده است؛ رسید پرداخت بانکی را ثبت کنید.');
     } else {
       // Offline receipt submission (card-to-card or bank deposit)
       finalizePayment();
     }
   };
 
-  const finalizePayment = () => {
+  const finalizePayment = async () => {
     if (isProcessing || financialError) return;
     setIsProcessing(true);
     const generatedTracking = receiptNumber.trim();
     const status = payMethod === 'online' ? 'confirmed' : 'pending_verification';
-    const result = recordStudentPayment({
+    const result = await recordStudentPayment({
       studentId: student.id,
       studentName: student.name,
       schoolId: student.schoolId,
@@ -249,13 +249,14 @@ export const ParentPaymentModal: React.FC<ParentPaymentModalProps> = ({
                       type="radio"
                       name="payment_method"
                       value="online"
+                      disabled
                       checked={payMethod === 'online'}
                       onChange={() => { setPayMethod('online'); setReceiptNumber(Math.floor(10000000 + Math.random() * 90000000).toString()); }}
                       className="text-emerald-600 focus:ring-emerald-500"
                     />
                     <div>
-                      <div className="text-xs font-bold">پرداخت آنلاین نمایشی</div>
-                      <div className="text-[10px] text-slate-500">شبیه‌سازی ثبت پرداخت</div>
+                      <div className="text-xs font-bold">پرداخت آنلاین</div>
+                      <div className="text-[10px] text-slate-500">تا اتصال درگاه غیرفعال است</div>
                     </div>
                   </label>
 

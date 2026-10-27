@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --set=app_password="$SCHOOL_APP_PASSWORD" <<'SQL'
+SELECT format('CREATE ROLE school_app LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS', :'app_password') \gexec
+GRANT CONNECT ON DATABASE schools TO school_app;
+GRANT USAGE ON SCHEMA public TO school_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO school_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO school_app;
+SQL

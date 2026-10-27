@@ -14,6 +14,9 @@ export default defineConfig(() => {
     server: {
       host: '0.0.0.0',
       port: 3000,
+      strictPort: true,
+      proxy: { '/api': {target:'http://127.0.0.1:3001',xfwd:true} },
+      fs: { deny: ['.env', '.env.*', '**/.git/**', '**/.local/**', '**/backups/**', '**/server/**', '**/infra/**', '**/tests/**'] },
       allowedHosts: true as const,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

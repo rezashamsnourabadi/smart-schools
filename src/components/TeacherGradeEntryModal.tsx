@@ -18,7 +18,7 @@ import {
   Plus,
   Minus
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, useResource, useClassRoster } from '../context/AppContext';
 import { getSchoolDate, toEnglishDigits, toPersianDigits } from '../utils/persianUtils';
 import { parseGradeScore } from '../utils/gradeUtils';
 
@@ -27,10 +27,12 @@ interface TeacherGradeEntryModalProps {
 }
 
 export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ onClose }) => {
-  const { classes, students, currentSchoolId, addGradeItem } = useApp();
+  useResource('grades');
+  useResource('classes');
+  const { classes, currentSchoolId, addGradeItem, currentUser } = useApp();
 
   const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
-  const [subject, setSubject] = useState<string>('ریاضی ۱');
+  const [subject, setSubject] = useState<string>(currentUser.teachingSubjects?.[0] || '');
   const [category, setCategory] = useState<'continuous' | 'term1' | 'term2' | 'quiz'>('continuous');
   const [title, setTitle] = useState<string>('ارزشیابی مستمر کلاسی و حل تمرین');
   const [maxScore, setMaxScore] = useState<number>(20);
@@ -39,7 +41,8 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
   const [showNoteForStudent, setShowNoteForStudent] = useState<Record<string, boolean>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
-  const classStudents = students.filter((s) => s.classGroupId === selectedClassId && (!s.status || s.status === 'active'));
+  const roster = useClassRoster(selectedClassId);
+  const classStudents = roster.data?.items || [];
 
   // Map of studentId -> score string
   const [scores, setScores] = useState<Record<string, string>>({});
@@ -84,7 +87,7 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
     quiz: 'کوییز و آزمون کلاسی'
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!classStudents.length) { setFormError('برای این کلاس دانش‌آموز فعالی جهت ثبت نمره وجود ندارد.'); return; }
     if (!subject.trim() || !title.trim()) { setFormError('نام درس و عنوان ارزشیابی را وارد کنید.'); setIsConfigOpen(true); return; }
@@ -93,7 +96,7 @@ export const TeacherGradeEntryModal: React.FC<TeacherGradeEntryModalProps> = ({ 
     if (invalid && !invalid.result.ok) { setFormError(`${invalid.student.name}: ${invalid.result.error}`); return; }
     const formattedScores = parsedScores.flatMap(({ student, result }) => result.ok ? [{ studentId: student.id, score: result.value, note: notes[student.id] || undefined }] : []);
 
-    const result = addGradeItem({
+    const result = await addGradeItem({
       schoolId: currentSchoolId,
       classGroupId: selectedClassId,
       subject: subject.trim(),
