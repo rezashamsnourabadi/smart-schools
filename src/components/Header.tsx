@@ -1,314 +1,76 @@
-import { notificationStatusLabel } from '../utils/notifications';
-import React, { useState, lazy, Suspense } from 'react';
-import { useApp } from '../context/AppContext';
-import { useAuth } from '../auth/AuthProvider';
-const AccountsModal = lazy(() => import('./AccountsModal').then(module => ({default:module.AccountsModal})));
+import React, {lazy, Suspense, useEffect, useRef, useState} from 'react';
+import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {
-  GraduationCap,
-  Building2,
-  Bell,
-  RotateCcw,
-  Calendar,
-  Clock,
-  ShieldCheck,
-  UserCheck,
-  MessageSquare,
-  ChevronDown,
-  Sparkles,
-  Settings,
-  BookOpen
+  Bell, BookOpen, Building2, CalendarDays, Check, ChevronDown, Clock3,
+  GraduationCap, LogOut, Settings2, ShieldCheck, UserRound, UsersRound, X,
+  type LucideIcon,
 } from 'lucide-react';
-import { toPersianDigits } from '../utils/persianUtils';
+import {useApp} from '../context/AppContext';
+import {useAuth} from '../auth/AuthContext';
+import type {UserRole} from '../types';
+import {notificationStatusLabel} from '../utils/notifications';
+import {toPersianDigits} from '../utils/persianUtils';
+import {ResourcePager} from './ResourcePager';
+const AccountsModal=lazy(()=>import('./AccountsModal').then(module=>({default:module.AccountsModal})));
 
-interface HeaderProps {
-  onOpenProfileModal?: () => void;
-  onOpenDocsModal?: () => void;
+interface HeaderProps {onOpenProfileModal?: () => void; onOpenDocsModal?: () => void}
+type Panel='account'|'notifications'|'context'|'brand';
+const roles:Record<UserRole,string>={platform_admin:'مدیر پلتفرم',principal:'مدیر مدرسه',vice_principal:'معاون مدرسه',teacher:'دبیر',student:'دانش‌آموز',parent:'ولی دانش‌آموز'};
+function MenuAction({id,icon:Icon,title,description,onClick}:{id:string;icon:LucideIcon;title:string;description?:string;onClick:()=>void}) {
+  return <button id={id} type="button" onClick={onClick} className="flex min-h-14 w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-right transition-colors hover:bg-[#f1f5eb]"><span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[#e4eadc] bg-[#f8faf4] text-[#7b9269]"><Icon className="size-4" strokeWidth={1.6} aria-hidden="true"/></span><span className="min-w-0"><span className="block text-xs font-bold text-[#43603e]">{title}</span>{description&&<span className="mt-1 block text-[10px] leading-5 text-slate-500">{description}</span>}</span></button>;
+}
+function messageDate(value:string) {
+  const date=new Date(value);
+  return Number.isNaN(date.getTime())?toPersianDigits(value):new Intl.DateTimeFormat('fa-IR',{timeZone:'Asia/Tehran',dateStyle:'short',timeStyle:'short'}).format(date);
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenProfileModal, onOpenDocsModal }) => {
-  const auth = useAuth();
-  const [accountsOpen,setAccountsOpen]=useState(false);
-  const {
-    currentRole,
-    currentSchool,
-    schools,
-    setCurrentSchoolId,
-    currentUser,
-    notifications,
-    resetAllData,
-    activeAcademicYear,
-    activeTerm,
-    schoolClock,
-    isViewingNonCurrentYear,
-    returnToCurrentAcademicYear
-  } = useApp();
+export const Header:React.FC<HeaderProps>=({onOpenProfileModal,onOpenDocsModal})=>{
+  const auth=useAuth(),reducedMotion=useReducedMotion();
+  const {currentRole,currentSchool,currentUser,notifications,activeAcademicYear,activeTerm,schoolClock,isViewingNonCurrentYear,returnToCurrentAcademicYear,page}=useApp();
+  const [panel,setPanel]=useState<Panel|null>(null),[accountsOpen,setAccountsOpen]=useState(false);
+  const [brand,setBrand]=useState<'دانا'|'رایان'|'پژواک'>('دانا'),[loggingOut,setLoggingOut]=useState(false),[logoutError,setLogoutError]=useState('');
+  const headerRef=useRef<HTMLElement>(null);
+  useEffect(()=>{
+    if(!panel)return;
+    const outside=(event:PointerEvent)=>{if(event.target instanceof Node&&!headerRef.current?.contains(event.target))setPanel(null);};
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape')setPanel(null);};
+    document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
+  },[panel]);
+  const toggle=(next:Panel)=>{setLogoutError('');setPanel(previous=>previous===next?null:next);};
+  const openProfile=()=>{setPanel(null);onOpenProfileModal?.();};
+  const openDocs=()=>{setPanel(null);onOpenDocsModal?.();};
+  const openAccounts=()=>{setPanel(null);setAccountsOpen(true);};
+  const logout=async()=>{if(loggingOut)return;setLoggingOut(true);setLogoutError('');try{await auth.logout();}catch(error){setLogoutError(error instanceof Error?error.message:'خروج ممکن نشد؛ دوباره تلاش کنید.');}finally{setLoggingOut(false);}};
+  const availableSchools=Array.from(new Map(auth.memberships.filter(member=>member.role===currentRole&&member.school_id).map(member=>[member.school_id!,member.school_name||'مدرسه'])).entries());
+  const notificationCount=page('notifications').total;
+  const panelTitle=panel==='account'?'حساب من':panel==='notifications'?'اعلان‌ها':panel==='context'?'فضای فعال من':'نام نمایشی سامانه';
 
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [selectedBrandName, setSelectedBrandName] = useState<'دانا' | 'رایان' | 'پژواک'>('دانا');
-  const [showBrandPicker, setShowBrandPicker] = useState(false);
-
-  const getRoleBadge = () => {
-    switch (currentRole) {
-      case 'platform_admin':
-        return { label: 'مدیر کل منطقه', color: 'bg-rose-50 text-rose-800 border-rose-200' };
-      case 'principal':
-        return { label: 'مدیر مدرسه', color: 'bg-indigo-50 text-indigo-800 border-indigo-200' };
-      case 'vice_principal':
-        return { label: 'معاون مدرسه', color: 'bg-teal-50 text-teal-800 border-teal-200' };
-      case 'teacher':
-        return { label: 'دبیر کلاس', color: 'bg-blue-50 text-blue-800 border-blue-200' };
-      case 'student':
-        return { label: 'دانش‌آموز', color: 'bg-cyan-50 text-cyan-800 border-cyan-200' };
-      case 'parent':
-        return { label: 'اولیا دانش‌آموز', color: 'bg-purple-50 text-purple-800 border-purple-200' };
-      default:
-        return { label: 'کاربر سامانه', color: 'bg-slate-50 text-slate-800 border-slate-200' };
-    }
-  };
-
-  const roleInfo = getRoleBadge();
-
-  return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs" id="main-header">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-13 sm:h-15 lg:h-16">
-          {/* Logo & Platform identity (Short, Elegant, 3 Short Name options) */}
-          <div className="flex items-center space-x-reverse space-x-2.5">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-teal-700 text-white flex items-center justify-center shadow-xs shrink-0">
-              <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-
-            <div className="relative">
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setShowBrandPicker(!showBrandPicker)}
-                  className="font-black text-slate-900 text-base sm:text-lg tracking-tight hover:text-teal-700 transition-colors flex items-center gap-1"
-                  title="انتخاب نام کوتاه سامانه (دانا، رایان، پژواک)"
-                >
-                  <span>{selectedBrandName}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-                <span className="hidden sm:inline-block text-[11px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/80">
-                  سامانه هوشمند مدارس
-                </span>
-              </div>
-
-              {/* Quick Brand Switcher Popup (3 Short Names) */}
-              {showBrandPicker && (
-                <div className="absolute top-full right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 w-48 z-50 text-xs space-y-1">
-                  <div className="px-2 py-1 text-[10px] text-slate-400 font-bold border-b border-slate-100">
-                    انتخاب نام سامانه:
-                  </div>
-                  {(['دانا', 'رایان', 'پژواک'] as const).map((brand) => (
-                    <button
-                      key={brand}
-                      onClick={() => {
-                        setSelectedBrandName(brand);
-                        setShowBrandPicker(false);
-                      }}
-                      className={`w-full text-right px-3 py-1.5 rounded-xl font-bold flex items-center justify-between transition-colors ${
-                        selectedBrandName === brand
-                          ? 'bg-teal-50 text-teal-800'
-                          : 'hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <span>{brand}</span>
-                      {selectedBrandName === brand && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <p className="text-[11px] text-slate-500 hidden sm:block truncate max-w-[200px] md:max-w-xs">
-                {currentRole === 'platform_admin'
-                  ? 'مدیریت و پایش مدارس منطقه'
-                  : currentSchool?.name || 'مدرسه هوشمند'}
-              </p>
-            </div>
-          </div>
-
-          {/* Center: School Switcher - visible on large screens */}
-          <div className="hidden lg:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-            <Building2 className="w-3.5 h-3.5 text-slate-500" />
-            <span className="text-xs text-slate-600 font-medium">مدرسه فعال:</span>
-            <select
-              id="school-select-header"
-              aria-label="انتخاب مدرسه فعال"
-              value={currentSchool?.id}
-              onChange={(e) => setCurrentSchoolId(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-slate-800 border-0 focus:ring-0 cursor-pointer outline-none"
-            >
-              {schools.map((sch) => (
-                <option key={sch.id} value={sch.id}>
-                  {sch.name} ({sch.type})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Left Actions: Date, SMS/Bale Bell, Profile, Reset */}
-          <div className="flex items-center space-x-reverse space-x-2 sm:space-x-3">
-            {['principal','platform_admin'].includes(currentRole)&&<button id="open-accounts" onClick={()=>setAccountsOpen(true)} className="min-h-11 px-3 text-xs rounded-xl bg-teal-50 text-teal-800 font-bold">حساب‌ها</button>}
-            {accountsOpen&&<Suspense fallback={<span role="status">در حال بارگذاری…</span>}><AccountsModal onClose={()=>setAccountsOpen(false)}/></Suspense>}
-            {/* Academic Year Badge */}
-            <div
-              className={`hidden lg:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl border font-bold ${
-                isViewingNonCurrentYear
-                  ? 'bg-amber-50 text-amber-900 border-amber-300'
-                  : 'bg-teal-50/80 text-teal-900 border-teal-200'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5 text-teal-700" />
-              <span>{activeAcademicYear ? `سال ${toPersianDigits(activeAcademicYear.title)}` : 'سال تحصیلی تعریف نشده'}</span>
-              {isViewingNonCurrentYear && <span className="text-[10px] font-black">(فقط‌خواندنی)</span>}
-              {activeTerm && <span className="text-[10px] font-normal text-slate-500">
-                ({activeTerm?.title.split(' ')[0]} {activeTerm?.title.split(' ')[1] || ''})
-              </span>}
-            </div>
-
-            {/* Live Date display */}
-            <div className="hidden xl:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span>{toPersianDigits(schoolClock.dateLabel)}</span>
-              <span className="text-slate-300">|</span>
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span>{toPersianDigits(schoolClock.time)}</span>
-            </div>
-
-            {/* Simulated Bale / SMS notifications dropdown */}
-            <div className="relative">
-              <button
-                id="notifications-toggle-btn"
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
-                title="تاریخچه پیام‌ها و اعلانات پیام‌رسان بله / پیامک به اولیا"
-              >
-                <Bell className="w-5 h-5" />
-                {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                    {toPersianDigits(notifications.length)}
-                  </span>
-                )}
-              </button>
-
-              {showNotifications && (
-                <div 
-                  id="notifications-flyout"
-                  className="fixed sm:absolute inset-x-3 sm:inset-x-auto sm:left-0 top-16 sm:top-full sm:mt-2 max-w-sm sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in"
-                >
-                  <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
-                      <MessageSquare className="w-4 h-4 text-teal-600" />
-                      <span>وضعیت ارسال اعلان‌ها؛ ارسال بیرونی به تنظیم سرویس پیام‌رسان وابسته است</span>
-                    </div>
-                    <span className="text-[11px] text-slate-500 font-mono font-bold">
-                      {toPersianDigits(notifications.length)} پیام
-                    </span>
-                  </div>
-
-                  <div className="max-h-72 overflow-y-auto px-2 divide-y divide-slate-100">
-                    {notifications.length === 0 ? (
-                      <p className="text-center text-xs text-slate-400 py-6">پیامی ثبت نشده است</p>
-                    ) : (
-                      notifications.map((ntf) => (
-                        <div key={ntf.id} className="py-2.5 px-2 hover:bg-slate-50 rounded-xl text-xs space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-slate-800">{ntf.studentName}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-teal-50 text-teal-700 font-medium">
-                              {notificationStatusLabel(ntf.status)} • {ntf.platform}
-                            </span>
-                          </div>
-                          <p className="text-slate-600 text-[11px] leading-relaxed line-clamp-2">
-                            {ntf.message}
-                          </p>
-                          <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-                            <span>گیرنده: {ntf.recipientName}</span>
-                            <span>{toPersianDigits(ntf.timestamp)}</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Reset sample data button */}
-            {<button
-              id="logout-btn"
-              onClick={() => void auth.logout()}
-              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-              title="خروج از حساب"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>}
-
-            {/* System Docs & Feature Catalog Button */}
-            <button
-              id="header-docs-modal-btn"
-              onClick={onOpenDocsModal}
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200/80 transition-all font-bold text-xs shadow-2xs cursor-pointer"
-              title="مشاهده مستندات جامع، کاتالوگ فیچرها و مشخصات فنی"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-teal-700" />
-              <span>مستندات و کاتالوگ</span>
-            </button>
-
-            {/* Mobile/Compact Docs Icon Button */}
-            <button
-              id="header-docs-modal-btn-mobile"
-              onClick={onOpenDocsModal}
-              className="lg:hidden p-2 text-teal-700 hover:bg-teal-50 rounded-xl transition-colors"
-              title="مستندات و کاتالوگ امکانات"
-            >
-              <BookOpen className="w-4 h-4" />
-            </button>
-
-            {/* Current Role badge - shown on wide screens */}
-            <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${roleInfo.color}`}>
-              {currentRole === 'platform_admin' ? (
-                <ShieldCheck className="w-3.5 h-3.5" />
-              ) : (
-                <UserCheck className="w-3.5 h-3.5" />
-              )}
-              <span>{roleInfo.label}</span>
-            </div>
-
-            {/* Profile Avatar & Interactive Access Button (Opens UserProfileModal) */}
-            <button
-              id="header-user-profile-btn"
-              onClick={onOpenProfileModal}
-              className="flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-2xl hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all text-right group cursor-pointer"
-              title="مشاهده اطلاعات کاربری و ویرایش مشخصات ارتباطی"
-            >
-              <div
-                className={`w-8 h-8 rounded-full ${currentUser.avatarBg} text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0 group-hover:scale-105 transition-transform`}
-              >
-                {currentUser.name.charAt(0)}
-              </div>
-              <div className="hidden sm:block text-right">
-                <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
-                  <span>{currentUser.name}</span>
-                  <Settings className="w-3 h-3 text-slate-400 group-hover:text-teal-600 transition-colors" />
-                </div>
-                <div className="text-[10px] text-slate-500 font-mono">
-                  {toPersianDigits(currentUser.phone)}
-                </div>
-              </div>
-            </button>
+  return <>
+    <header id="main-header" ref={headerRef} className="dana-header sticky top-0 z-40 border-b border-[#e1e8d9] bg-white/95 backdrop-blur-md">
+      <div className="relative mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div className="flex min-h-[72px] items-center justify-between gap-2 py-2 sm:gap-4">
+          <button id="header-brand-toggle" type="button" aria-expanded={panel==='brand'} aria-controls="header-brand-panel" onClick={()=>toggle('brand')} className="inline-flex min-h-11 shrink-0 items-center gap-2.5 rounded-2xl text-[#294f3f]"><span className="flex size-10 items-center justify-center rounded-2xl bg-[#234f3f] text-white"><GraduationCap className="size-6" strokeWidth={1.5} aria-hidden="true"/></span><span className="text-xl font-bold tracking-tight">{brand}</span><ChevronDown className="size-3 text-[#94a285]" aria-hidden="true"/></button>
+          <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+            <button id="header-context-toggle" type="button" aria-label="مدرسه و سال تحصیلی" aria-expanded={panel==='context'} aria-controls="header-context-panel" onClick={()=>toggle('context')} className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-2xl border border-[#e4eadd] bg-[#fafbf8] px-2.5 text-[#7a9167] hover:bg-[#f0f5e8] md:max-w-[300px] md:justify-start md:px-3"><Building2 className="size-[18px] shrink-0" strokeWidth={1.6} aria-hidden="true"/><span className="hidden min-w-0 text-right md:block"><span className="block truncate text-xs font-bold text-[#516b47]">{currentRole==='platform_admin'?'مدیریت مدارس منطقه':currentSchool?.name||'فضای مدرسه'}</span><span className="mt-0.5 block truncate text-[10px] text-[#86957a]">{activeAcademicYear?`سال ${toPersianDigits(activeAcademicYear.title)}`:roles[currentRole]}</span></span><ChevronDown className="hidden size-3 shrink-0 text-[#95a38a] md:block" aria-hidden="true"/></button>
+            {['principal','platform_admin'].includes(currentRole)&&<button id="open-accounts-desktop" type="button" onClick={openAccounts} className="hidden min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-bold text-[#6f875b] hover:bg-[#f3f7ed] lg:inline-flex"><UsersRound className="size-4" aria-hidden="true"/>حساب‌ها</button>}
+            <button id="header-docs-modal-btn" type="button" onClick={openDocs} className="hidden min-h-11 items-center gap-2 rounded-xl px-3 text-xs text-[#859477] hover:bg-[#f3f7ed] lg:inline-flex"><BookOpen className="size-4" aria-hidden="true"/>راهنما</button>
+            <button id="notifications-toggle-btn" type="button" aria-label={`اعلان‌ها، ${toPersianDigits(notificationCount)} پیام ثبت‌شده`} aria-expanded={panel==='notifications'} aria-controls="notifications-flyout" onClick={()=>toggle('notifications')} className={`relative flex min-h-11 min-w-11 items-center justify-center rounded-2xl border transition-colors ${panel==='notifications'?'border-[#d6e2ca] bg-[#edf3e5] text-[#567944]':'border-transparent text-[#819372] hover:bg-[#f2f6eb]'}`}><Bell className="size-5" strokeWidth={1.6} aria-hidden="true"/>{notificationCount>0&&<span className="absolute end-0.5 top-0 flex min-w-4 items-center justify-center rounded-full bg-[#6e9053] px-1 py-0.5 text-[9px] font-bold text-white">{toPersianDigits(notificationCount>99?'99+':notificationCount)}</span>}</button>
+            <button id="header-user-menu-btn" type="button" aria-label="منوی حساب کاربری" aria-expanded={panel==='account'} aria-controls="header-account-panel" onClick={()=>toggle('account')} className="flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-2xl border border-[#e3eadd] bg-[#f9fbf5] p-1.5 hover:bg-[#edf4e4]"><span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#e2ecd6] text-xs font-bold text-[#66834d]">{currentUser.name.charAt(0)}</span><span className="hidden max-w-[130px] truncate text-xs font-bold text-[#526c46] xl:block">{currentUser.name}</span><ChevronDown className="hidden size-3 text-[#94a286] sm:block" aria-hidden="true"/></button>
           </div>
         </div>
+        <AnimatePresence>{panel&&<motion.section key={panel} id={panel==='notifications'?'notifications-flyout':`header-${panel}-panel`} aria-label={panelTitle} initial={{opacity:0,y:reducedMotion?0:6}} animate={{opacity:1,y:0}} exit={{opacity:0,y:reducedMotion?0:6}} transition={{duration:reducedMotion?0:0.14}} className={`dana-header-panel fixed inset-x-3 top-[76px] z-50 mx-auto flex max-h-[75vh] max-w-md flex-col overflow-hidden rounded-3xl border border-[#dce5d2] bg-white shadow-[0_16px_55px_-20px_rgba(35,70,42,0.3)] md:absolute md:inset-x-auto md:top-full md:mx-0 md:mt-2 md:w-96 ${panel==='brand'?'md:start-6':'md:end-6'}`}>
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#edf0e8] bg-[#f7faf2] px-4 py-3"><h2 className="text-xs font-bold text-[#506c42]">{panelTitle}</h2><button type="button" aria-label="بستن منو" onClick={()=>setPanel(null)} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-[#8b9c7d] hover:bg-white"><X className="size-4" aria-hidden="true"/></button></div>
+          <div className="min-h-0 overflow-y-auto overscroll-contain p-3">
+            {panel==='brand'&&<div className="space-y-1">{(['دانا','رایان','پژواک'] as const).map(name=><button type="button" key={name} onClick={()=>{setBrand(name);setPanel(null);}} className="flex min-h-12 w-full items-center justify-between rounded-xl px-3 text-sm font-bold text-[#6a8358] hover:bg-[#f2f6e9]">{name}{brand===name&&<Check className="size-4" aria-hidden="true"/>}</button>)}</div>}
+            {panel==='account'&&<><div className="mb-2 rounded-2xl border border-[#e4eadb] bg-[#fafbf7] p-4"><p className="break-words text-sm font-bold text-[#3f603a]">{currentUser.name}</p><p className="mt-1 text-[11px] text-[#819471]">{roles[currentRole]}</p><p className="mt-2 text-xs text-slate-500" dir="ltr">{toPersianDigits(currentUser.phone)}</p></div><MenuAction id="header-user-profile-btn" icon={UserRound} title="پروفایل و تنظیمات حساب" description="مشخصات، امنیت و اطلاعات ارتباطی" onClick={openProfile}/>{['principal','platform_admin'].includes(currentRole)&&<MenuAction id="open-accounts" icon={UsersRound} title="مدیریت حساب‌ها" description="کاربران و دسترسی‌های مجاز" onClick={openAccounts}/>}<MenuAction id="header-docs-modal-btn-mobile" icon={BookOpen} title="راهنما و امکانات دانا" onClick={openDocs}/><div className="mt-2 border-t border-[#edf0e6] pt-2"><button id="logout-btn" type="button" disabled={loggingOut} onClick={()=>void logout()} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-xs font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50"><LogOut className="size-4" aria-hidden="true"/>{loggingOut?'در حال خروج…':'خروج از حساب'}</button>{logoutError&&<p role="alert" className="p-3 text-xs leading-6 text-rose-700">{logoutError}</p>}</div></>}
+            {panel==='context'&&<div className="space-y-3 p-1">{availableSchools.length>0?<label className="block text-xs font-bold text-[#728963]">مدرسه فعال<select id="school-select-header" aria-label="انتخاب مدرسه فعال" value={currentSchool?.id||availableSchools[0][0]} onChange={event=>{const member=auth.memberships.find(item=>item.school_id===event.target.value&&item.role===currentRole);if(member){setPanel(null);auth.select(member.id);}}} className="mt-2 min-h-12 w-full min-w-0 rounded-xl border border-[#dfe7d4] bg-white px-3 text-xs font-normal text-[#567347]">{availableSchools.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>:<p className="rounded-xl bg-[#f3f7ec] p-3 text-xs text-[#6b8559]">مدیریت و پایش مدارس منطقه</p>}<div className="rounded-2xl border border-[#e3eadb] p-4"><p className="mb-2 flex items-center gap-2 text-[11px] text-[#879979]"><CalendarDays className="size-4" aria-hidden="true"/>سال تحصیلی</p><p className="text-sm font-bold text-[#526f42]">{activeAcademicYear?toPersianDigits(activeAcademicYear.title):'سال تحصیلی تعریف نشده'}</p>{activeTerm&&<p className="mt-2 text-xs text-slate-500">{activeTerm.title}</p>}{isViewingNonCurrentYear&&<p className="mt-2 text-xs text-amber-700">نمای گذشته · فقط خواندنی</p>}</div><p className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f7f9f3] p-3 text-[11px] leading-6 text-slate-500"><span>{toPersianDigits(schoolClock.dateLabel)}</span><span className="inline-flex items-center gap-1.5"><Clock3 className="size-3.5" aria-hidden="true"/>{toPersianDigits(schoolClock.time)}</span></p></div>}
+            {panel==='notifications'&&<><p className="mb-2 px-1 text-[10px] leading-6 text-slate-400">تاریخچه و وضعیت پیام‌های ثبت‌شده</p>{notifications.length?<div className="space-y-2">{notifications.map(item=><article key={item.id} className="rounded-2xl border border-[#e7ecdf] bg-[#fbfcf9] p-3.5"><div className="mb-2 flex flex-wrap items-center justify-between gap-2"><h3 className="text-xs font-bold text-[#567046]">{item.studentName}</h3><span className="rounded-lg bg-[#eef4e5] px-2 py-1 text-[10px] text-[#7b9367]">{notificationStatusLabel(item.status)} · {item.platform}</span></div><p className="whitespace-pre-wrap break-words text-xs leading-7 text-slate-600">{toPersianDigits(item.message)}</p><p className="mt-3 flex flex-wrap justify-between gap-2 text-[10px] leading-6 text-slate-400"><span>گیرنده: {item.recipientName}</span><time>{messageDate(item.timestamp)}</time></p></article>)}</div>:<p role="status" className="py-8 text-center text-xs text-slate-500">{page('notifications').loading?'در حال دریافت اعلان‌ها…':'هنوز پیامی ثبت نشده است.'}</p>}<div className="mt-3"><ResourcePager kind="notifications" appearance="sage" showSearch={false}/></div><p className="px-1 pt-3 text-[10px] leading-6 text-slate-400">وضعیت صف با تحویل پیام یکی نیست؛ ارسال بیرونی به تنظیم سرویس پیام‌رسان وابسته است.</p></>}
+          </div>
+        </motion.section>}</AnimatePresence>
       </div>
-      {isViewingNonCurrentYear && (
-        <div className="border-t border-amber-200 bg-amber-50 px-3 py-2 text-amber-950">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-            <p className="leading-relaxed">نمای سال {toPersianDigits(activeAcademicYear?.title || '')} انتخاب شده است. داده‌های این نما مربوط به سال انتخاب‌شده‌اند. سوابق سال غیرجاری فقط خواندنی هستند.</p>
-            <button id="return-current-year-header" onClick={returnToCurrentAcademicYear} className="min-h-11 shrink-0 rounded-xl bg-amber-700 px-4 font-bold text-white hover:bg-amber-800">بازگشت به سال فعال</button>
-          </div>
-        </div>
-      )}
+      {isViewingNonCurrentYear&&<div className="border-t border-[#e5dfc8] bg-[#faf5e8] px-3 py-2"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-[11px] text-[#9a824e]"><p>نمای سال {toPersianDigits(activeAcademicYear?.title)} · اطلاعات این سال فقط خواندنی است.</p><button id="return-current-year-header" type="button" onClick={returnToCurrentAcademicYear} className="min-h-11 rounded-xl border border-[#ded2ae] bg-white/70 px-3 font-bold">بازگشت به سال فعال</button></div></div>}
     </header>
-  );
+    {accountsOpen&&<Suspense fallback={<div role="status" className="fixed inset-0 z-[100] flex items-center justify-center bg-[#244737]/40 text-sm text-white">در حال دریافت حساب‌ها…</div>}><AccountsModal onClose={()=>setAccountsOpen(false)}/></Suspense>}
+  </>;
 };

@@ -1,5 +1,5 @@
 import {useQuery} from '@tanstack/react-query';
-import {useAuth} from '../auth/AuthProvider';
+import {useAuth} from '../auth/AuthContext';
 import {useApp} from '../context/AppContext';
 import {request} from './client';
 import type {AttendanceSession} from '../types';

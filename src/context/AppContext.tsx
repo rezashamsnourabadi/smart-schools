@@ -3,7 +3,8 @@ import {useQueries,useQuery,useQueryClient} from '@tanstack/react-query';
 import type {AppContextType} from './contracts';
 import type {Student,UserProfile,AcademicYear,VicePrincipalPermissions,UserRole} from '../types';
 import {getSchoolClock} from '../utils/persianUtils';
-import {useAuth,Status} from '../auth/AuthProvider';
+import {useAuth} from '../auth/AuthContext';
+import {Status} from '../auth/Status';
 import {request,uploadDataUrl,type RequestScope} from '../api/client';
 import type {AttendanceSession} from '../types';
 

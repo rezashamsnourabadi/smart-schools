@@ -1,352 +1,50 @@
-import { ResourcePager } from './ResourcePager';
-import React, { useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { useApp, useResource } from '../context/AppContext';
-import { QuestionBankItem } from '../types';
-import { toPersianDigits } from '../utils/persianUtils';
-import { AddQuestionModal } from './AddQuestionModal';
-import {
-  BookOpen,
-  Search,
-  Filter,
-  PlusCircle,
-  X,
-  Check,
-  Copy,
-  Sparkles,
-  Building2,
-  Tag,
-  HelpCircle,
-  Layers
-} from 'lucide-react';
+import React, {useEffect, useRef, useState} from 'react';
+import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
+import {BookOpen, Check, ChevronDown, Copy, Eye, EyeOff, Filter, Plus, Search, Tag, X} from 'lucide-react';
+import {useApp,useResource} from '../context/AppContext';
+import type {QuestionBankItem} from '../types';
+import {toEnglishDigits,toPersianDigits} from '../utils/persianUtils';
+import {AddQuestionModal} from './AddQuestionModal';
+import {ResourcePager} from './ResourcePager';
 
-interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export const QuestionBankModal: React.FC<Props> = ({ isOpen, onClose }) => {
+interface Props {isOpen:boolean;onClose:()=>void}
+export const QuestionBankModal:React.FC<Props>=({isOpen,onClose})=>{
   useResource('questionBank');
-  const shouldReduceMotion = useReducedMotion();
-  const { questionBank } = useApp();
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('all');
-  const [selectedGrade, setSelectedGrade] = useState('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [selectedType, setSelectedType] = useState('all');
-
-  const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
-  const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  // Subjects list dynamically
-  const subjects = Array.from(new Set(questionBank.map((q) => q.subject)));
-  const grades = Array.from(new Set(questionBank.map((q) => q.grade)));
-
-  // Filtered questions
-  const filteredQuestions = questionBank.filter((q) => {
-    const matchesSearch =
-      q.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.tags.some((t) => t.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesSubject = selectedSubject === 'all' || q.subject === selectedSubject;
-    const matchesGrade = selectedGrade === 'all' || q.grade === selectedGrade;
-    const matchesDifficulty = selectedDifficulty === 'all' || q.difficulty === selectedDifficulty;
-    const matchesType = selectedType === 'all' || q.type === selectedType;
-
-    return matchesSearch && matchesSubject && matchesGrade && matchesDifficulty && matchesType;
-  });
-
-  const toggleAnswerReveal = (id: string) => {
-    setRevealedAnswers((prev) => ({ ...prev, [id]: !prev[id] }));
+  const {questionBank,currentRole,page}=useApp(),reducedMotion=useReducedMotion();
+  const [searchTerm,setSearchTerm]=useState(''),[subject,setSubject]=useState('all'),[grade,setGrade]=useState('all'),[difficulty,setDifficulty]=useState('all'),[type,setType]=useState('all');
+  const [showAdd,setShowAdd]=useState(false),[answers,setAnswers]=useState<Record<string,boolean>>({}),[copied,setCopied]=useState<string|null>(null),[copyError,setCopyError]=useState<string|null>(null);
+  const closeRef=useRef<HTMLButtonElement>(null),copyTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  useEffect(()=>{if(!isOpen)return;const previous=document.activeElement;document.body.classList.add('question-bank-open');closeRef.current?.focus();return()=>{document.body.classList.remove('question-bank-open');if(previous instanceof HTMLElement&&previous.isConnected)previous.focus();};},[isOpen]);
+  useEffect(()=>()=>{if(copyTimer.current)clearTimeout(copyTimer.current);},[]);
+  const canAdd=currentRole==='teacher'||currentRole==='platform_admin';
+  const subjects=Array.from(new Set([...questionBank.map(item=>item.subject),...(subject==='all'?[]:[subject])])),grades=Array.from(new Set([...questionBank.map(item=>item.grade),...(grade==='all'?[]:[grade])]));
+  const search=toEnglishDigits(searchTerm.trim()).toLowerCase();
+  const filtered=questionBank.filter(item=>(!search||toEnglishDigits([item.title,item.content,...item.tags||[]].join(' ')).toLowerCase().includes(search))&&(subject==='all'||item.subject===subject)&&(grade==='all'||item.grade===grade)&&(difficulty==='all'||item.difficulty===difficulty)&&(type==='all'||item.type===type));
+  const filterCount=[search,subject==='all'?'':subject,grade==='all'?'':grade,difficulty==='all'?'':difficulty,type==='all'?'':type].filter(Boolean).length;
+  const clearFilters=()=>{setSearchTerm('');setSubject('all');setGrade('all');setDifficulty('all');setType('all');};
+  const copyQuestion=async(item:QuestionBankItem)=>{
+    const text=[item.title,item.content,...item.options?.map((option,index)=>`${toPersianDigits(index+1)}) ${option}`)||[]].join('\n');
+    setCopyError(null);setCopied(null);
+    try{
+      let done=false;
+      try{if(navigator.clipboard){await navigator.clipboard.writeText(text);done=true;}}catch{/* HTTP development browsers can use the selection fallback. */}
+      if(!done){const previous=document.activeElement;const field=document.createElement('textarea');field.value=text;field.readOnly=true;field.className='clipboard-fallback';document.body.append(field);try{field.select();done=document.execCommand('copy');}finally{field.remove();if(previous instanceof HTMLElement)previous.focus();}}
+      if(!done)throw new Error('Clipboard unavailable');
+      setCopied(item.id);if(copyTimer.current)clearTimeout(copyTimer.current);copyTimer.current=setTimeout(()=>setCopied(null),2000);
+    }catch{setCopyError(item.id);}
   };
-
-  const handleCopyQuestion = (q: QuestionBankItem) => {
-    const textToCopy = `${q.title}\n${q.content}\n${
-      q.options ? q.options.map((opt, i) => `${i + 1}) ${opt}`).join('\n') : ''
-    }`;
-    navigator.clipboard.writeText(textToCopy);
-    setCopiedId(q.id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  return (
-    <AnimatePresence>
-    {isOpen && <motion.div
-      key="question-bank-overlay"
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-6 overflow-y-auto w-full max-w-full"
-    >
-      <motion.div
-        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
-        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
-        className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-5xl m-auto h-full max-h-[96vh] sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200"
-      >
-        {/* Modal Top Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bg-slate-50/80 rounded-t-3xl shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-teal-700 text-white flex items-center justify-center shadow-xs shrink-0">
-              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-bold text-sm sm:text-base text-slate-900 leading-snug">
-                  بانک سوالات نمونه محلی
-                </h2>
-                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 font-bold border border-teal-200 shrink-0">
-                  {toPersianDigits(questionBank.length)} سوال ثبت‌شده
-                </span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate sm:whitespace-normal">
-                داده‌های این بانک در همین مرورگر نگهداری می‌شوند و با مدرسه‌های دیگر همگام نیستند.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-            <button
-              id="btn-add-question-from-bank"
-              onClick={() => setShowAddQuestionModal(true)}
-              className="min-h-[44px] px-3.5 sm:px-4 py-2 rounded-xl bg-slate-900 hover:bg-teal-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>افزودن سوال</span>
-            </button>
-
-            <button
-              id="btn-close-question-bank"
-              onClick={onClose}
-              className="min-h-[44px] min-w-[44px] p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
-              aria-label="بستن پنجره"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+  return <>
+    <AnimatePresence>{isOpen&&<motion.div key="question-bank-overlay" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:reducedMotion?0:0.15}} className="fixed inset-0 z-[85] flex items-center justify-center bg-[#19382e]/50 sm:p-4">
+      <motion.section id="question-bank-modal" role="dialog" aria-modal="true" aria-labelledby="question-bank-title" initial={{y:reducedMotion?0:12}} animate={{y:0}} className="question-bank-sheet dana-dialog flex min-h-0 w-full min-w-0 max-w-5xl flex-col overflow-hidden bg-white shadow-2xl sm:rounded-[28px] sm:border sm:border-[#e0e7d6]">
+        <header className="shrink-0 border-b border-[#e4ebda] bg-[#f4f8ee] p-4 sm:p-5"><div className="flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-[#dce6d1] bg-[#e7efdd] text-[#7b9562]"><BookOpen className="size-5" strokeWidth={1.5} aria-hidden="true"/></span><div className="min-w-0"><p className="mb-1 text-[10px] text-[#90a17e]">تمرین، مرور، یادگیری</p><h2 id="question-bank-title" className="text-lg font-bold text-[#3d5d36]">بانک سؤال</h2></div></div><div className="flex shrink-0 items-center gap-2">{canAdd&&<button id="btn-add-question-from-bank" type="button" onClick={()=>setShowAdd(true)} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-[#345d3e] px-3 text-[11px] font-bold text-white hover:bg-[#244b31]"><Plus className="size-4" aria-hidden="true"/><span>افزودن سؤال</span></button>}<button id="btn-close-question-bank" ref={closeRef} type="button" onClick={onClose} aria-label="بستن پنجره بانک سؤال" className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-[#e0e8d6] bg-white text-[#8a9b79] hover:bg-[#edf4e3]"><X className="size-5" aria-hidden="true"/></button></div></div><p className="mt-3 text-[11px] leading-7 text-[#819273]">سؤال‌های قابل دسترسی مدرسه و مجموعه مشترک منطقه؛ همراه با گزینه‌ها و پاسخ تمرینی.</p></header>
+        <div className="shrink-0 border-b border-[#e7ecdf] bg-white p-3 sm:px-5"><ResourcePager kind="questionBank" appearance="sage" searchPlaceholder="جستجو در عنوان سؤال‌ها…"/></div>
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-[#fafbf7] p-4 sm:p-5">
+          <details className="group rounded-2xl border border-[#e1e8d7] bg-white p-3 sm:p-4"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-xs font-bold text-[#70885a]"><span className="inline-flex flex-wrap items-center gap-2"><Filter className="size-4" strokeWidth={1.5} aria-hidden="true"/>فیلترهای این صفحه{filterCount>0&&<span className="rounded-full bg-[#eaf2df] px-2 py-1 text-[10px]">{toPersianDigits(filterCount)} فعال</span>}</span><ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true"/></summary><div className="space-y-4 border-t border-[#edf1e7] pt-4"><p className="text-[11px] leading-7 text-slate-500">این فیلترها سؤال‌های صفحه فعلی را محدود می‌کنند. برای جستجو در عنوان همه سؤال‌ها از کادر بالای صفحه استفاده کنید.</p><label className="block text-[11px] font-bold text-[#718563]">متن یا برچسب در این صفحه<span className="relative mt-2 block"><Search className="absolute start-3 top-3.5 size-4 text-[#9caa8f]" aria-hidden="true"/><input id="question-page-search" value={searchTerm} onChange={event=>setSearchTerm(event.target.value)} placeholder="جستجو در متن یا برچسب…" className="min-h-12 w-full rounded-xl border border-[#e0e8d5] bg-[#fcfdf9] pe-3 ps-10 text-xs font-normal"/></span></label><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[{label:'درس',value:subject,set:setSubject,options:subjects,all:'همه درس‌ها'},{label:'پایه',value:grade,set:setGrade,options:grades,all:'همه پایه‌ها'},{label:'سطح سختی',value:difficulty,set:setDifficulty,options:['آسان','متوسط','دشوار'],all:'همه سطوح'},{label:'نوع سؤال',value:type,set:setType,options:['تستی','تشریحی','کوتاه‌پاسخ'],all:'همه نوع‌ها'}].map(field=><label key={field.label} className="min-w-0 text-[11px] font-bold text-[#718563]">{field.label}<select aria-label={`انتخاب ${field.label}`} value={field.value} onChange={event=>field.set(event.target.value)} className="mt-2 min-h-12 w-full min-w-0 rounded-xl border border-[#e0e8d5] bg-white px-2 text-xs font-normal"><option value="all">{field.all}</option>{field.options.map(option=><option key={option} value={option}>{toPersianDigits(option)}</option>)}</select></label>)}</div>{filterCount>0&&<button type="button" onClick={clearFilters} className="min-h-11 px-2 text-xs font-bold text-[#7b9269]">پاک‌کردن فیلترها</button>}</div></details>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-[#95a289]"><p>{toPersianDigits(filtered.length)} سؤال در این صفحه</p><p>{toPersianDigits(page('questionBank').total)} سؤال قابل دسترسی</p></div>
+          {!filtered.length?<div role="status" className="rounded-2xl border border-dashed border-[#dce6cf] bg-white p-8 text-center"><BookOpen className="mx-auto mb-4 size-7 text-[#adc09b]" strokeWidth={1.3} aria-hidden="true"/><p className="text-xs leading-7 text-[#869878]">{page('questionBank').loading?'در حال دریافت سؤال‌ها…':filterCount?'در این صفحه سؤالی با فیلترهای انتخابی یافت نشد.':'هنوز سؤالی در این فهرست ثبت نشده است.'}</p>{filterCount>0&&<button type="button" onClick={clearFilters} className="mt-2 min-h-11 px-3 text-xs font-bold text-[#66864e]">نمایش بدون فیلتر</button>}</div>:<div className="grid items-start gap-4 xl:grid-cols-2">{filtered.map(item=><article id={`question-card-${item.id}`} key={item.id} className="min-w-0 space-y-4 rounded-2xl border border-[#e0e8d6] bg-white p-4 sm:p-5"><div className="flex flex-wrap items-center gap-1.5 text-[10px]"><span className="rounded-lg bg-[#edf4e4] px-2.5 py-1 font-bold text-[#72945a]">{item.subject}</span><span className="rounded-lg border border-[#e9ede3] px-2 py-1 text-[#8b9c7c]">{toPersianDigits(item.grade)}</span><span className="rounded-lg border border-[#e9ede3] px-2 py-1 text-[#8b9c7c]">{item.difficulty}</span><span className="ms-auto text-[#9eaa93]">{item.type}</span></div><div><h3 className="break-words text-sm font-bold leading-7 text-[#425e3b]">{toPersianDigits(item.title)}</h3><p className="mt-3 whitespace-pre-wrap break-words rounded-xl bg-[#f8faf4] p-3 text-[13px] leading-8 text-slate-600">{toPersianDigits(item.content)}</p></div>{!!item.options?.length&&<div className="grid gap-2 sm:grid-cols-2">{item.options.map((option,index)=><div key={index} className={`flex items-start gap-2 rounded-xl border p-3 text-xs leading-7 ${answers[item.id]&&option===item.correctAnswer?'border-[#bfd4a7] bg-[#edf5e4] text-[#5f7f45]':'border-[#edf0e8] text-slate-500'}`}><span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-[#f2f6ea] text-[10px] text-[#8b9f75]">{toPersianDigits(index+1)}</span><span className="min-w-0 break-words">{toPersianDigits(option)}</span></div>)}</div>}{answers[item.id]&&item.correctAnswer&&<div className="rounded-xl border border-[#dce8cf] bg-[#f1f7e9] p-3 text-xs leading-8 text-[#60814a]"><p className="mb-1 font-bold">پاسخ / راهنمای تمرین</p><p className="whitespace-pre-wrap break-words">{toPersianDigits(item.correctAnswer)}</p></div>}<div className="flex flex-wrap gap-1.5">{item.tags.map((tag,index)=><span key={index} className="inline-flex max-w-full items-center gap-1 rounded-md bg-[#f4f7ee] px-2 py-1 text-[10px] text-[#99a68b]"><Tag className="size-2.5 shrink-0" aria-hidden="true"/><span className="break-words">{toPersianDigits(tag)}</span></span>)}</div><p className="flex flex-wrap items-center justify-between gap-2 text-[10px] leading-6 text-slate-400"><span>طراح: {item.authorName}{item.authorSchool&&<> · {item.authorSchool}</>}</span><span>{toPersianDigits(item.usageCount)} بار استفاده</span></p><div className="flex flex-wrap gap-2 border-t border-[#edf1e7] pt-3">{item.correctAnswer&&<button type="button" aria-expanded={!!answers[item.id]} onClick={()=>setAnswers(previous=>({...previous,[item.id]:!previous[item.id]}))} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#f0f5e7] px-3 text-[11px] font-bold text-[#6b8c52]">{answers[item.id]?<EyeOff className="size-4" aria-hidden="true"/>:<Eye className="size-4" aria-hidden="true"/>}{answers[item.id]?'بستن پاسخ':'مشاهده پاسخ'}</button>}<button type="button" onClick={()=>void copyQuestion(item)} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-[#e1e8d8] px-3 text-[11px] text-[#8b9a7d]">{copied===item.id?<Check className="size-4" aria-hidden="true"/>:<Copy className="size-3.5" aria-hidden="true"/>}{copied===item.id?'کپی شد':'کپی سؤال'}</button></div>{copyError===item.id&&<p role="alert" className="text-xs leading-7 text-rose-700">کپی در این مرورگر ممکن نشد؛ متن سؤال را انتخاب و کپی کنید.</p>}</article>)}</div>}
         </div>
-
-        <ResourcePager kind="questionBank"/>
-        {/* Search and Filters Bar */}
-        <div className="p-4 border-b border-slate-200 bg-white space-y-3 shrink-0">
-          <div className="flex flex-col sm:flex-row gap-2.5">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="جستجو در متن سوال، مبحث، یا کلمات کلیدی..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pr-10 pl-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none"
-              />
-            </div>
-
-            {/* Filter Dropdowns */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <select
-                aria-label="انتخاب درس"
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-700 outline-none"
-              >
-                <option value="all">همه درس‌ها</option>
-                {subjects.map((sub) => (
-                  <option key={sub} value={sub}>
-                    {sub}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                aria-label="انتخاب مقطع تحصیلی"
-                value={selectedGrade}
-                onChange={(e) => setSelectedGrade(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-700 outline-none"
-              >
-                <option value="all">همه پایه‌ها</option>
-                {grades.map((gr) => (
-                  <option key={gr} value={gr}>
-                    {gr}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                aria-label="انتخاب سطح سختی"
-                value={selectedDifficulty}
-                onChange={(e) => setSelectedDifficulty(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-700 outline-none"
-              >
-                <option value="all">همه سطوح سختی</option>
-                <option value="آسان">آسان</option>
-                <option value="متوسط">متوسط</option>
-                <option value="دشوار">دشوار</option>
-              </select>
-
-              <select
-                aria-label="انتخاب نوع سوال"
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-700 outline-none"
-              >
-                <option value="all">همه انواع سوال</option>
-                <option value="تستی">تستی چهارگزینه‌ای</option>
-                <option value="تشریحی">تشریحی</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Questions List */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-          {filteredQuestions.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-xs">
-              سوالی با فیلترهای انتخابی یافت نشد.
-            </div>
-          ) : (
-            <div className="space-y-3.5">
-              {filteredQuestions.map((q) => {
-                const isRevealed = revealedAnswers[q.id];
-                const isCopied = copiedId === q.id;
-
-                return (
-                  <div
-                    key={q.id}
-                    className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 shadow-xs hover:border-teal-300 transition-all text-right"
-                  >
-                    {/* Tags and Metadata */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap text-[11px]">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
-                          {q.subject}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
-                          {q.grade}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-md font-bold ${
-                            q.difficulty === 'آسان'
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : q.difficulty === 'متوسط'
-                              ? 'bg-amber-50 text-amber-700'
-                              : 'bg-rose-50 text-rose-700'
-                          }`}
-                        >
-                          سطح: {q.difficulty}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md bg-slate-50 text-slate-600">
-                          نوع: {q.type}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-slate-400 text-[10px]">
-                        <span className="flex items-center gap-1">
-                          <Building2 className="w-3 h-3 text-slate-400" />
-                          <span>طراح: {q.authorName} ({q.authorSchool})</span>
-                        </span>
-                        <span>• استفاده: {q.usageCount} بار</span>
-                      </div>
-                    </div>
-
-                    {/* Question Content */}
-                    <div>
-                      <h4 className="font-bold text-sm text-slate-900 mb-1">{q.title}</h4>
-                      <p className="text-xs text-slate-700 leading-relaxed bg-slate-50/70 p-3.5 rounded-xl border border-slate-100 whitespace-pre-line">
-                        {q.content}
-                      </p>
-                    </div>
-
-                    {/* Options if Multiple Choice */}
-                    {q.options && q.options.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        {q.options.map((opt, idx) => (
-                          <div
-                            key={idx}
-                            className={`p-2.5 rounded-xl border flex items-center gap-2 ${
-                              isRevealed && opt === q.correctAnswer
-                                ? 'bg-emerald-50 border-emerald-400 text-emerald-900 font-bold'
-                                : 'bg-white border-slate-200 text-slate-700'
-                            }`}
-                          >
-                            <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center shrink-0">
-                              {idx + 1}
-                            </span>
-                            <span>{opt}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Revealed Answer Box */}
-                    {isRevealed && q.correctAnswer && (
-                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
-                        <div>
-                          <strong>پاسخ صحیح / راهنما:</strong> {q.correctAnswer}
-                        </div>
-                        <span className="text-[10px] text-emerald-700">تایید شده توسط گروه آموزشی</span>
-                      </div>
-                    )}
-
-                    {/* Card Footer Actions */}
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1">
-                        {q.tags.map((tag, tIdx) => (
-                          <span
-                            key={tIdx}
-                            className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 flex items-center gap-1"
-                          >
-                            <Tag className="w-2.5 h-2.5" />
-                            <span>{tag}</span>
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {q.correctAnswer && (
-                          <button
-                            onClick={() => toggleAnswerReveal(q.id)}
-                            className="text-xs text-teal-700 hover:text-teal-900 font-semibold px-2.5 py-1 rounded-lg hover:bg-teal-50 transition-colors"
-                          >
-                            {isRevealed ? 'مخفی‌سازی پاسخ' : 'مشاهده کلید و پاسخ'}
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => handleCopyQuestion(q)}
-                          className="text-xs text-slate-600 hover:text-slate-900 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1 font-medium"
-                        >
-                          {isCopied ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              <span className="text-emerald-700 font-bold">کپی شد</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5 text-slate-400" />
-                              <span>کپی متن سوال</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Add Question Modal */}
-        <AddQuestionModal
-          isOpen={showAddQuestionModal}
-          onClose={() => setShowAddQuestionModal(false)}
-        />
-      </motion.div>
-    </motion.div>}
-    </AnimatePresence>
-  );
+      </motion.section>
+    </motion.div>}</AnimatePresence>
+    <AddQuestionModal isOpen={isOpen&&showAdd&&canAdd} onClose={()=>setShowAdd(false)}/>
+  </>;
 };

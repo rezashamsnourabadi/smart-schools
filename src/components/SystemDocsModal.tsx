@@ -267,7 +267,7 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
-      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto w-full max-w-full"
+      className="fixed inset-0 z-50 bg-[#19382e]/50 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto w-full max-w-full"
       id="system-docs-modal"
     >
       <motion.div
@@ -275,10 +275,10 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
         transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
-        className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] m-auto"
+        className="dana-dialog bg-white w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] m-auto"
       >
         {/* Modal Top Header */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-teal-800 via-teal-700 to-slate-800 text-white flex items-center justify-between shrink-0 shadow-xs">
+        <div className="p-4 sm:p-5 bg-[#355e3c] text-white flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-xs flex items-center justify-center text-teal-200 border border-white/15">
               <BookOpen className="w-5 h-5" />
@@ -286,14 +286,14 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base sm:text-lg font-black tracking-tight">
-                  مستندات جامع، کاتالوگ فیچرها و مشخصات فنی سامانه
+                  راهنما و امکانات دانا
                 </h3>
                 <span className="text-[10px] bg-teal-500/30 text-teal-100 px-2 py-0.5 rounded-full border border-teal-400/30 font-bold hidden sm:inline-block">
-                  نسخه {toPersianDigits('2.4')}
+                  راهنمای سامانه
                 </span>
               </div>
               <p className="text-xs text-teal-100/80 mt-0.5">
-                ویژه توسعه‌دهندگان، سرمایه‌گذاران، کارشناسان فناوری و مدیران آموزش و پرورش
+                قابلیت‌ها، دسترسی‌ها و راهنمای فنی سامانه
               </p>
             </div>
           </div>
@@ -330,58 +330,58 @@ export const SystemDocsModal: React.FC<SystemDocsModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Tab Navigation Bar */}
-        <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 pt-3 flex items-center justify-between gap-2 overflow-x-auto shrink-0">
-          <div className="flex items-center space-x-reverse space-x-2">
+        <div className="shrink-0 border-b border-[#e2e9d8] bg-[#f7faf1] px-3 py-2 sm:px-5">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <button
               id="docs-tab-features"
               onClick={() => setActiveTab('features')}
-              className={`px-4 py-2.5 rounded-t-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all border-b-2 whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex min-h-12 min-w-0 items-center justify-center gap-2 transition-all border-b-2  ${
                 activeTab === 'features'
                   ? 'bg-white text-teal-800 border-teal-600 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 border-transparent hover:bg-slate-100'
               }`}
             >
               <Layers className="w-4 h-4 text-teal-600" />
-              <span>کاتالوگ کامل فیچرها ({toPersianDigits(featuresList.length)})</span>
+              <span>قابلیت‌ها ({toPersianDigits(featuresList.length)})</span>
             </button>
 
             <button
               id="docs-tab-rbac"
               onClick={() => setActiveTab('rbac')}
-              className={`px-4 py-2.5 rounded-t-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all border-b-2 whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex min-h-12 min-w-0 items-center justify-center gap-2 transition-all border-b-2  ${
                 activeTab === 'rbac'
                   ? 'bg-white text-teal-800 border-teal-600 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 border-transparent hover:bg-slate-100'
               }`}
             >
               <Shield className="w-4 h-4 text-indigo-600" />
-              <span>ماتریس دسترسی نقش‌ها (RBAC)</span>
+              <span>دسترسی نقش‌ها</span>
             </button>
 
             <button
               id="docs-tab-developers"
               onClick={() => setActiveTab('developers')}
-              className={`px-4 py-2.5 rounded-t-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all border-b-2 whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex min-h-12 min-w-0 items-center justify-center gap-2 transition-all border-b-2  ${
                 activeTab === 'developers'
                   ? 'bg-white text-teal-800 border-teal-600 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 border-transparent hover:bg-slate-100'
               }`}
             >
               <Code2 className="w-4 h-4 text-cyan-600" />
-              <span>معماری فنی و پایگاه‌داده</span>
+              <span>معماری فنی</span>
             </button>
 
             <button
               id="docs-tab-investors"
               onClick={() => setActiveTab('investors')}
-              className={`px-4 py-2.5 rounded-t-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all border-b-2 whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex min-h-12 min-w-0 items-center justify-center gap-2 transition-all border-b-2  ${
                 activeTab === 'investors'
                   ? 'bg-white text-teal-800 border-teal-600 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900 border-transparent hover:bg-slate-100'
               }`}
             >
               <TrendingUp className="w-4 h-4 text-amber-600" />
-              <span>ارزش تجاری و سرمایه‌گذاران</span>
+              <span>درباره محصول</span>
             </button>
           </div>
         </div>

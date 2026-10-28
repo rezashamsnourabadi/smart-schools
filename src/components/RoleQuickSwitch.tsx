@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { useAuth } from '../auth/AuthProvider';
+import { useAuth } from '../auth/AuthContext';
 import { UserRole } from '../types';
 import {
   ShieldAlert,
@@ -23,7 +23,7 @@ interface RoleOption {
 const ROLES_LIST: RoleOption[] = [
   {
     role: 'platform_admin',
-    title: 'مدیر کل پلتفرم',
+    title: 'مدیر پلتفرم',
     subtitle: 'نظارت کلیه مدارس، تبلیغات و بانک سوالات',
     icon: ShieldAlert,
     badgeColor: 'bg-rose-600 text-white',
@@ -47,7 +47,7 @@ const ROLES_LIST: RoleOption[] = [
   },
   {
     role: 'teacher',
-    title: 'معلم (تمرکز ویژه)',
+    title: 'دبیر',
     subtitle: 'حضور و غیاب فوری کلاس جاری با ۱ کلیک',
     icon: Users2,
     badgeColor: 'bg-blue-600 text-white',
@@ -63,7 +63,7 @@ const ROLES_LIST: RoleOption[] = [
   },
   {
     role: 'parent',
-    title: 'اولیا دانش‌آموز',
+    title: 'ولی دانش‌آموز',
     subtitle: 'اطلاع فوری از وضعیت حضور، کارنامه و بنر مفید',
     icon: Sparkles,
     badgeColor: 'bg-purple-600 text-white',
@@ -75,50 +75,5 @@ export const RoleQuickSwitch: React.FC = () => {
   const { currentRole, setCurrentRole } = useApp();
   const auth = useAuth();
 
-  return (
-    <section className="bg-slate-900 text-white py-2 sm:py-2.5 border-b border-slate-800 shrink-0" id="role-quick-switcher">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        {auth.memberships.length > 1 && <select id="membership-selector" aria-label="انتخاب مدرسه، نقش یا فرزند" value={auth.member.id} onChange={e=>auth.select(e.target.value)} className="min-h-11 max-w-full bg-slate-800 text-white rounded-xl px-3 mb-2 text-xs">{auth.memberships.map(member=><option key={member.id} value={member.id}>{member.school_name || 'مدیریت منطقه'} — {ROLES_LIST.find(r=>r.role===member.role)?.title} {member.label || ''}</option>)}</select>}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-          {/* Label */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-500/20 text-teal-300 text-[10px] font-bold">
-                ★
-              </span>
-              <span className="text-xs font-bold text-slate-200 whitespace-nowrap">
-                سوئیچ سریع نقش کاربری:
-              </span>
-              <span className="text-[11px] text-slate-400 hidden xl:inline">
-                (دسترسی‌های اختصاص‌یافته به حساب شما)
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Buttons - Single scrollable row on mobile/landscape, grid on desktop */}
-          <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-0.5 lg:grid lg:grid-cols-6 lg:gap-2">
-            {ROLES_LIST.filter(item => auth.memberships.some(member => member.role === item.role)).map((item) => {
-              const Icon = item.icon;
-              const isActive = currentRole === item.role;
-              return (
-                <button
-                  key={item.role}
-                  id={`role-switch-${item.role}`}
-                  onClick={() => setCurrentRole(item.role)}
-                  className={`min-h-11 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-right transition-all text-xs font-medium border shrink-0 whitespace-nowrap ${
-                    isActive
-                      ? `${item.badgeColor} border-transparent shadow-sm ring-2 ring-white/20 font-bold scale-[1.02]`
-                      : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{item.title}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+  return <section id="role-quick-switcher" className="shrink-0 border-b border-[#e6ecdd] bg-[#fafcf7] px-3 py-2 sm:px-6"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-1.5">{ROLES_LIST.filter(item=>auth.memberships.some(member=>member.role===item.role)).map(({role,title,icon:Icon})=><button key={role} id={`role-switch-${role}`} type="button" aria-pressed={currentRole===role} onClick={()=>setCurrentRole(role)} className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-[11px] font-bold transition-colors ${currentRole===role?'border-[#dce6ce] bg-[#edf4e3] text-[#708e57]':'border-transparent text-[#9aa88e] hover:bg-[#f0f5e9]'}`}><Icon className="size-4" strokeWidth={1.6} aria-hidden="true"/>{role==='teacher'?'دبیر':title}</button>)}</div>{auth.memberships.length>1?<select id="membership-selector" aria-label="انتخاب مدرسه، نقش یا فرزند" value={auth.member.id} onChange={event=>auth.select(event.target.value)} className="min-h-11 min-w-0 max-w-full rounded-xl border border-[#dfe8d2] bg-white px-3 text-xs text-[#7b9166]">{auth.memberships.map(member=><option key={member.id} value={member.id}>{member.school_name||'مدیریت منطقه'} · {ROLES_LIST.find(role=>role.role===member.role)?.title} {member.label||''}</option>)}</select>:<span className="text-[10px] text-[#9da990]">فضای اختصاصی شما</span>}</div></section>;
 };

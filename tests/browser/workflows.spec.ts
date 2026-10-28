@@ -19,10 +19,11 @@ for(const role of ['platform_admin','principal','vice_principal','teacher','stud
     }
     if(role==='parent'){await expect(page.locator('#membership-selector')).toBeVisible();const options=page.locator('#membership-selector option');expect(await options.count()).toBe(2);const second=await options.nth(1).getAttribute('value');await page.locator('#membership-selector').selectOption(second!);await expect(page.locator('#main-header')).toBeVisible();}
     if(role==='principal'){
+      await page.locator('#header-user-menu-btn').click();
       await page.locator('#open-accounts').click();await expect(page.locator('#accounts-modal')).toBeVisible();await page.getByRole('button',{name:'بستن',exact:true}).click();
     }
     expect(errors).toEqual([]);
-    await page.locator('#logout-btn').click();await expect(page.locator('#login-page')).toBeVisible();await expect(page).toHaveURL(/\/login$/);
+    await page.locator('#header-user-menu-btn').click();await page.locator('#logout-btn').click();await expect(page.locator('#login-page')).toBeVisible();await expect(page).toHaveURL(/\/login$/);
   });
 }
 test('login keeps its form when the connection fails',async({page})=>{

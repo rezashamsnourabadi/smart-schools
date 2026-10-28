@@ -1,6 +1,6 @@
 import {lazy,Suspense,useCallback,useEffect,useState} from 'react';
 import {request,RequestError} from '../api/client';
-import type {AuthState} from './AuthProvider';
+import type {AuthState} from './AuthContext';
 import {Status} from './Status';
 import {LoginPage} from './LoginPage';
 import {showLoginPath} from './navigation';

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import {motion,useReducedMotion} from 'motion/react';
 import {
   X,
   User,
@@ -46,6 +47,14 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   const { classes, updateParentContact, addDisciplinaryRecord, currentUser, currentRole, canManageSchool, schoolClock } = useApp();
   const [gradeOffset,setGradeOffset]=useState(0),[attendanceOffset,setAttendanceOffset]=useState(0);
   const [cardEditorOpen,setCardEditorOpen]=useState(false);
+  const reducedMotion=useReducedMotion();
+  const closeRef=useRef<HTMLButtonElement>(null),contentRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const previousFocus=document.activeElement;
+    document.body.classList.add('student-dossier-open');closeRef.current?.focus();
+    return()=>{document.body.classList.remove('student-dossier-open');if(previousFocus instanceof HTMLElement&&previousFocus.isConnected)previousFocus.focus();};
+  },[]);
+
   const gradeQuery=useStudentRecords<GradeItem>(student.id,'grades',gradeOffset);
   const attendanceQuery=useStudentRecords<AttendanceSession>(student.id,'attendanceSessions',attendanceOffset);
   const grades=gradeQuery.data?.items||[],attendanceSessions=attendanceQuery.data?.items||[];
@@ -104,118 +113,27 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
     .slice()
     .sort((a, b) => (normalizeSchoolDate(b.date) || '').localeCompare(normalizeSchoolDate(a.date) || ''));
 
+  const dossierTabs=[
+    {id:'profile',label:'مشخصات',icon:User},
+    {id:'reportCards',label:'نمره و کارنامه',icon:GraduationCap},
+    {id:'attendance',label:'حضور و غیاب',icon:Calendar},
+    {id:'discipline',label:'سوابق رفتاری',icon:Award},
+    {id:'pastYears',label:'سال‌های قبل',icon:Clock},
+    {id:'finances',label:'امور مالی',icon:CreditCard},
+  ] as const;
+  const activeTitle=dossierTabs.find(tab=>tab.id===activeTab)?.label;
   return (
-    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-3 overflow-y-auto w-full max-w-full">
-      <div 
-        className="bg-white w-full max-w-3xl rounded-t-3xl sm:rounded-2xl shadow-2xl m-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal Header */}
-        <div className="relative bg-gradient-to-r from-teal-700 via-teal-800 to-cyan-900 text-white p-3.5 sm:p-5 shrink-0">
-          <button
-            onClick={onClose}
-            className="absolute top-3 left-3 sm:top-4 sm:left-4 p-1.5 sm:p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-            title="بستن پنجره"
-            aria-label="بستن"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          <div className="flex flex-row items-center gap-3 sm:gap-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/15 border border-white/30 flex items-center justify-center text-xl sm:text-2xl font-black shrink-0 shadow-inner">
-              {student.name.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
-                <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-white truncate">{student.name}</h2>
-                <span className="px-2 py-0.5 rounded-full bg-teal-500/30 text-teal-100 text-xs border border-teal-400/30 font-medium">
-                  {studentClass?.name || student.grade}
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-100 text-[11px] font-mono">
-                  ش.د: {toPersianDigits(student.studentNumber)}
-                </span>
-              </div>
-              <p className="text-teal-100/90 text-xs sm:text-sm flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                <span>کد ملی: <strong className="font-mono text-white">{toPersianDigits(student.nationalCode)}</strong></span>
-                <span>فرزند: <strong className="text-white">{student.fatherName}</strong></span>
-                <span className="hidden xs:inline">رشته: <strong className="text-white">{student.fieldOfStudy}</strong></span>
-              </p>
-            </div>
-          </div>
-
-          {/* Navigation Tabs (scrollable on mobile) */}
-          <div className="flex items-center gap-1 mt-3 sm:mt-5 overflow-x-auto pb-1 no-scrollbar border-b border-teal-600/50">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                activeTab === 'profile'
-                  ? 'bg-white text-teal-900 shadow-sm font-bold'
-                  : 'text-teal-100 hover:bg-white/10'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              شناسنامه و اطلاعات تماس
-            </button>
-            <button
-              onClick={() => setActiveTab('reportCards')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                activeTab === 'reportCards'
-                  ? 'bg-white text-teal-900 shadow-sm font-bold'
-                  : 'text-teal-100 hover:bg-white/10'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              کارنامه‌های تحصیلی
-            </button>
-            <button
-              onClick={() => setActiveTab('attendance')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                activeTab === 'attendance'
-                  ? 'bg-white text-teal-900 shadow-sm font-bold'
-                  : 'text-teal-100 hover:bg-white/10'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5" />
-              وضعیت حضور و غیاب
-            </button>
-            <button
-              onClick={() => setActiveTab('discipline')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                activeTab === 'discipline'
-                  ? 'bg-white text-teal-900 shadow-sm font-bold'
-                  : 'text-teal-100 hover:bg-white/10'
-              }`}
-            >
-              <Award className="w-3.5 h-3.5" />
-              تشویقی و انضباط ({toPersianDigits(student.disciplinaryRecords?.length || 0)})
-            </button>
-            <button
-              onClick={() => setActiveTab('pastYears')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                activeTab === 'pastYears'
-                  ? 'bg-white text-teal-900 shadow-sm font-bold'
-                  : 'text-teal-100 hover:bg-white/10'
-              }`}
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              سوابق سال‌های گذشته
-            </button>
-            {canViewFinances && <button
-              onClick={() => setActiveTab('finances')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                activeTab === 'finances'
-                  ? 'bg-white text-teal-900 shadow-sm font-bold'
-                  : 'text-teal-100 hover:bg-white/10'
-              }`}
-            >
-              <CreditCard className="w-3.5 h-3.5" />
-              امور مالی و شهریه
-            </button>}
-          </div>
-        </div>
-
+    <motion.div id="student-dossier-overlay" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:reducedMotion?0:0.16}} className="fixed inset-0 z-[80] flex items-center justify-center bg-[#19382e]/50 sm:p-4">
+      <motion.section id="student-dossier-modal" role="dialog" aria-modal="true" aria-labelledby="student-dossier-title" aria-describedby="student-dossier-subtitle" initial={{y:reducedMotion?0:16}} animate={{y:0}} exit={{y:reducedMotion?0:16}} className="student-dossier flex min-h-0 w-full min-w-0 max-w-4xl flex-col overflow-hidden bg-white shadow-2xl sm:rounded-[28px] sm:border sm:border-[#dce5d3]">
+        <header className="shrink-0 border-b border-[#e5ebde] bg-[#f4f7ef] px-4 pt-4 pb-3 sm:px-6 sm:pt-5">
+          <div className="mb-3 flex items-center justify-between gap-3"><p className="text-[10px] font-bold tracking-wide text-[#8a9c7c]">پرونده دانش‌آموز</p><button id="student-dossier-close" ref={closeRef} onClick={onClose} aria-label="بستن پرونده" className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-[#e1e8d9] bg-white text-[#73866a] hover:bg-[#eaf0e2]"><X className="size-5" aria-hidden="true"/></button></div>
+          <div className="flex items-center gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-[#d9e5ce] bg-[#e5eddc] text-xl font-bold text-[#65834f] sm:size-14">{student.name.charAt(0)}</span><div className="min-w-0 flex-1"><h2 id="student-dossier-title" className="break-words text-lg font-bold leading-8 text-[#2e4c38] sm:text-xl">{student.name}</h2><p id="student-dossier-subtitle" className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] leading-6 text-[#8a9680]"><span>{studentClass?.name||student.grade}</span><span>·</span><span>شماره دانش‌آموزی: {toPersianDigits(student.studentNumber)}</span></p></div></div>
+        </header>
+        <nav aria-label="بخش‌های پرونده دانش‌آموز" className="grid shrink-0 grid-cols-3 gap-1.5 border-b border-[#e7ecdf] bg-white p-3 sm:grid-cols-6 sm:px-5">
+          {dossierTabs.filter(tab=>tab.id!=='finances'||canViewFinances).map(({id,label,icon:Icon})=><button id={`student-dossier-tab-${id}`} key={id} type="button" aria-pressed={activeTab===id} aria-controls="student-dossier-panel" onClick={()=>{setActiveTab(id);contentRef.current?.scrollTo(0,0);}} className={`flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border px-1 py-2 text-[10px] font-bold leading-5 transition-colors sm:min-h-16 sm:text-[11px] ${activeTab===id?'border-[#d4e1c8] bg-[#eef4e6] text-[#547541]':'border-transparent bg-[#f9faf7] text-[#8b9783] hover:bg-[#f0f4e9] hover:text-[#587544]'}`}><Icon className="size-4 shrink-0" strokeWidth={1.7} aria-hidden="true"/><span className="break-words text-center">{label}</span></button>)}
+        </nav>
         {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50">
+        <div id="student-dossier-panel" ref={contentRef} role="region" aria-label={activeTitle} className="student-dossier-content min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-[#f8faf5] p-4 sm:p-6">
           {cardEditorOpen&&<ReportCardEditor student={student} onClose={()=>setCardEditorOpen(false)}/>}
           {activeTab==='reportCards'&&currentRole==='principal'&&<button id="edit-official-report-card" className="min-h-11 mb-3 px-4 rounded-xl bg-teal-700 text-white font-bold text-sm" onClick={()=>setCardEditorOpen(true)}>ثبت یا انتشار کارنامه مدرسه</button>}
           {['reportCards','attendance'].includes(activeTab)&&(()=>{const query=activeTab==='reportCards'?gradeQuery:attendanceQuery,offset=activeTab==='reportCards'?gradeOffset:attendanceOffset,setOffset=activeTab==='reportCards'?setGradeOffset:setAttendanceOffset;return <div className="flex flex-wrap items-center gap-3 mb-4 text-xs">{query.error?<span role="alert" className="text-rose-800">{query.error.message}</span>:<span role="status">{query.isFetching?'در حال دریافت…':`${toPersianDigits(query.data?.total||0)} مورد`}</span>}<button disabled={query.isFetching||offset===0} onClick={()=>setOffset(Math.max(0,offset-25))} className="min-h-11 px-3 bg-white rounded-xl border border-slate-200">قبلی</button><button disabled={query.isFetching||offset+25>=(query.data?.total||0)} onClick={()=>setOffset(offset+25)} className="min-h-11 px-3 bg-white rounded-xl border border-slate-200">بعدی</button></div>;})()}
@@ -223,61 +141,61 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
           {activeTab === 'profile' && (
             <div className="space-y-4">
               {/* Quick Academic Summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-                  <div className="text-slate-400 text-xs mb-1">معدل کارنامه نوبت اول</div>
-                  <div className="text-xl font-black text-teal-700">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+                <div className="min-w-0 rounded-2xl border border-[#e1e8d9] bg-white p-4">
+                  <div className="mb-1 text-[11px] leading-6 text-[#91a084]">معدل کارنامه نوبت اول</div>
+                  <div className="text-xl font-bold text-[#5b7949]">
                     {formatPersianScore(activeTerm1Card?.gpa)}
                   </div>
                 </div>
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-                  <div className="text-slate-400 text-xs mb-1">رتبه در کلاس</div>
-                  <div className="text-xl font-black text-blue-700">
+                <div className="min-w-0 rounded-2xl border border-[#e1e8d9] bg-white p-4">
+                  <div className="mb-1 text-[11px] leading-6 text-[#91a084]">رتبه در کلاس</div>
+                  <div className="text-xl font-bold text-[#5b7949]">
                     {activeTerm1Card?.rankInClass ? `${toPersianDigits(activeTerm1Card.rankInClass)}` : '—'}
                   </div>
                 </div>
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-                  <div className="text-slate-400 text-xs mb-1">نمره انضباط</div>
-                  <div className="text-xl font-black text-emerald-700">
+                <div className="min-w-0 rounded-2xl border border-[#e1e8d9] bg-white p-4">
+                  <div className="mb-1 text-[11px] leading-6 text-[#91a084]">نمره انضباط</div>
+                  <div className="text-xl font-bold text-[#5b7949]">
                     {formatPersianScore(activeTerm1Card?.disciplineScore)}
                   </div>
                 </div>
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-                  <div className="text-slate-400 text-xs mb-1">تعداد غیبت مجاز</div>
-                  <div className="text-xl font-black text-amber-700">
+                <div className="min-w-0 rounded-2xl border border-[#e1e8d9] bg-white p-4">
+                  <div className="mb-1 text-[11px] leading-6 text-[#91a084]">روزهای غیبت</div>
+                  <div className="text-xl font-bold text-[#5b7949]">
                     {toPersianDigits(student.attendanceStats?.absentDays || 0)} روز ثبت‌شده
                   </div>
                 </div>
               </div>
 
               {/* Personal Details */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs">
+              <div className="rounded-2xl border border-[#e1e7d8] bg-white p-4 sm:p-5">
                 <h3 className="font-bold text-slate-800 text-sm sm:text-base mb-3 flex items-center gap-2">
                   <User className="w-4 h-4 text-teal-600" />
                   مشخصات فردی و هویتی
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
-                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[13px] sm:text-sm">
+                  <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                     <span className="text-slate-500">نام و نام خانوادگی:</span>
                     <span className="font-semibold text-slate-800">{student.name}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                     <span className="text-slate-500">کد ملی:</span>
                     <span className="font-mono font-semibold text-slate-800">{toPersianDigits(student.nationalCode)}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                     <span className="text-slate-500">تاریخ تولد:</span>
-                    <span className="font-semibold text-slate-800">{toPersianDigits(student.birthDate || '۱۳۸۹/۰۴/۱۵')}</span>
+                    <span className="font-semibold text-slate-800">{toPersianDigits(student.birthDate || '—')}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                     <span className="text-slate-500">نام پدر:</span>
                     <span className="font-semibold text-slate-800">{student.fatherName}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                     <span className="text-slate-500">پایه و رشته تحصیلی:</span>
                     <span className="font-semibold text-slate-800">{student.grade} - {student.fieldOfStudy}</span>
                   </div>
-                  <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                     <span className="text-slate-500">کلاس جاری:</span>
                     <span className="font-semibold text-slate-800">{studentClass?.name || student.grade}</span>
                   </div>
@@ -285,8 +203,8 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
               </div>
 
               {/* Contact & Address with Parent Edit Capability */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs">
-                <div className="flex items-center justify-between mb-3">
+              <div className="rounded-2xl border border-[#e1e7d8] bg-white p-4 sm:p-5">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <h3 className="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
                     <Phone className="w-4 h-4 text-teal-600" />
                     اطلاعات اولیا، تماس و سکونت
@@ -311,7 +229,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                           type="text"
                           value={editParentPhone}
                           onChange={(e) => setEditParentPhone(e.target.value)}
-                          className="w-full text-xs sm:text-sm p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          className="w-full text-[13px] sm:text-sm p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                         />
                       </div>
                       <div>
@@ -320,7 +238,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                           type="text"
                           value={editEmergencyPhone}
                           onChange={(e) => setEditEmergencyPhone(e.target.value)}
-                          className="w-full text-xs sm:text-sm p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          className="w-full text-[13px] sm:text-sm p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                         />
                       </div>
                       <div>
@@ -329,7 +247,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                           type="text"
                           value={editBale}
                           onChange={(e) => setEditBale(e.target.value)}
-                          className="w-full text-xs sm:text-sm p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-left"
+                          className="w-full text-[13px] sm:text-sm p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-left"
                           dir="ltr"
                         />
                       </div>
@@ -339,7 +257,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                           type="text"
                           value={editAddress}
                           onChange={(e) => setEditAddress(e.target.value)}
-                          className="w-full text-xs sm:text-sm p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          className="w-full text-[13px] sm:text-sm p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                         />
                       </div>
                     </div>
@@ -360,20 +278,20 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[13px] sm:text-sm">
+                    <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                       <span className="text-slate-500">نام سرپرست/ولی:</span>
                       <span className="font-semibold text-slate-800">{student.parentName}</span>
                     </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                       <span className="text-slate-500">شماره همراه ولی:</span>
                       <span className="font-mono font-semibold text-teal-800">{toPersianDigits(student.parentPhone)}</span>
                     </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                       <span className="text-slate-500">تماس اضطراری منزل:</span>
-                      <span className="font-mono text-slate-800">{toPersianDigits(student.emergencyPhone || '۰۲۱-۵۵۴۲۸۸۹')}</span>
+                      <span className="font-mono text-slate-800">{toPersianDigits(student.emergencyPhone || '—')}</span>
                     </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                    <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-start gap-3 border-b border-[#edf0e7] py-2.5 [&>span]:min-w-0 [&>span]:break-words [&>span:last-child]:text-left">
                       <span className="text-slate-500">حساب پیام‌رسان بله:</span>
                       <span className="font-mono text-cyan-700 font-semibold">{student.parentBaleAccount}</span>
                     </div>
@@ -441,7 +359,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                       <p className="text-xs text-slate-600 px-1">نمره انضباط نوبت: {formatPersianScore(rc.disciplineScore)} • معدل: {formatPersianScore(rc.gpa)}</p>
                     </div>
                     <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full text-right text-xs sm:text-sm">
+                      <table className="w-full text-right text-[13px] sm:text-sm">
                         <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 font-medium">
                           <tr>
                             <th className="p-3">ردیف</th>
@@ -527,7 +445,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200">
                 <h4 className="font-bold text-slate-800 text-sm mb-3">تاریخچه ثبت لحظه‌ای حضور و غیاب</h4>
                 <p className="text-xs text-slate-500 mb-3 leading-6">آمار بر اساس روزهای دارای جلسه ثبت‌شده است. وجود غیبت در هر زنگ، آن روز را دارای غیبت محسوب می‌کند؛ هر روز فقط یک بار شمرده می‌شود.</p>
-                <div id="student-attendance-history" className="space-y-2 text-xs sm:text-sm">
+                <div id="student-attendance-history" className="space-y-2 text-[13px] sm:text-sm">
                   {!attendanceHistory.length && <p role="status" className="p-3 text-slate-500">جلسه‌ای برای این دانش‌آموز ثبت نشده است.</p>}
                   {attendanceHistory.map(({ session, row }) => <div key={session.id} className="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-bold">{toPersianDigits(session.date)} • زنگ {toPersianDigits(session.period)}</span><span className={`font-bold ${row.status === 'absent' ? 'text-rose-700' : row.status === 'late' ? 'text-amber-800' : 'text-slate-700'}`}>{attendanceLabel(row.status)}</span></div>
@@ -570,7 +488,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                       <select
                         value={newDiscType}
                         onChange={(e) => setNewDiscType(e.target.value as typeof newDiscType)}
-                        className="w-full text-xs sm:text-sm p-2 bg-white border border-slate-300 rounded-lg"
+                        className="w-full text-[13px] sm:text-sm p-2 bg-white border border-slate-300 rounded-lg"
                       >
                         <option value="تشویقی">تشویقی و تقدیرنامه</option>
                         <option value="تذکر">تذکر شفاهی/کتبی</option>
@@ -584,7 +502,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                         placeholder="مثال: رتبه مسابقات علمی، تاخیر مکرر"
                         value={newDiscTitle}
                         onChange={(e) => setNewDiscTitle(e.target.value)}
-                        className="w-full text-xs sm:text-sm p-2 bg-white border border-slate-300 rounded-lg"
+                        className="w-full text-[13px] sm:text-sm p-2 bg-white border border-slate-300 rounded-lg"
                         required
                       />
                     </div>
@@ -595,7 +513,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                         value={newDiscNote}
                         onChange={(e) => setNewDiscNote(e.target.value)}
                         placeholder="شرح کامل رویداد و اقدامات صورت گرفته..."
-                        className="w-full text-xs sm:text-sm p-2 bg-white border border-slate-300 rounded-lg"
+                        className="w-full text-[13px] sm:text-sm p-2 bg-white border border-slate-300 rounded-lg"
                       />
                     </div>
                   </div>
@@ -697,27 +615,27 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3.5 sm:p-4 bg-white border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
-          <div className="text-xs text-slate-500 hidden sm:block">
+        <div className="student-sheet-footer shrink-0 border-t border-[#e5ebdd] bg-white px-4 pt-3 pb-4 sm:flex sm:items-center sm:justify-between sm:gap-3 sm:px-6">
+          <div className="hidden text-[11px] text-[#98a38e] sm:block">
             سامانه هوشمند مدارس شهرستان • پرونده الکترونیک دانش‌آموز
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
             <button
               onClick={() => window.print()}
-              className="px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-100 rounded-xl flex items-center gap-1.5 border border-slate-200 font-medium"
+              className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe6d7] px-4 text-xs font-bold text-[#708363] hover:bg-[#f4f7ef]"
             >
               <Printer className="w-3.5 h-3.5 text-slate-500" />
-              چاپ صفحه از مرورگر
+              چاپ این بخش
             </button>
             <button
               onClick={onClose}
-              className="px-5 py-2 text-xs bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold shadow-xs transition-colors"
+              className="min-h-11 rounded-xl bg-[#245442] px-5 text-xs font-bold text-white transition-colors hover:bg-[#193e31]"
             >
               بستن
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 };

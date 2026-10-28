@@ -1,281 +1,41 @@
-import React, { useState } from 'react';
-import {
-  X,
-  User,
-  Phone,
-  Smartphone,
-  Building2,
-  GraduationCap,
-  BookOpen,
-  Shield,
-  Save,
-  Check,
-  Calendar,
-  IdCard,
-  MapPin,
-  ExternalLink
-} from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { toPersianDigits } from '../utils/persianUtils';
+import React, {useEffect, useRef, useState} from 'react';
+import {motion,useReducedMotion} from 'motion/react';
+import {BookOpen, Check, GraduationCap, LockKeyhole, Phone, Save, Settings2, ShieldCheck, X} from 'lucide-react';
+import {useApp} from '../context/AppContext';
+import {useAuth} from '../auth/AuthContext';
+import type {UserRole} from '../types';
+import {toPersianDigits} from '../utils/persianUtils';
 import {SecuritySettings} from './SecuritySettings';
 
-interface UserProfileModalProps {
-  onClose: () => void;
-}
+interface Props {onClose:()=>void}
+const titles:Record<UserRole,string>={platform_admin:'مدیر پلتفرم',principal:'مدیر مدرسه',vice_principal:'معاون مدرسه',teacher:'دبیر',student:'دانش‌آموز',parent:'ولی دانش‌آموز'};
+function Detail({label,children}:{label:string;children:React.ReactNode}){return <div className="min-w-0 rounded-xl border border-[#e7ecdf] bg-white p-3"><dt className="mb-2 text-[10px] leading-5 text-[#95a587]">{label}</dt><dd className="break-words text-xs font-bold leading-7 text-[#607b4b]">{children||'—'}</dd></div>;}
 
-export const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose }) => {
-  const [securityOpen,setSecurityOpen]=useState(false);
-  const {
-    currentUser,
-    currentRole,
-    currentSchool,
-    currentStudent: child,
-    updateParentContact,
-    sendNotification
-  } = useApp();
-
-  // If user is a parent or student, get the corresponding student record
-
-  // Parent contact states
-  const [parentBale, setParentBale] = useState(child?.parentBaleAccount || '');
-  const [parentPhone, setParentPhone] = useState(child?.parentPhone || '');
-  const [emergencyPhone, setEmergencyPhone] = useState(child?.emergencyPhone || '');
-  const [savedSuccess, setSavedSuccess] = useState(false);
-
-  const handleSaveParentContact = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!child) return;
-    const saved0 = await updateParentContact(child.id, {
-      parentBaleAccount: parentBale.trim(),
-      parentPhone: parentPhone.trim(),
-      emergencyPhone: emergencyPhone.trim()
-    }); if (!saved0.ok) return;
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3500);
-  };
-
-  const getRoleTitle = () => {
-    switch (currentRole) {
-      case 'platform_admin':
-        return 'مدیر کل پلتفرم شهرستان';
-      case 'principal':
-        return 'مدیر واحد آموزشی';
-      case 'vice_principal':
-        return 'معاون مدرسه';
-      case 'teacher':
-        return 'دبیر تخصصی';
-      case 'student':
-        return 'دانش‌آموز';
-      case 'parent':
-        return 'ولی دانش‌آموز';
-      default:
-        return 'کاربر سامانه';
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto w-full max-w-full">
-      <div
-        className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200 m-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {securityOpen&&<SecuritySettings onClose={()=>setSecurityOpen(false)}/>}
-        <button id="open-security-settings" onClick={()=>setSecurityOpen(true)} className="min-h-11 px-4 text-sm font-bold text-teal-800">امنیت حساب و تغییر رمز</button>
-        {/* Header with avatar banner */}
-        <div className="bg-linear-to-r from-teal-800 to-slate-900 text-white p-5 relative">
-          <button
-            onClick={onClose}
-            className="absolute top-4 left-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          <div className="flex items-center gap-3.5">
-            <div
-              className={`w-14 h-14 rounded-2xl ${currentUser.avatarBg} text-white flex items-center justify-center font-bold text-xl shadow-md border-2 border-white/20 shrink-0`}
-            >
-              {currentUser.name.charAt(0)}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-lg">{currentUser.name}</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-200 border border-teal-400/30">
-                  {getRoleTitle()}
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5">
-                {currentSchool?.name || 'مرکز پایش مدارس'}
-              </p>
-            </div>
-          </div>
+export const UserProfileModal:React.FC<Props>=({onClose})=>{
+  const auth=useAuth(),reducedMotion=useReducedMotion();
+  const {currentUser,currentRole,currentSchool,currentStudent:child,updateParentContact,activeAcademicYear,classes,canManageSchool}=useApp();
+  const [securityOpen,setSecurityOpen]=useState(false),[parentBale,setParentBale]=useState(child?.parentBaleAccount||''),[parentPhone,setParentPhone]=useState(child?.parentPhone||''),[emergencyPhone,setEmergencyPhone]=useState(child?.emergencyPhone||'');
+  const [busy,setBusy]=useState(false),[saved,setSaved]=useState(false),[error,setError]=useState('');
+  const closeRef=useRef<HTMLButtonElement>(null);
+  useEffect(()=>{const previous=document.activeElement;document.body.classList.add('dana-profile-open');closeRef.current?.focus();return()=>{document.body.classList.remove('dana-profile-open');if(previous instanceof HTMLElement&&previous.isConnected)previous.focus();};},[]);
+  useEffect(()=>{if(!saved)return;const timer=setTimeout(()=>setSaved(false),3500);return()=>clearTimeout(timer);},[saved]);
+  const saveContact=async(event:React.FormEvent)=>{event.preventDefault();if(!child||busy)return;setBusy(true);setError('');setSaved(false);try{const result=await updateParentContact(child.id,{parentBaleAccount:parentBale.trim(),parentPhone:parentPhone.trim(),emergencyPhone:emergencyPhone.trim()});if(result.ok)setSaved(true);else setError(result.error);}catch(reason){setError(reason instanceof Error?reason.message:'ثبت اطلاعات ممکن نشد.');}finally{setBusy(false);}};
+  return <>
+    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:reducedMotion?0:0.15}} className="fixed inset-0 z-[90] flex items-center justify-center bg-[#19382e]/50 p-3 sm:p-4">
+      <motion.section id="user-profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-title" initial={{y:reducedMotion?0:12}} animate={{y:0}} className="dana-dialog dana-profile-sheet flex min-h-0 w-full max-w-xl flex-col overflow-hidden rounded-[28px] border border-[#dce6d1] bg-white shadow-2xl">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[#e3ead9] bg-[#f4f8ed] p-5"><div className="flex min-w-0 items-center gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#e2ecd5] text-lg font-bold text-[#72945a]">{currentUser.name.charAt(0)}</span><div className="min-w-0"><p className="mb-1 text-[10px] text-[#91a17f]">حساب کاربری من</p><h2 id="profile-title" className="break-words text-base font-bold leading-7 text-[#48643c]">{currentUser.name}</h2><p className="mt-1 text-[11px] text-[#849875]">{titles[currentRole]}</p></div></div><button ref={closeRef} type="button" onClick={onClose} aria-label="بستن حساب کاربری" className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-[#e0e8d6] bg-white text-[#8c9e7b]"><X className="size-5" aria-hidden="true"/></button></header>
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain bg-[#fbfcf8] p-4 sm:p-5">
+          <dl className="grid grid-cols-2 gap-2.5"><Detail label="شناسه کاربری"><span dir="ltr" className="break-all">{toPersianDigits(auth.user.username)}</span></Detail><Detail label="همراه حساب (بازیابی)">{toPersianDigits(auth.user.phone)}</Detail><Detail label="آموزشگاه فعال">{currentSchool?.name||'مدیریت منطقه'}</Detail><Detail label="سال تحصیلی">{activeAcademicYear?toPersianDigits(activeAcademicYear.title):'تعریف نشده'}</Detail>{currentSchool?.code&&<Detail label="کد آموزشگاه">{toPersianDigits(currentSchool.code)}</Detail>}</dl>
+          <button id="open-security-settings" type="button" onClick={()=>setSecurityOpen(true)} className="flex min-h-16 w-full items-center gap-3 rounded-2xl border border-[#dce7cd] bg-[#f0f6e7] p-4 text-right"><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#86a269]"><LockKeyhole className="size-4" aria-hidden="true"/></span><span><span className="block text-xs font-bold text-[#69854e]">امنیت حساب</span><span className="mt-1 block text-[10px] leading-6 text-[#94a581]">تغییر رمز و شماره همراه بازیابی</span></span><Settings2 className="ms-auto size-4 shrink-0 text-[#91a577]" aria-hidden="true"/></button>
+          {(currentRole==='parent'||currentRole==='student')&&!child&&<p role="status" className="rounded-xl border border-dashed border-[#dce6d0] p-4 text-xs leading-7 text-[#8c9d7c]">پرونده‌ای به این حساب در مدرسه انتخاب‌شده متصل نیست.</p>}
+          {currentRole==='parent'&&child&&<section className="rounded-2xl border border-[#e0e9d5] bg-white p-4"><h3 className="flex items-center gap-2 text-xs font-bold text-[#698454]"><Phone className="size-4" aria-hidden="true"/>اطلاعات تماس پرونده فرزند</h3><p className="mt-2 text-[11px] leading-7 text-[#99a58d]">{child.name} · این اطلاعات با شماره بازیابی حساب مستقل است.</p><form onSubmit={saveContact} className="mt-4 space-y-3">{[{id:'bale',label:'شناسه پیام‌رسان بله',value:parentBale,set:setParentBale,required:false,type:'text'},{id:'phone',label:'همراه ولی',value:parentPhone,set:setParentPhone,required:true,type:'tel'},{id:'emergency',label:'تلفن اضطراری',value:emergencyPhone,set:setEmergencyPhone,required:false,type:'tel'}].map(field=><label key={field.id} className="block text-[11px] font-bold text-[#7e946a]">{field.label}<input id={`profile-parent-${field.id}`} type={field.type} dir="ltr" required={field.required} value={field.value} onChange={event=>field.set(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-[#dfe8d3] bg-[#fcfdf9] px-3 text-xs font-normal text-slate-600"/></label>)}<p className="text-[10px] leading-7 text-slate-400">ارسال بیرونی پیام‌ها به تنظیم سرویس پیامک یا بله وابسته است.</p>{error&&<p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs leading-7 text-rose-700">{error}</p>}{saved&&<p role="status" className="flex items-center gap-2 rounded-xl bg-[#edf5e2] p-3 text-xs text-[#7a995d]"><Check className="size-4" aria-hidden="true"/>اطلاعات تماس ذخیره شد.</p>}<button disabled={busy} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#355e3c] px-3 text-xs font-bold text-white disabled:opacity-50"><Save className="size-4" aria-hidden="true"/>{busy?'در حال ذخیره…':'ذخیره اطلاعات تماس'}</button></form></section>}
+          {currentRole==='student'&&child&&<section className="space-y-3 rounded-2xl border border-[#e1e9d7] bg-white p-4"><h3 className="flex items-center gap-2 text-xs font-bold text-[#6d8a54]"><GraduationCap className="size-4" aria-hidden="true"/>مشخصات دانش‌آموزی</h3><dl className="grid grid-cols-2 gap-2.5"><Detail label="کد ملی">{toPersianDigits(child.nationalCode)}</Detail><Detail label="شماره دانش‌آموزی">{toPersianDigits(child.studentNumber)}</Detail><Detail label="پایه و رشته">{child.grade} {child.fieldOfStudy}</Detail><Detail label="نام پدر">{child.fatherName}</Detail></dl></section>}
+          {currentRole==='teacher'&&<section className="rounded-2xl border border-[#e1e9d7] bg-white p-4"><h3 className="mb-3 flex items-center gap-2 text-xs font-bold text-[#6d8a54]"><BookOpen className="size-4" aria-hidden="true"/>دروس و کلاس‌های شما</h3><div className="flex flex-wrap gap-2">{currentUser.teachingSubjects?.map(subject=><span key={subject} className="rounded-lg bg-[#f1f6e8] px-3 py-2 text-[11px] text-[#849d6a]">{subject}</span>)}</div><p className="mt-3 text-xs leading-8 text-slate-500">{classes.length?classes.map(item=>item.name).join(' · '):'کلاسی در فهرست فعلی ثبت نشده است.'}</p></section>}
+          {['principal','vice_principal','platform_admin'].includes(currentRole)&&<section className="rounded-2xl border border-[#e1e9d7] bg-white p-4"><h3 className="flex items-center gap-2 text-xs font-bold text-[#6d8a54]"><ShieldCheck className="size-4" aria-hidden="true"/>دسترسی‌های حساب</h3><p className="mt-3 text-xs leading-8 text-slate-500">دسترسی‌ها بر اساس نقش و عضویت مجاز شما در سامانه بررسی می‌شوند.{currentRole==='vice_principal'&&<> اختیارات معاون را مدیر مدرسه تعیین می‌کند.</>}</p>{currentRole!=='platform_admin'&&<div className="mt-3 flex flex-wrap gap-2">{([{key:'canManageStudentsAndClasses',label:'دانش‌آموز و کلاس'},{key:'canManageSchedule',label:'برنامه هفتگی'},{key:'canViewFullDossier',label:'پرونده کامل'},{key:'canLogDisciplinary',label:'سوابق رفتاری'},{key:'canManageAnnouncements',label:'اطلاعیه‌ها'},{key:'canManageFinances',label:'امور مالی'}] as const).filter(item=>canManageSchool(item.key)).map(item=><span key={item.key} className="rounded-lg bg-[#f2f7e9] px-3 py-2 text-[10px] text-[#8aa373]">{item.label}</span>)}</div>}</section>}
         </div>
-
-        {/* Modal Body */}
-        <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
-          {/* General User Identity Info */}
-          <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
-            <div>
-              <span className="text-slate-400 block text-[11px]">شماره تماس ثبت‌شده:</span>
-              <span className="font-mono font-bold text-slate-800 text-sm">
-                {toPersianDigits(currentUser.phone)}
-              </span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">آموزشگاه فعال:</span>
-              <span className="font-bold text-slate-800 truncate block">
-                {currentSchool?.name}
-              </span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">کد سازمانی آموزشگاه:</span>
-              <span className="font-mono text-slate-700">
-                {toPersianDigits(currentSchool?.code || '')}
-              </span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">سال تحصیلی:</span>
-              <span className="font-mono text-teal-800 font-bold">
-                {toPersianDigits('۱۴۰۵-۱۴۰۴')}
-              </span>
-            </div>
-          </div>
-
-          {/* PARENT SPECIFIC: Bale Messenger & Contact Settings */}
-          {(currentRole === 'parent' || currentRole === 'student') && !child && <p role="status" className="p-4 text-sm">پرونده‌ای به این حساب در مدرسه انتخاب‌شده متصل نیست.</p>}
-          {currentRole === 'parent' && child && (
-            <div className="space-y-3 bg-teal-50/50 p-4 rounded-2xl border border-teal-200">
-              <div className="flex items-center justify-between border-b border-teal-100 pb-2">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 text-teal-700" />
-                  <h4 className="font-bold text-xs text-teal-950">
-                    تنظیمات شناسه پیام‌رسان بله و تماس اولیا
-                  </h4>
-                </div>
-                <span className="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-md font-bold">
-                  فرزند: {child.name}
-                </span>
-              </div>
-
-              <form onSubmit={handleSaveParentContact} className="space-y-3 pt-1">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    شناسه در پیام‌رسان بله (Bale ID):
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      required
-                      value={parentBale}
-                      onChange={(e) => setParentBale(e.target.value)}
-                      placeholder="@username یا شماره بله"
-                      className="w-full text-xs p-2.5 pe-8 bg-white border border-slate-300 rounded-xl font-mono text-left outline-none focus:ring-2 focus:ring-teal-500"
-                    />
-                    <Smartphone className="w-4 h-4 text-slate-400 absolute left-2.5 top-3" />
-                  </div>
-                  <span className="text-[10px] text-slate-500 mt-1 block">
-                    در این نسخه فقط سابقه اعلان آزمایشی ثبت می‌شود؛ ارسال واقعی به بله یا پیامک فعال نیست.
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    شماره تلفن همراه اولیا (پیامک اضطراری):
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      required
-                      value={parentPhone}
-                      onChange={(e) => setParentPhone(e.target.value)}
-                      className="w-full text-xs p-2.5 pe-8 bg-white border border-slate-300 rounded-xl font-mono text-left outline-none focus:ring-2 focus:ring-teal-500"
-                    />
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-2.5 top-3" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    تلفن ثابت یا شماره تماس اضطراری دوم:
-                  </label>
-                  <input
-                    type="tel"
-                    value={emergencyPhone}
-                    onChange={(e) => setEmergencyPhone(e.target.value)}
-                    className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-xl font-mono text-left outline-none"
-                  />
-                </div>
-
-                {savedSuccess && (
-                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-900 text-xs flex items-center gap-1.5 font-medium border border-emerald-300">
-                    <Check className="w-4 h-4 text-emerald-700" />
-                    <span>مشخصات ارتباطی با موفقیت در سامانه ذخیره شد.</span>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>ذخیره تغییرات تماس</span>
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* STUDENT SPECIFIC: Details */}
-          {currentRole === 'student' && child && (
-            <div className="bg-cyan-50/60 p-4 rounded-2xl border border-cyan-200 space-y-2 text-xs">
-              <div className="font-bold text-cyan-950 flex items-center gap-1.5 border-b border-cyan-200 pb-2">
-                <GraduationCap className="w-4 h-4 text-cyan-700" />
-                <span>مشخصات پرونده تحصیلی دانش‌آموز</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <div>کد ملی: <span className="font-mono font-bold">{toPersianDigits(child.nationalCode)}</span></div>
-                <div>شماره دانش‌آموزی: <span className="font-mono font-bold">{toPersianDigits(child.studentNumber)}</span></div>
-                <div>پایه و رشته: <span className="font-bold">{child.grade} {child.fieldOfStudy}</span></div>
-                <div>نام پدر: <span className="font-bold">{child.fatherName}</span></div>
-              </div>
-            </div>
-          )}
-
-          {/* TEACHER SPECIFIC: Subjects */}
-          {currentRole === 'teacher' && (
-            <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-200 space-y-2 text-xs">
-              <div className="font-bold text-blue-950 flex items-center gap-1.5 border-b border-blue-200 pb-2">
-                <BookOpen className="w-4 h-4 text-blue-700" />
-                <span>دروس و کلاس‌های تحت تدریس</span>
-              </div>
-              <p className="text-slate-600 text-xs">
-                دبیر رسمی دروس ریاضی، حسابان و هندسه در پایه‌های دهم و یازدهم دبیرستان.
-              </p>
-            </div>
-          )}
-
-          {/* PRINCIPAL & VP SPECIFIC */}
-          {(currentRole === 'principal' || currentRole === 'vice_principal') && (
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
-              <div className="font-bold text-slate-900 flex items-center gap-1.5 border-b border-slate-200 pb-2">
-                <Shield className="w-4 h-4 text-teal-700" />
-                <span>سطح دسترسی سازمانی</span>
-              </div>
-              <p className="text-slate-600 leading-relaxed text-xs">
-                دارای دسترسی مدیریتی جهت تنظیم کلاس‌ها، نظارت بر دبیران، حضور و غیاب، صدور کارنامه‌ها و تفویض اختیارات.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
-          >
-            بستن پنجره
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+        <footer className="student-sheet-footer shrink-0 border-t border-[#e6ecde] bg-white px-4 pt-3 pb-4"><button type="button" onClick={onClose} className="min-h-12 w-full rounded-xl bg-[#355e3c] text-xs font-bold text-white hover:bg-[#274b30]">بستن حساب کاربری</button></footer>
+      </motion.section>
+    </motion.div>
+    {securityOpen&&<SecuritySettings onClose={()=>setSecurityOpen(false)}/>}
+  </>;
 };

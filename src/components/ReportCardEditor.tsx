@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {useQueryClient} from '@tanstack/react-query';
 import {Plus,Save,X} from 'lucide-react';
 import type {Student,ReportCard,AcademicSubjectScore} from '../types';
-import {useAuth} from '../auth/AuthProvider';
+import {useAuth} from '../auth/AuthContext';
 import {useApp} from '../context/AppContext';
 import {request} from '../api/client';
 import {toEnglishDigits,toPersianDigits} from '../utils/persianUtils';

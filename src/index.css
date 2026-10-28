@@ -70,3 +70,42 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Student workspace and shared dossier; other dashboards keep their own styles. */
+body.student-dossier-open, body.student-submit-open { overflow: hidden; }
+.student-dossier { height: 100vh; height: 100dvh; }
+.student-homework-sheet { max-height: 94vh; max-height: 94dvh; }
+@media (min-width: 640px) {
+  .student-dossier { height: 92vh; height: 92dvh; }
+}
+.student-dashboard :where(button, a, select, textarea):focus-visible,
+.student-dossier :where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #779b62;
+  outline-offset: 3px;
+}
+.student-dossier :where(button, input, select) { min-height: 44px; }
+.student-dossier :where(input, select, textarea) { min-width: 0; max-width: 100%; }
+.student-dossier-content :where(p, h3, h4) { overflow-wrap: anywhere; }
+.student-dossier #student-financial-tab > .grid > div { min-width: 0; }
+.student-dossier #student-financial-tab > .grid > div > div:last-child { overflow-wrap: anywhere; line-height: 1.8; }
+.student-sheet-footer { padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); }
+.student-bottom-nav { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); }
+
+/* Shared header tools and the question bank follow the same quiet sage palette. */
+body.question-bank-open, body.dana-profile-open { overflow: hidden; }
+.dana-header :where(button, a, select):focus-visible,
+.dana-dialog :where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid #819e68;
+  outline-offset: 3px;
+}
+.dana-dialog :where(button, input, select) { min-height: 44px; }
+.dana-dialog :where(input, select, textarea) { min-width: 0; max-width: 100%; }
+.dana-dialog :where(p, h3, dd) { overflow-wrap: anywhere; }
+.dana-dialog summary::-webkit-details-marker,
+#student-dana-plus summary::-webkit-details-marker { display: none; }
+.question-bank-sheet { height: 100vh; height: 100dvh; }
+.dana-profile-sheet { max-height: 92vh; max-height: 92dvh; }
+.clipboard-fallback { position: fixed; top: 0; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+@media (min-width: 640px) {
+  .question-bank-sheet { height: 92vh; height: 92dvh; }
+}
+

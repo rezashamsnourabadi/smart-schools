@@ -1,562 +1,152 @@
-import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import React, {useEffect, useRef, useState} from 'react';
+import {AnimatePresence, motion, useReducedMotion} from 'motion/react';
 import {
-  GraduationCap,
-  Calendar,
-  Clock,
-  CheckCircle2,
-  Award,
-  BookOpen,
-  Sparkles,
-  HelpCircle,
-  FileText,
-  ChevronLeft,
-  FileQuestion,
-  Eye,
-  Send,
-  Upload,
-  Paperclip,
-  Megaphone,
-  AlertCircle,
-  X,
-  MessageSquare,
-  UploadCloud,
-  Trash2,
-  Pin
+  ArrowUpLeft, Award, BookOpen, CalendarDays, Check, CheckCircle2,
+  ChevronLeft, ClipboardList, Clock3, FileText, GraduationCap, LayoutDashboard,
+  Megaphone, MessageSquare, Paperclip, Pin, Send, Sparkles, Trash2, UploadCloud,
+  Wallet, X, type LucideIcon,
 } from 'lucide-react';
-import { SponsorBannerCard } from './SponsorBannerCard';
-import { toPersianDigits } from '../utils/persianUtils';
-import { Student, HomeworkItem } from '../types';
-import { attendanceLabel } from '../utils/attendance';
-import { MAX_LOCAL_ATTACHMENT_BYTES, MAX_LOCAL_ATTACHMENT_LABEL } from '../utils/localAttachments';
+import {useApp} from '../context/AppContext';
+import type {HomeworkItem, HomeworkSubmission, ScheduleSlot, Student} from '../types';
+import {attendanceLabel, isSlotLive} from '../utils/attendance';
+import {formatPersianScore, toPersianDigits} from '../utils/persianUtils';
+import {MAX_LOCAL_ATTACHMENT_BYTES, MAX_LOCAL_ATTACHMENT_LABEL} from '../utils/localAttachments';
+import {SponsorBannerCard} from './SponsorBannerCard';
+import {ResourcePager} from './ResourcePager';
+import {DanaPlusSection} from './DanaPlusSection';
 
-interface Props {
-  onOpenQuestionBank: () => void;
-  onOpenStudentDossier?: (student: Student) => void;
+type View = 'overview' | 'homework' | 'schedule' | 'announcements';
+type DossierTab = 'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances';
+interface Attachment {name: string; size: string; url: string; type: 'image' | 'pdf'}
+interface Draft {text: string; attachment?: Attachment; error?: string}
+interface Props {onOpenQuestionBank: () => void; onOpenStudentDossier?: (student: Student, tab?: DossierTab) => void}
+
+function SectionHeading({icon: Icon, title, subtitle, action}: {icon: LucideIcon; title: string; subtitle?: string; action?: React.ReactNode}) {
+  return <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#eef3e9] text-[#64825d]"><Icon className="size-5" strokeWidth={1.6} aria-hidden="true"/></span><div className="min-w-0"><h2 className="text-sm font-bold text-[#24463c] sm:text-base">{title}</h2>{subtitle&&<p className="mt-1 text-[11px] leading-5 text-slate-500">{subtitle}</p>}</div></div>{action}</div>;
+}
+function EmptyState({children, icon: Icon = BookOpen}: {children: React.ReactNode; icon?: LucideIcon}) {
+  return <div role="status" className="rounded-2xl border border-dashed border-[#dce5d7] bg-[#fafbf8] px-4 py-7 text-center"><Icon className="mx-auto mb-3 size-6 text-[#9bab8e]" strokeWidth={1.5} aria-hidden="true"/><p className="text-xs leading-7 text-slate-500">{children}</p></div>;
+}
+function FileLinks({files}: {files?: {name: string; url?: string}[]}) {
+  return files?.some(file=>file.url)?<div className="flex flex-wrap gap-2">{files.map((file,index)=>file.url&&<a key={`${file.name}-${index}`} href={file.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs text-teal-800"><Paperclip className="size-3.5 shrink-0" aria-hidden="true"/><span className="min-w-0 break-all">{file.name}</span><ArrowUpLeft className="size-3 shrink-0" aria-hidden="true"/></a>)}</div>:null;
+}
+function Lesson({slot, live = false}: {slot: ScheduleSlot; live?: boolean}) {
+  return <div className={`flex items-start gap-3 rounded-2xl border p-3.5 ${live?'border-[#aac8ad] bg-[#f0f6ec]':'border-[#e5eae0] bg-white'}`}>
+    <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${live?'bg-[#1e5041] text-white':'bg-[#f1f4ed] text-[#7b8c70]'}`}>{toPersianDigits(slot.period)}</span>
+    <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="break-words text-sm font-bold text-slate-800">{slot.subject}</h3>{live&&<span className="rounded-full bg-[#dcebd5] px-2 py-0.5 text-[10px] text-[#426b3e]">اکنون</span>}</div><p className="mt-1.5 break-words text-[11px] text-slate-500">{slot.teacherName}</p><p className="mt-2 inline-flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500"><Clock3 className="size-3" aria-hidden="true"/><span dir="ltr">{toPersianDigits(slot.startTime)} – {toPersianDigits(slot.endTime)}</span></p></div>
+  </div>;
+}
+function HomeworkCard({item, submission, responsesComplete, responsesLoading, onSubmit}: {item: HomeworkItem; submission?: HomeworkSubmission; responsesComplete: boolean; responsesLoading: boolean; onSubmit: (item: HomeworkItem) => void}) {
+  return <article id={`student-homework-${item.id}`} className="min-w-0 overflow-hidden rounded-2xl border border-[#e1e7dc] bg-white p-4 sm:p-5">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="rounded-lg bg-[#edf3e7] px-2.5 py-1 text-[10px] font-bold text-[#617c51]">{item.subject}</span><span className="inline-flex items-center gap-1 text-[10px] text-slate-500"><Clock3 className="size-3" aria-hidden="true"/>تا {toPersianDigits(item.dueDate)}</span></div>
+    <h3 className="break-words text-sm font-bold leading-7 text-[#29463b]">{item.title}</h3><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-7 text-slate-500">{item.description}</p>
+    {!!item.attachments?.length&&<div className="mt-3"><FileLinks files={item.attachments}/></div>}
+    <div className="mt-4 border-t border-[#edf0e8] pt-3">
+      {submission?<div className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4f7d52]"><CheckCircle2 className="size-4 shrink-0" aria-hidden="true"/>پاسخ ارسال شده</span><span className="rounded-lg bg-[#f2f5ed] px-2 py-1 text-[10px] text-slate-500">{submission.status==='graded'?`نمره: ${formatPersianScore(submission.teacherScore)} از ${toPersianDigits(20)}`:'در انتظار بررسی دبیر'}</span></div>
+        <p className="text-[10px] text-slate-400">تاریخ ارسال: {toPersianDigits(submission.submissionDate)}</p>
+        {submission.teacherFeedback&&<p className="flex items-start gap-2 rounded-xl bg-[#f6f8f2] p-3 text-xs leading-7 text-[#51634c]"><MessageSquare className="mt-1 size-4 shrink-0" aria-hidden="true"/><span><strong>بازخورد دبیر: </strong>{submission.teacherFeedback}</span></p>}
+        <details className="rounded-xl border border-slate-100 px-3"><summary className="flex min-h-11 cursor-pointer items-center gap-2 text-[11px] text-slate-500"><FileText className="size-3.5" aria-hidden="true"/>مشاهده پاسخ ارسالی من</summary><div className="space-y-3 pb-3"><p className="whitespace-pre-wrap break-words text-xs leading-7 text-slate-600">{submission.textContent}</p><FileLinks files={submission.attachments}/></div></details>
+      </div>:<div className="flex flex-wrap items-center justify-between gap-2"><span className="text-[11px] text-[#9a825a]">{responsesLoading?'در حال دریافت وضعیت پاسخ…':responsesComplete?'هنوز پاسخی نفرستاده‌ای':'پاسخ این تکلیف در صفحه فعلی پاسخ‌ها نیست'}</span><button id={`submit-homework-${item.id}`} type="button" disabled={responsesLoading} onClick={()=>onSubmit(item)} className="disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#205343] px-4 text-xs font-bold text-white transition-colors hover:bg-[#173f34]"><Send className="size-3.5" aria-hidden="true"/>ارسال پاسخ</button></div>}
+    </div>
+  </article>;
 }
 
-export const StudentDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenStudentDossier }) => {
-  const {
-    currentSchool,
-    currentUser,
-    schedule,
-    questionBank,
-    homework,
-    homeworkSubmissions,
-    submitHomework,
-    exams,
-    currentStudent,
-    announcements,
-    setSelectedStudentForDossier
-  } = useApp();
+export const StudentDashboard: React.FC<Props> = ({onOpenQuestionBank, onOpenStudentDossier}) => {
+  const {currentSchool, currentUser, schedule, questionBank, homework, homeworkSubmissions, submitHomework, exams, currentStudent, announcements, openStudentDossier, schoolClock, activeAcademicYear, classes, page, activeMobileTab, setActiveMobileTab} = useApp();
+  const reducedMotion=useReducedMotion();
+  const [scheduleDay,setScheduleDay]=useState(schoolClock.dayOfWeek);
+  const view:View=activeMobileTab==='homework'||activeMobileTab==='schedule'||activeMobileTab==='announcements'?activeMobileTab:'overview';
+  const setView=(next:View)=>setActiveMobileTab(next==='overview'?'dashboard':next);
+  const sampleQuestion=questionBank[0];
+  const [selectedOption,setSelectedOption]=useState<string|null>(null),[answerShown,setAnswerShown]=useState(false);
+  const [activeHomework,setActiveHomework]=useState<HomeworkItem|null>(null),[drafts,setDrafts]=useState<Record<string,Draft>>({});
+  const [sending,setSending]=useState(false),[sendError,setSendError]=useState('');
+  const closeHomeworkRef=useRef<HTMLButtonElement>(null);
+  useEffect(()=>{setSelectedOption(null);setAnswerShown(false);},[sampleQuestion?.id]);
+  useEffect(()=>{
+    if(!activeHomework)return;
+    const previousFocus=document.activeElement;
+    document.body.classList.add('student-submit-open');closeHomeworkRef.current?.focus();
+    return()=>{document.body.classList.remove('student-submit-open');if(previousFocus instanceof HTMLElement&&previousFocus.isConnected)previousFocus.focus();};
+  },[activeHomework?.id]);
+  if(!currentStudent)return <div id="student-no-linked-record"><EmptyState icon={GraduationCap}>پرونده‌ای برای این حساب در مدرسه انتخاب‌شده یافت نشد.</EmptyState></div>;
 
-  // Pick a sample practice question for the student
-  const sampleQuestion = questionBank[0];
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [isAnswerSubmitted, setIsAnswerSubmitted] = useState<boolean>(false);
-
-  // Homework submission modal state
-  const [activeHwForSubmit, setActiveHwForSubmit] = useState<HomeworkItem | null>(null);
-  const [submissionText, setSubmissionText] = useState('');
-  const [studentUploadedFile, setStudentUploadedFile] = useState<{
-    name: string;
-    size: string;
-    url: string;
-    type: string;
-  } | null>(null);
-  const [studentAttachmentError, setStudentAttachmentError] = useState('');
-
-  if (!currentStudent) return <p id="student-no-linked-record" role="status" className="p-6 bg-white rounded-2xl">پرونده‌ای برای این حساب در مدرسه انتخاب‌شده یافت نشد.</p>;
-
-  const handleStudentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > MAX_LOCAL_ATTACHMENT_BYTES) {
-      setStudentAttachmentError(`اندازه فایل باید حداکثر ${MAX_LOCAL_ATTACHMENT_LABEL} باشد.`);
-      e.currentTarget.value = '';
-      return;
-    }
-
-    const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        setStudentAttachmentError('خواندن فایل ممکن نشد. دوباره تلاش کنید.');
-        return;
-      }
-      setStudentAttachmentError('');
-      setStudentUploadedFile({
-        name: file.name,
-        size: `${toPersianDigits(sizeInMb)} مگابایت`,
-        url: reader.result as string,
-        type: file.type.startsWith('image/') ? 'image' : 'pdf'
-      });
-    };
-    reader.onerror = () => setStudentAttachmentError('خواندن فایل ممکن نشد. دوباره تلاش کنید.');
-    reader.readAsDataURL(file);
+  const openDossier=(tab:DossierTab='profile')=>{
+    if(onOpenStudentDossier)onOpenStudentDossier(currentStudent,tab);else openStudentDossier(currentStudent,tab);
   };
-
-  const handleTestAnswer = (opt: string) => {
-    setSelectedOption(opt);
-    setIsAnswerSubmitted(true);
+  const openHomework=(item:HomeworkItem)=>{setSendError('');setActiveHomework(item);};
+  const draft:Draft=activeHomework?drafts[activeHomework.id]||{text:''}:{text:''};
+  const updateDraft=(change:Partial<Draft>)=>{if(activeHomework)setDrafts(previous=>({...previous,[activeHomework.id]:{...previous[activeHomework.id]||{text:''},...change}}));};
+  const readFile=(event:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=event.target.files?.[0],homeworkId=activeHomework?.id;if(!file||!homeworkId)return;
+    const setFileError=(error:string)=>setDrafts(previous=>({...previous,[homeworkId]:{...previous[homeworkId]||{text:''},error}}));
+    if(file.size>MAX_LOCAL_ATTACHMENT_BYTES){setFileError(`حداکثر اندازه پیوست ${MAX_LOCAL_ATTACHMENT_LABEL} است.`);event.target.value='';return;}
+    if(!file.type.startsWith('image/')&&file.type!=='application/pdf'){setFileError('یک تصویر یا فایل PDF انتخاب کنید.');event.target.value='';return;}
+    const reader=new FileReader();reader.onerror=()=>setFileError('خواندن فایل ممکن نشد؛ دوباره انتخاب کنید.');
+    reader.onload=()=>{
+      if(typeof reader.result!=='string'){setFileError('خواندن فایل ممکن نشد؛ دوباره انتخاب کنید.');return;}
+      const attachment:Attachment={name:file.name,size:`${toPersianDigits((file.size/1024/1024).toFixed(1))} مگابایت`,url:reader.result,type:file.type.startsWith('image/')?'image':'pdf'};
+      setDrafts(previous=>({...previous,[homeworkId]:{...previous[homeworkId]||{text:''},attachment,error:undefined}}));
+    };reader.readAsDataURL(file);
   };
-
-  const handleOpenMyDossier = () => {
-    if (onOpenStudentDossier) {
-      onOpenStudentDossier(currentStudent);
-    } else {
-      setSelectedStudentForDossier(currentStudent);
-    }
+  const sendHomework=async(event:React.FormEvent)=>{
+    event.preventDefault();if(!activeHomework||!draft.text.trim()||sending)return;setSending(true);setSendError('');
+    const id=activeHomework.id;
+    try{
+      const result=await submitHomework({homeworkId:id,studentId:currentStudent.id,studentName:currentStudent.name,textContent:draft.text.trim(),attachments:draft.attachment?[{name:draft.attachment.name,type:draft.attachment.type,url:draft.attachment.url}]:[]});
+      if(!result.ok){setSendError(result.error);return;}
+      setDrafts(previous=>{const next={...previous};delete next[id];return next;});setActiveHomework(null);
+    }catch(error){setSendError(error instanceof Error?error.message:'ارسال ممکن نشد؛ دوباره تلاش کنید.');}finally{setSending(false);}
   };
+  const studentAnnouncements=announcements.filter(item=>item.target==='all'||item.target==='students').slice().sort((a,b)=>Number(!!b.isPinned)-Number(!!a.isPinned));
+  const todayLessons=schedule.filter(slot=>slot.dayOfWeek===schoolClock.dayOfWeek).slice().sort((a,b)=>a.period-b.period);
+  const selectedLessons=schedule.filter(slot=>slot.dayOfWeek===scheduleDay).slice().sort((a,b)=>a.period-b.period);
+  const studentClass=classes.find(item=>item.id===currentStudent.classGroupId);
+  const tabs:{id:View;title:string;icon:LucideIcon}[]=[{id:'overview',title:'خانه',icon:LayoutDashboard},{id:'homework',title:'تکلیف و آزمون',icon:BookOpen},{id:'schedule',title:'برنامه کلاس',icon:CalendarDays},{id:'announcements',title:'اطلاعیه‌ها',icon:Megaphone}];
+  const activeHomeworks=view==='overview'?homework.slice(0,2):homework;
+  const visibleAnnouncements=view==='overview'?studentAnnouncements.slice(0,2):studentAnnouncements;
+  const smallAction=(target:View)=><button type="button" onClick={()=>setView(target)} className="inline-flex min-h-11 items-center gap-1 text-[11px] font-bold text-[#6d8561]">مشاهده همه<ChevronLeft className="size-3.5" aria-hidden="true"/></button>;
 
-  const handleSendHomework = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeHwForSubmit || !submissionText.trim()) return;
+  return <div id="student-dashboard-view" className="student-dashboard min-w-0 space-y-4 sm:space-y-6">
+    <section id="student-welcome" className="relative overflow-hidden rounded-[26px] border border-[#dfe7d8] bg-[#edf3e7] p-5 sm:p-7">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-[#788b6d]"><span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-[#91a67f]"/>{currentSchool?.name||'فضای مدرسه من'}</span><span>{toPersianDigits(schoolClock.dateLabel)}</span></div>
+      <div className="mt-3 flex items-start justify-between gap-3"><div className="min-w-0"><h1 className="break-words text-xl font-bold leading-[1.8] tracking-tight text-[#254538] sm:text-3xl">سلام، {currentStudent.name||currentUser.name}</h1><p className="mt-2 text-xs leading-6 text-[#75836d]">{studentClass?.name||currentStudent.grade}{activeAcademicYear&&<> · سال {toPersianDigits(activeAcademicYear.title)}</>}</p></div><span className="hidden size-14 shrink-0 items-center justify-center rounded-[20px] border border-white/70 bg-white/55 text-[#87a06e] sm:flex"><GraduationCap className="size-7" strokeWidth={1.3} aria-hidden="true"/></span></div>
+      <button id="student-today-attendance" type="button" onClick={()=>openDossier('attendance')} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 text-[11px] text-[#64765a]"><Clock3 className="size-3.5" aria-hidden="true"/>وضعیت حضور امروز<span className="font-bold text-[#34543e]">{attendanceLabel(currentStudent.todayStatus)}</span><ChevronLeft className="size-3" aria-hidden="true"/></button>
+    </section>
 
-    const saved0 = await submitHomework({
-      homeworkId: activeHwForSubmit.id,
-      studentId: currentStudent.id,
-      studentName: currentStudent.name,
-      textContent: submissionText.trim(),
-      attachments: studentUploadedFile
-        ? [{ name: studentUploadedFile.name, type: studentUploadedFile.type, url: studentUploadedFile.url }]
-        : []
-    }); if (!saved0.ok) return;
+    <section aria-label="دسترسی‌های شخصی" className="grid grid-cols-4 gap-2 sm:gap-3">
+      {([{id:'profile',label:'پرونده من',icon:GraduationCap},{id:'reportCards',label:'کارنامه',icon:Award},{id:'attendance',label:'حضور و غیاب',icon:ClipboardList},{id:'finances',label:'امور مالی',icon:Wallet}] as const).map(({id,label,icon:Icon})=><button id={`student-open-${id}`} key={id} type="button" onClick={()=>openDossier(id)} className="flex min-h-[76px] min-w-0 flex-col items-center justify-center gap-2.5 rounded-2xl border border-[#e2e8dc] bg-white px-1 py-3 text-[10px] font-bold leading-5 text-[#5b6b52] transition-colors hover:border-[#9eb690] hover:bg-[#f8faf5] sm:min-h-[90px] sm:text-xs"><Icon className="size-5 text-[#7a9568]" strokeWidth={1.6} aria-hidden="true"/><span className="break-words text-center">{label}</span></button>)}
+      <button id="student-dana-plus-shortcut" type="button" onClick={()=>{setView('overview');requestAnimationFrame(()=>document.getElementById('student-dana-plus')?.scrollIntoView({behavior:reducedMotion?'auto':'smooth',block:'start'}));}} className="col-span-4 flex min-h-12 items-center gap-3 rounded-2xl border border-[#e4dfca] bg-[#f7f4e9] px-4 text-xs text-[#8c8259]"><Sparkles className="size-4 shrink-0" aria-hidden="true"/><span className="font-bold">دانا پلاس</span><span className="text-[10px]">یادگیری فراتر از مدرسه</span><span className="ms-auto text-[10px]">به‌زودی</span></button>
+    </section>
 
-    setSubmissionText('');
-    setStudentUploadedFile(null);
-    setActiveHwForSubmit(null);
-  };
+    <nav aria-label="بخش‌های صفحه دانش‌آموز" className="grid grid-cols-4 gap-1 rounded-2xl border border-[#e2e8dc] bg-white p-1" role="group">{tabs.map(({id,title,icon:Icon})=><button id={`student-tab-${id}`} key={id} aria-pressed={view===id} aria-controls="student-workspace-panel" type="button" onClick={()=>setView(id)} className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl px-1 text-[10px] font-bold transition-colors sm:min-h-12 sm:flex-row sm:gap-2 sm:text-xs ${view===id?'bg-[#eaf1e4] text-[#3c6344]':'text-slate-400 hover:bg-[#f7f9f3] hover:text-[#66805a]'}`}><Icon className="size-4 shrink-0" aria-hidden="true"/><span className="break-words text-center leading-5">{title}</span></button>)}</nav>
 
-  // Filter announcements for students (pinned first)
-  const studentAnnouncements = announcements
-    .filter((a) => a.target === 'all' || a.target === 'students')
-    .sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return 0;
-    });
+    <SponsorBannerCard audienceFilter="students" variant="compact"/>
 
-  return (
-    <div className="space-y-4 sm:space-y-6" id="student-dashboard-view">
-      {/* Top Greeting Card */}
-      <div className="bg-gradient-to-r from-teal-800 to-cyan-900 text-white p-6 rounded-3xl shadow-md relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-500/20 text-teal-200 text-xs font-bold border border-teal-400/30">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>پروفایل اختصاصی دانش‌آموز</span>
-            </div>
-            <h1 className="text-2xl font-black">
-              سلام {currentUser.name} عزیز، روزت پر از یادگیری!
-            </h1>
-            <p className="text-xs text-teal-100 max-w-xl leading-relaxed">
-              کلاس {currentStudent.grade} • {currentSchool?.name}
-            </p>
-          </div>
+    <div id="student-workspace-panel" role="region" aria-labelledby={`student-tab-${view}`} className="min-w-0 space-y-5 sm:space-y-6">
+      {view==='schedule'&&<section id="student-weekly-schedule" className="space-y-5 rounded-3xl border border-[#e2e8dc] bg-white p-4 sm:p-6"><SectionHeading icon={CalendarDays} title="برنامه هفتگی کلاس" subtitle="روز موردنظر را انتخاب کن."/><label className="flex flex-wrap items-center gap-3 text-xs text-slate-500">روز هفته<select id="student-schedule-day" value={scheduleDay} onChange={event=>setScheduleDay(event.target.value)} className="min-h-12 min-w-0 flex-1 rounded-xl border border-[#dfe6d8] bg-[#f8faf5] px-3 text-sm text-[#39583f]">{['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'].map(day=><option key={day} value={day}>{day}{day===schoolClock.dayOfWeek?' (امروز)':''}</option>)}</select></label><div className="grid gap-3 md:grid-cols-2">{selectedLessons.map(slot=><Lesson key={slot.id} slot={slot} live={isSlotLive(slot,schoolClock)}/>)}</div>{!selectedLessons.length&&<EmptyState icon={CalendarDays}>{page('schedule').loading?'در حال دریافت برنامه…':'برای این روز در فهرست فعلی برنامه‌ای ثبت نشده است.'}</EmptyState>}<ResourcePager kind="schedule"/></section>}
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleOpenMyDossier}
-              className="px-4 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold backdrop-blur-sm border border-white/30 flex items-center gap-2 transition-all shadow-xs"
-            >
-              <FileText className="w-4 h-4 text-teal-200" />
-              <span>مشاهده کارنامه و پرونده تحصیلی من</span>
-            </button>
+      {(view==='overview'||view==='homework')&&<div className={`grid min-w-0 gap-5 ${view==='overview'?'xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]':''}`}>
+        <section id="student-homework-list" className="min-w-0 space-y-4 rounded-3xl border border-[#e2e8dc] bg-[#fbfcf9] p-4 sm:p-6"><SectionHeading icon={BookOpen} title="تکلیف‌های من" subtitle="تمرین‌ها، پاسخ‌ها و بازخورد دبیر" action={view==='overview'?smallAction('homework'):undefined}/>{!homework.length&&<EmptyState>{page('homework').loading?'در حال دریافت تکلیف‌ها…':'تکلیفی در این فهرست ثبت نشده است.'}</EmptyState>}<div className={`grid gap-3 ${view==='homework'?'lg:grid-cols-2':''}`}>{activeHomeworks.map(item=><HomeworkCard key={item.id} item={item} responsesLoading={page('homeworkSubmissions').loading} responsesComplete={page('homeworkSubmissions').total<=homeworkSubmissions.length} submission={homeworkSubmissions.find(submission=>submission.homeworkId===item.id&&submission.studentId===currentStudent.id)} onSubmit={openHomework}/>)}</div>{view==='homework'&&<><ResourcePager kind="homework"/>{page('homeworkSubmissions').total>25&&<div className="space-y-2"><p className="text-[11px] text-slate-500">صفحه پاسخ‌های ثبت‌شده</p><ResourcePager kind="homeworkSubmissions"/></div>}</>}</section>
+        {view==='overview'&&<section id="student-today-schedule" className="min-w-0 space-y-4 rounded-3xl border border-[#e2e8dc] bg-white p-4 sm:p-6"><SectionHeading icon={CalendarDays} title="برنامه امروز" subtitle={schoolClock.dayOfWeek} action={smallAction('schedule')}/>{todayLessons.length?<div className="space-y-2.5">{todayLessons.map(slot=><Lesson key={slot.id} slot={slot} live={isSlotLive(slot,schoolClock)}/>)}</div>:<EmptyState icon={CalendarDays}>{page('schedule').loading?'در حال دریافت برنامه…':'در فهرست فعلی برای امروز کلاسی ثبت نشده است.'}<button type="button" onClick={()=>setView('schedule')} className="mx-auto mt-2 flex min-h-11 items-center gap-1 font-bold text-[#5d7b52]">دیدن برنامه هفته<ChevronLeft className="size-3" aria-hidden="true"/></button></EmptyState>}</section>}
+        <section id="student-exam-list" className={`min-w-0 space-y-4 rounded-3xl border border-[#e2e8dc] bg-white p-4 sm:p-6 ${view==='overview'?'xl:col-span-2':''}`}><SectionHeading icon={ClipboardList} title="آزمون‌های پیش‌رو" subtitle="زمان‌بندی آزمون‌های ثبت‌شده مدرسه" action={view==='overview'?smallAction('homework'):undefined}/>{!exams.length?<EmptyState icon={ClipboardList}>{page('exams').loading?'در حال دریافت زمان‌بندی آزمون‌ها…':'آزمونی در این فهرست برنامه‌ریزی نشده است.'}</EmptyState>:<div className="grid gap-3 md:grid-cols-2">{(view==='overview'?exams.slice(0,2):exams).map(exam=><article key={exam.id} className="min-w-0 rounded-2xl border border-[#e5e9df] bg-[#f8faf4] p-4"><span className="text-[10px] font-bold text-[#8b9877]">{exam.subject}</span><h3 className="mt-2 break-words text-sm font-bold leading-7 text-[#35513d]">{exam.title}</h3><p className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500"><CalendarDays className="size-3.5" aria-hidden="true"/>{toPersianDigits(exam.examDate)}<span dir="ltr">{toPersianDigits(exam.startTime)}</span><span>· {toPersianDigits(exam.durationMinutes)} دقیقه</span></p><p className="mt-3 border-t border-[#e6ecde] pt-3 text-[10px] leading-6 text-slate-400">{toPersianDigits(exam.questions.length)} سؤال ثبت‌شده · شرکت آنلاین فعال نیست.</p></article>)}</div>}{view==='homework'&&<ResourcePager kind="exams"/>}</section>
+      </div>}
 
-            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm p-2.5 rounded-2xl border border-white/20">
-              <div className="w-9 h-9 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5" />
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-teal-100 font-medium">وضعیت ثبت‌شده امروز:</div>
-                <div className="text-xs font-bold text-white">{attendanceLabel(currentStudent.todayStatus)}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Second Position Sponsor Ribbon */}
-      <SponsorBannerCard audienceFilter="students" variant="compact" />
+      {(view==='overview'||view==='announcements')&&<section id="student-announcements" className="space-y-4 rounded-3xl border border-[#e2e8dc] bg-white p-4 sm:p-6"><SectionHeading icon={Megaphone} title="خبرهای مدرسه" subtitle="اطلاعیه‌ها و رویدادهای مرتبط با شما" action={view==='overview'?smallAction('announcements'):undefined}/>{!visibleAnnouncements.length&&<EmptyState icon={Megaphone}>{page('announcements').loading?'در حال دریافت اطلاعیه‌ها…':'هنوز اطلاعیه‌ای برای نمایش وجود ندارد.'}</EmptyState>}<div className="grid gap-3 lg:grid-cols-2">{visibleAnnouncements.map(item=><article key={item.id} className={`min-w-0 rounded-2xl border p-4 ${item.isPinned?'border-[#d4dfbf] bg-[#f7f9f0]':'border-slate-100 bg-[#fafbf8]'}`}><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="inline-flex items-center gap-1 text-[10px] text-[#7e906a]">{item.isPinned&&<><Pin className="size-3" aria-hidden="true"/>سنجاق‌شده</>}</span><span className="text-[10px] text-slate-400">{toPersianDigits(item.date)}</span></div><div className="flex flex-wrap items-start gap-2"><h3 className="min-w-0 break-words text-sm font-bold leading-7 text-slate-800">{item.title}</h3>{item.priority==='urgent'&&<span className="rounded-md bg-rose-50 px-2 py-1 text-[10px] text-rose-700">فوری</span>}</div><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-7 text-slate-500">{item.content}</p>{item.eventDate&&<p className="mt-3 text-[11px] text-slate-500">زمان رویداد: {toPersianDigits(item.eventDate)}{item.eventLocation&&<> · {item.eventLocation}</>}</p>}{!!item.attachments?.length&&<div className="mt-3"><FileLinks files={item.attachments}/></div>}<p className="mt-3 border-t border-[#e9ede3] pt-3 text-[10px] text-slate-400">از طرف {item.senderName}</p></article>)}</div>{view==='announcements'&&<ResourcePager kind="announcements"/>}</section>}
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Col (7 cols): Today's Schedule, Active Homework, Upcoming Exams */}
-        <div className="lg:col-span-7 space-y-5">
-          {/* Today's Schedule */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-teal-600" />
-                <h3 className="font-bold text-sm text-slate-900">
-                  برنامهٔ کلاسی شما
-                </h3>
-              </div>
-            </div>
+      {view==='overview'&&<DanaPlusSection/>}
 
-            <div className="space-y-2.5">
-              {schedule.length === 0 && <p role="status" className="text-xs text-slate-500">برنامه‌ای برای کلاس شما ثبت نشده است.</p>}
-              {schedule.map((slot) => (
-                <div key={slot.id} className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between gap-2 text-xs">
-                  <div>
-                    <div className="font-bold text-slate-900">{slot.dayOfWeek} • زنگ {toPersianDigits(slot.period)}: {slot.subject}</div>
-                    <p className="text-slate-500 mt-1">دبیر: {slot.teacherName}</p>
-                  </div>
-                  <span className="font-mono text-slate-600" dir="ltr">{toPersianDigits(slot.startTime)} – {toPersianDigits(slot.endTime)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Active Homework & Exams */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <FileQuestion className="w-5 h-5 text-teal-600" />
-                <h3 className="font-bold text-sm text-slate-900">
-                  تکالیف درسی و آزمون‌های پیش‌رو
-                </h3>
-              </div>
-              <span className="text-xs text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-md">
-                {toPersianDigits(homework.length + exams.length)} مورد فعال
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {homework.map((hw) => {
-                const mySubmission = homeworkSubmissions.find(
-                  (s) => s.homeworkId === hw.id && s.studentId === currentStudent.id
-                );
-
-                return (
-                  <div
-                    key={hw.id}
-                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 text-xs"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 font-bold text-[10px]">
-                            تکلیف: {hw.subject}
-                          </span>
-                          <span className="font-bold text-slate-800 text-xs">{hw.title}</span>
-                        </div>
-                        <p className="text-slate-600 text-[11px] leading-relaxed">{hw.description}</p>
-                      </div>
-                      <div className="text-left shrink-0">
-                        <span className="text-[10px] text-slate-400 block">مهلت تحویل:</span>
-                        <span className="font-mono font-bold text-rose-700 text-xs">{toPersianDigits(hw.dueDate)}</span>
-                      </div>
-                    </div>
-
-                    {/* Submission status or CTA */}
-                    <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                      {mySubmission ? (
-                        <div className="w-full space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200">
-                          <div className="flex items-center justify-between">
-                            <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>پاسخ شما ارسال شده است ({toPersianDigits(mySubmission.submissionDate)})</span>
-                            </span>
-                            {mySubmission.status === 'graded' ? (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                                نمره دبیر: {toPersianDigits(mySubmission.teacherScore ?? 0)} از ۲۰
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-semibold text-[10px] border border-amber-200">
-                                در نوبت بررسی دبیر
-                              </span>
-                            )}
-                          </div>
-                          {mySubmission.teacherFeedback && (
-                            <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-md border border-slate-100 flex items-start gap-1.5">
-                              <MessageSquare className="w-3.5 h-3.5 text-teal-600 shrink-0 mt-0.5" />
-                              <div>
-                                <span className="font-bold text-slate-700">نظر دبیر: </span>
-                                <span>{mySubmission.teacherFeedback}</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="w-full flex items-center justify-between">
-                          <span className="text-[11px] text-amber-700 font-medium">
-                            پاسخ این تکلیف هنوز ثبت نشده است
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setActiveHwForSubmit(hw)}
-                            className="px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors"
-                          >
-                            <Send className="w-3.5 h-3.5" />
-                            <span>ارسال پاسخ تکلیف</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {exams.slice(0, 1).map((ex) => (
-                <div key={ex.id} className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 flex items-start justify-between gap-3 text-xs">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 rounded-md bg-purple-200 text-purple-900 font-bold text-[10px]">
-                        آزمون زمان‌بندی‌شده: {ex.subject}
-                      </span>
-                      <span className="font-bold text-slate-900 text-xs">{ex.title}</span>
-                    </div>
-                    <p className="text-purple-800 text-[11px]">
-                      زمان برنامه‌ریزی: {toPersianDigits(ex.durationMinutes)} دقیقه • سؤال ثبت‌شده: {toPersianDigits(ex.questions.length)} • شرکت آنلاین فعال نیست.
-                    </p>
-                  </div>
-                  <div className="text-left shrink-0">
-                    <span className="text-[10px] text-purple-700 block">زمان آزمون:</span>
-                    <span className="font-mono font-bold text-purple-900 text-xs">{toPersianDigits(ex.examDate)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Announcements for Students */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Megaphone className="w-5 h-5 text-teal-600" />
-                <h3 className="font-bold text-sm text-slate-900">
-                  اطلاعیه‌ها و رویدادهای مهم مدرسه
-                </h3>
-              </div>
-              <span className="text-xs text-slate-500 font-medium">
-                {toPersianDigits(studentAnnouncements.length)} اطلاعیه
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {studentAnnouncements.map((ann) => (
-                <div
-                  key={ann.id}
-                  className={`p-3.5 rounded-xl border transition-colors space-y-2 text-xs ${
-                    ann.isPinned
-                      ? 'border-amber-400 bg-amber-50/30 ring-1 ring-amber-400/30'
-                      : 'border-slate-200 bg-slate-50/60 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      {ann.isPinned && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                          <Pin className="w-2.5 h-2.5 fill-amber-600 text-amber-600" />
-                          <span>پین</span>
-                        </span>
-                      )}
-                      <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 font-mono">{toPersianDigits(ann.date)}</span>
-                  </div>
-                  <p className="text-slate-600 leading-relaxed text-[11px]">{ann.content}</p>
-                  <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400 border-t border-slate-100">
-                    <span>فرستنده: {ann.senderName}</span>
-                    {ann.priority === 'urgent' && (
-                      <span className="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded-sm">فوری</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Col (5 cols): Sample from the Question Bank */}
-        <div className="lg:col-span-5 space-y-5">
-          {/* Question of the Day */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-teal-600" />
-                <h3 className="font-bold text-sm text-slate-900">
-                  نمونه تمرین از بانک شهرستان
-                </h3>
-              </div>
-              {sampleQuestion ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 font-bold border border-teal-200">{sampleQuestion.subject} • {sampleQuestion.difficulty}</span>
-                : <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold border border-slate-200">بانک خالی</span>}
-            </div>
-
-            {sampleQuestion ? <>
-              <div className="space-y-2">
-                <h4 className="font-bold text-xs text-slate-900 leading-snug">{sampleQuestion.title}</h4>
-                <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">{sampleQuestion.content}</p>
-              </div>
-
-              {/* Practice answer feedback stays local and does not submit a real exam. */}
-              {sampleQuestion.options && (
-                <div className="space-y-2">
-                  <span className="text-[11px] font-bold text-slate-600 block">گزینه‌ای را برای دیدن پاسخ‌نامه تمرینی انتخاب کنید:</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {sampleQuestion.options.map((opt, i) => {
-                      const isSelected = selectedOption === opt;
-                      const isCorrect = opt === sampleQuestion.correctAnswer;
-                      let btnColor = 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50';
-
-                      if (isAnswerSubmitted) {
-                        if (isCorrect) {
-                          btnColor = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold ring-2 ring-emerald-300';
-                        } else if (isSelected) {
-                          btnColor = 'bg-rose-50 border-rose-300 text-rose-800 line-through';
-                        }
-                      }
-
-                      return <button key={i} onClick={() => handleTestAnswer(opt)} className={`min-h-11 p-2.5 rounded-xl border text-xs text-center transition-all ${btnColor}`}>{opt}</button>;
-                    })}
-                  </div>
-
-                  {isAnswerSubmitted && <div className="p-3 rounded-xl bg-teal-50 text-teal-900 text-xs mt-2 border border-teal-200 flex items-center justify-between"><span>پاسخ تمرینی: <strong>{sampleQuestion.correctAnswer}</strong></span><span className="text-[10px] text-teal-700">طراح: {sampleQuestion.authorName}</span></div>}
-                  <p className="text-[10px] text-slate-500">این بازخورد تمرینی و محلی است و نتیجه آزمون ثبت نمی‌کند.</p>
-                </div>
-              )}
-            </> : <p role="status" className="p-3 rounded-xl border border-dashed border-slate-300 text-xs text-slate-600">هنوز سؤالی در بانک قابل نمایش نیست.</p>}
-
-            <button
-              onClick={onOpenQuestionBank}
-              className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <span>مشاهده بانک سؤال</span>
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Non-intrusive Educational/Cultural Sponsor Spot for Student */}
-      <SponsorBannerCard audienceFilter="students" />
-
-      {/* Homework Submission Modal */}
-      {activeHwForSubmit && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
-                  <Send className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-slate-900">ارسال پاسخ تکلیف درسی</h3>
-                  <span className="text-[11px] text-teal-700 font-medium">
-                    {activeHwForSubmit.subject} • {activeHwForSubmit.title}
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveHwForSubmit(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
-              <div className="font-bold text-slate-800">شرح تکلیف:</div>
-              <p className="leading-relaxed">{activeHwForSubmit.description}</p>
-              <div className="flex items-center justify-between pt-2 text-[10px] text-slate-400 border-t border-slate-200">
-                <span>دبیر: {activeHwForSubmit.teacherName}</span>
-                <span>مهلت تحویل: {toPersianDigits(activeHwForSubmit.dueDate)}</span>
-              </div>
-            </div>
-
-            <form onSubmit={handleSendHomework} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  پاسخ و توضیحات حل تمرین: <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="راه حل سوالات، مراحل محاسبات یا توضیحات تمرین را در این قسمت بنویسید..."
-                  value={submissionText}
-                  onChange={(e) => setSubmissionText(e.target.value)}
-                  className="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none leading-relaxed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                  <UploadCloud className="w-4 h-4 text-teal-600" />
-                  <span>آپلود تصویر حل تمرین یا فایل PDF (اختیاری):</span>
-                </label>
-
-                <input
-                  type="file"
-                  id="student-solution-upload"
-                  onChange={handleStudentFileChange}
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                />
-
-                {!studentUploadedFile ? (
-                  <label
-                    htmlFor="student-solution-upload"
-                    className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 hover:border-teal-500 bg-white hover:bg-teal-50/50 rounded-xl cursor-pointer transition-colors text-center"
-                  >
-                    <UploadCloud className="w-4 h-4 text-slate-400" />
-                    <span className="text-xs text-slate-600 font-medium">
-                      کلیک برای عکس گرفتن یا آپلود فایل حل تمرین
-                    </span>
-                  </label>
-                ) : (
-                  <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs">
-                      {studentUploadedFile.type === 'image' ? (
-                        <img
-                          src={studentUploadedFile.url}
-                          alt="solution preview"
-                          className="w-9 h-9 rounded-lg object-cover border border-teal-300"
-                        />
-                      ) : (
-                        <FileText className="w-6 h-6 text-teal-700" />
-                      )}
-                      <div>
-                        <span className="font-bold text-slate-900 block truncate max-w-xs">{studentUploadedFile.name}</span>
-                        <span className="text-[10px] text-slate-500">{studentUploadedFile.size}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setStudentUploadedFile(null)}
-                      className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-                <p className="mt-1 text-[11px] text-slate-500">پیوست به‌صورت محلی ذخیره می‌شود؛ حداکثر {MAX_LOCAL_ATTACHMENT_LABEL}.</p>
-                {studentAttachmentError && <p role="alert" className="mt-1 text-xs font-medium text-rose-700">{studentAttachmentError}</p>}
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setActiveHwForSubmit(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-                >
-                  انصراف
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>ثبت نهایی و ارسال به دبیر</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {view==='overview'&&<section id="student-practice" className="space-y-5 rounded-3xl border border-[#dce5d3] bg-[#f1f5ea] p-4 sm:p-6"><SectionHeading icon={Sparkles} title="یک تمرین کوتاه" subtitle="از بانک سؤال شهرستان" action={<button id="student-open-question-bank" onClick={onOpenQuestionBank} className="inline-flex min-h-11 items-center gap-1 text-[11px] font-bold text-[#5c7b4e]">بانک سؤال<ArrowUpLeft className="size-3.5" aria-hidden="true"/></button>}/>{sampleQuestion?<div className="space-y-4"><div className="flex flex-wrap gap-2 text-[10px] text-[#799366]"><span>{sampleQuestion.subject}</span><span>· {sampleQuestion.difficulty}</span></div><h3 className="break-words text-sm font-bold leading-7 text-[#36523d]">{sampleQuestion.title}</h3><p className="whitespace-pre-wrap break-words text-xs leading-8 text-[#63715c]">{sampleQuestion.content}</p>{sampleQuestion.options&&<><p className="text-[11px] text-[#7e8d70]">یک گزینه را انتخاب کن تا پاسخ تمرینی را ببینی.</p><div className="grid gap-2 sm:grid-cols-2">{sampleQuestion.options.map((option,index)=>{const correct=option===sampleQuestion.correctAnswer,chosen=option===selectedOption;return <button key={index} type="button" aria-pressed={chosen} onClick={()=>{setSelectedOption(option);setAnswerShown(true);}} className={`flex min-h-12 items-center gap-3 rounded-xl border p-3 text-right text-xs leading-6 transition-colors ${answerShown&&correct?'border-[#91b48b] bg-[#e5efd9] text-[#385f34]':answerShown&&chosen?'border-rose-200 bg-rose-50 text-rose-700':'border-[#dee6d3] bg-white/80 text-slate-600 hover:border-[#9db78a]'}`}><span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-black/[0.03] text-[10px]">{toPersianDigits(index+1)}</span><span className="min-w-0 break-words">{option}</span>{answerShown&&correct&&<Check className="ms-auto size-4 shrink-0" aria-hidden="true"/>}</button>;})}</div>{answerShown&&<div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/70 p-3 text-xs leading-7 text-[#516d44]"><span>پاسخ تمرینی: <strong>{sampleQuestion.correctAnswer}</strong></span><button type="button" onClick={()=>{setSelectedOption(null);setAnswerShown(false);}} className="min-h-11 px-2 font-bold">تلاش دوباره</button></div>}<p className="text-[10px] leading-6 text-[#8c997f]">طراح: {sampleQuestion.authorName} · این تمرین، نتیجه آزمون ثبت نمی‌کند.</p></>}</div>:<EmptyState>{page('questionBank').loading?'در حال دریافت تمرین…':'هنوز سؤالی در بانک قابل نمایش نیست.'}</EmptyState>}</section>}
     </div>
-  );
+
+    <AnimatePresence>{activeHomework&&<motion.div id="student-homework-modal" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:reducedMotion?0:0.16}} className="fixed inset-0 z-[85] flex items-end justify-center bg-[#16382c]/45 sm:items-center sm:p-4"><motion.section role="dialog" aria-modal="true" aria-labelledby="student-homework-modal-title" initial={{y:reducedMotion?0:18}} animate={{y:0}} exit={{y:reducedMotion?0:18}} className="student-homework-sheet flex w-full max-w-xl flex-col overflow-hidden rounded-t-3xl border border-[#e2e8dc] bg-white shadow-2xl sm:rounded-3xl">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#edf0e8] p-4 sm:px-6"><div className="min-w-0"><p className="mb-1 text-[10px] text-[#8b9b7c]">{activeHomework.subject}</p><h2 id="student-homework-modal-title" className="break-words text-sm font-bold text-[#31513c]">ارسال پاسخ تکلیف</h2></div><button id="student-close-homework" ref={closeHomeworkRef} type="button" disabled={sending} onClick={()=>setActiveHomework(null)} aria-label="بستن فرم تکلیف" className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-[#f4f6ef] text-slate-500 disabled:opacity-40"><X className="size-5" aria-hidden="true"/></button></header>
+      <form onSubmit={sendHomework} className="flex min-h-0 flex-1 flex-col"><div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-6"><div className="space-y-2 rounded-2xl border border-[#e4eadd] bg-[#f7f9f3] p-4"><h3 className="break-words text-sm font-bold text-[#3f5b43]">{activeHomework.title}</h3><p className="whitespace-pre-wrap break-words text-xs leading-7 text-slate-500">{activeHomework.description}</p><p className="flex flex-wrap justify-between gap-2 text-[10px] text-[#94a087]"><span>{activeHomework.teacherName}</span><span>تا {toPersianDigits(activeHomework.dueDate)}</span></p><FileLinks files={activeHomework.attachments}/></div>
+      <label htmlFor="student-homework-answer" className="block text-xs font-bold text-[#4c6350]">پاسخ و توضیحات تو<textarea id="student-homework-answer" required rows={5} value={draft.text} onChange={event=>updateDraft({text:event.target.value})} placeholder="پاسخ و مراحل حل تمرین را اینجا بنویس…" className="mt-2 w-full resize-y rounded-2xl border border-[#dce4d4] bg-[#fcfdfb] p-3 text-sm font-normal leading-8 text-slate-700 outline-none focus:border-[#8ca77b] focus:ring-2 focus:ring-[#edf3e6]"/></label>
+      <div className="space-y-2"><p className="text-xs font-bold text-[#4c6350]">پیوست پاسخ <span className="font-normal text-slate-400">(اختیاری)</span></p><input id="student-solution-upload" type="file" accept="image/*,application/pdf" onChange={readFile} className="peer sr-only"/><label htmlFor="student-solution-upload" className="flex min-h-20 cursor-pointer items-center justify-center gap-3 rounded-2xl border border-dashed border-[#b8c9aa] bg-[#f8faf5] p-4 text-xs text-[#7a9068] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-teal-700"><UploadCloud className="size-5 shrink-0" aria-hidden="true"/><span>انتخاب تصویر یا PDF<br/><span className="mt-1 block text-[10px] text-slate-400">حداکثر {MAX_LOCAL_ATTACHMENT_LABEL}</span></span></label>{draft.attachment&&<div className="flex items-center gap-3 rounded-xl border border-[#dce7d2] bg-[#f5f9ef] p-3">{draft.attachment.type==='image'?<img src={draft.attachment.url} alt="پیش‌نمایش پیوست پاسخ" className="size-10 shrink-0 rounded-lg object-cover"/>:<FileText className="size-7 shrink-0 text-[#7a9568]" aria-hidden="true"/>}<div className="min-w-0 flex-1 text-xs"><p className="break-all font-bold text-[#536d47]">{draft.attachment.name}</p><p className="mt-1 text-[10px] text-slate-400">{draft.attachment.size}</p></div><button type="button" onClick={()=>updateDraft({attachment:undefined,error:undefined})} aria-label="حذف پیوست" className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-rose-600 hover:bg-rose-50"><Trash2 className="size-4" aria-hidden="true"/></button></div>}{draft.error&&<p role="alert" className="text-xs leading-6 text-rose-700">{draft.error}</p>}</div>
+      {sendError&&<p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs leading-7 text-rose-700">{sendError}</p>}<p className="text-[10px] leading-6 text-slate-400">پاسخ تا زمان ارسال موفق در همین صفحه حفظ می‌شود. پیوست همراه پاسخ در سرور ذخیره خواهد شد.</p></div>
+      <footer className="student-sheet-footer flex shrink-0 items-center gap-2 border-t border-[#e7ecdf] bg-white px-4 pt-3 pb-4 sm:px-6"><button type="submit" disabled={sending||!draft.text.trim()||!!draft.error} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#205343] px-3 text-xs font-bold text-white transition-colors hover:bg-[#173e33] disabled:opacity-50"><Send className="size-4" aria-hidden="true"/>{sending?'در حال ارسال…':'ارسال پاسخ به دبیر'}</button><button type="button" disabled={sending} onClick={()=>setActiveHomework(null)} className="min-h-12 rounded-xl px-4 text-xs text-slate-500 disabled:opacity-40">بعداً ارسال می‌کنم</button></footer></form>
+    </motion.section></motion.div>}</AnimatePresence>
+  </div>;
 };

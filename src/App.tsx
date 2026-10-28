@@ -35,6 +35,7 @@ const AppContent: React.FC = () => {
     selectedStudentForDossier,
     setSelectedStudentForDossier,
     dossierInitialTab,
+    openStudentDossier,
     canManageSchool
   } = useApp();
 
@@ -98,7 +99,7 @@ const AppContent: React.FC = () => {
         return (
           <StudentDashboard
             onOpenQuestionBank={() => setIsQuestionBankOpen(true)}
-            onOpenStudentDossier={handleOpenStudentDossier}
+            onOpenStudentDossier={(student,tab)=>openStudentDossier(student,tab)}
           />
         );
       case 'parent':
@@ -120,7 +121,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-clip flex flex-col bg-slate-100/70 text-slate-800 antialiased selection:bg-teal-200" dir="rtl">
+    <div className={`min-h-screen w-full max-w-full overflow-x-clip flex flex-col text-slate-800 antialiased selection:bg-teal-200 ${currentRole==='student'?'bg-[#f7f8f4]':'bg-slate-100/70'}`} dir="rtl">
       {/* Top Header with Profile Modal trigger and Brand Switcher */}
       <Header
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
@@ -146,20 +147,24 @@ const AppContent: React.FC = () => {
         onOpenHomework={() => setIsHomeworkExamModalOpen(true)}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onOpenDossier={() => {
-          if (currentStudent) setSelectedStudentForDossier(currentStudent);
+          if (currentStudent) {
+            if(currentRole==='student')openStudentDossier(currentStudent,'profile');
+            else setSelectedStudentForDossier(currentStudent);
+          }
         }}
       />
 
       {/* Full Student Dossier Modal */}
-      {selectedStudentForDossier && (currentRole !== 'vice_principal' || canManageSchool('canViewFullDossier')) && (
+      <AnimatePresence>{selectedStudentForDossier && (currentRole !== 'vice_principal' || canManageSchool('canViewFullDossier')) && (
         <StudentDossierModal
+          key={selectedStudentForDossier.id}
           student={selectedStudentForDossier}
           onClose={() => setSelectedStudentForDossier(null)}
           canEditContact={currentRole === 'parent' || canManageSchool('canManageStudentsAndClasses')}
           canManageDiscipline={canManageSchool('canLogDisciplinary')}
           initialTab={dossierInitialTab}
         />
-      )}
+      )}</AnimatePresence>
 
       {/* Dedicated Student Manager Modal */}
       {isStudentModalOpen && canManageSchool('canManageStudentsAndClasses') && (
@@ -177,11 +182,12 @@ const AppContent: React.FC = () => {
       )}
 
       {/* User Profile & Contact Settings Modal */}
-      {isProfileModalOpen && (
+      <AnimatePresence>{isProfileModalOpen && (
         <UserProfileModal
+          key="user-profile-modal"
           onClose={() => setIsProfileModalOpen(false)}
         />
-      )}
+      )}</AnimatePresence>
 
       {/* Weekly Schedule Planner Modal */}
       <AnimatePresence>
