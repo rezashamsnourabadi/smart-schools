@@ -90,6 +90,37 @@ body.student-dossier-open, body.student-submit-open { overflow: hidden; }
 .student-sheet-footer { padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); }
 .student-bottom-nav { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); }
 
+/* A warmer student workspace, with quiet color cues for each learning area. */
+.student-welcome-card {
+  background: linear-gradient(115deg, #fbf2de 0%, #f1f5e7 48%, #e6efdf 100%);
+  box-shadow: 0 8px 26px -20px #65784c;
+}
+.student-welcome-card::before,
+.student-welcome-card::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid #ffffff80;
+  border-radius: 50%;
+  width: 190px;
+  height: 190px;
+  inset-inline-end: -75px;
+  top: -100px;
+}
+.student-welcome-card::after { width: 250px; height: 250px; inset-inline-end: -105px; top: -130px; }
+.student-personal-link { box-shadow: 0 4px 16px -12px #66815b40; }
+.student-dashboard #student-homework-list { background: linear-gradient(160deg, #fffaf0, #fdfcf9 45%); border-color: #ebe1cb; }
+.student-dashboard #student-homework-list .student-section-icon { background: #faedcf; color: #ad853e; }
+.student-dashboard #student-today-schedule { background: linear-gradient(155deg, #f1f7fa, #fff 55%); border-color: #dce7eb; }
+.student-dashboard #student-today-schedule .student-section-icon,
+.student-dashboard #student-weekly-schedule .student-section-icon { background: #e3eff4; color: #638b9e; }
+.student-dashboard #student-exam-list .student-section-icon { background: #f8e8e3; color: #b38070; }
+.student-dashboard #student-announcements .student-section-icon { background: #eee8f4; color: #927ba5; }
+.student-dashboard #student-practice { background: linear-gradient(135deg, #edf4e4, #f8faf3); }
+.student-dashboard #student-workspace-panel > section,
+.student-dashboard #student-workspace-panel > div > section { box-shadow: 0 6px 24px -22px #65784c60; }
+
 /* Shared header tools and the question bank follow the same quiet sage palette. */
 body.question-bank-open, body.dana-profile-open { overflow: hidden; }
 .dana-header :where(button, a, select):focus-visible,
