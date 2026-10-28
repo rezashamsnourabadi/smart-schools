@@ -70,7 +70,7 @@ export async function fileRoutes(app:FastifyInstance) {
       if(file.purpose==='receipt')access ||=allowed(member,'canManageFinances');
       if(['homework','submission'].includes(file.purpose)) {
         if(['principal','vice_principal'].includes(member.role))access ||=allowed(member,'canViewFullDossier');
-        if(member.role==='teacher'){const profile=await memberProfile(tx,member,school,year);access ||=(profile?.assignedClassIds as string[]||[]).includes(file.class_id);}
+        if(member.role==='teacher'){const profile=await memberProfile(tx,member,school,year);const reference=JSON.stringify([{url:`/api/v1/files/${id}`}]);const own=await tx.query("SELECT 1 FROM records h LEFT JOIN records s ON s.school_id=h.school_id AND s.year_id=h.year_id AND s.kind='homeworkSubmissions' AND s.data->>'homeworkId'=h.id::text WHERE h.school_id=$1 AND h.year_id=$2 AND h.kind='homework' AND h.teacher_id=$3 AND (h.data->'attachments' @> $4::jsonb OR s.data->'attachments' @> $4::jsonb) LIMIT 1",[school,year,profile?.id||null,reference]);access ||=!!own.rowCount;}
         if(file.purpose==='homework'&&['parent','student'].includes(member.role))access ||=(await linkedRecord(tx,member,school,year))?.classGroupId===file.class_id;
         if(file.purpose==='submission'&&member.role==='parent')access ||=(await linkedRecord(tx,member,school,year))?.id===file.student_id;
       }

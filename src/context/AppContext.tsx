@@ -5,6 +5,7 @@ import type {Student,UserProfile,AcademicYear,VicePrincipalPermissions,UserRole}
 import {getSchoolClock} from '../utils/persianUtils';
 import {useAuth} from '../auth/AuthContext';
 import {Status} from '../auth/Status';
+import {refreshTeacherData,type TeacherChange} from '../api/teacherCache';
 import {request,uploadDataUrl,type RequestScope} from '../api/client';
 import type {AttendanceSession} from '../types';
 
@@ -40,7 +41,7 @@ export const AppProvider=({children}:{children:React.ReactNode})=>{
   const currentYear=metadata.data?.years.find(y=>y.isCurrent);
   const activeYear=metadata.data?.years.find(y=>y.id===yearId)||currentYear;
   const effectiveScope=useMemo(()=>({...scope,yearId:activeYear?.id}),[scope,activeYear?.id]);
-  const resources=useMemo(()=>Array.from(new Set([...baseResources,...roleResources[auth.member.role]||[],...modules])).filter(k=>auth.member.role!=='platform_admin'||['schools','banners','announcements','questionBank'].includes(k)),[auth.member.role,modules]);
+  const resources=useMemo(()=>Array.from(new Set([...(auth.member.role==='teacher'?['schools','banners']:baseResources),...roleResources[auth.member.role]||[],...modules])).filter(k=>auth.member.role!=='platform_admin'||['schools','banners','announcements','questionBank'].includes(k)),[auth.member.role,modules]);
   const queries=useQueries({queries:resources.map(kind=>{
     const page=pages[kind]||{offset:0,search:''};
     const includeFinance=kind==='students'&&modules.includes('feeItems');
@@ -49,7 +50,7 @@ export const AppProvider=({children}:{children:React.ReactNode})=>{
   const collections:Record<string,Record<string,unknown>[]>=Object.fromEntries(['schools','classes','students','schedule','announcements','banners','notifications','grades','homework','homeworkSubmissions','exams','teachers','vicePrincipals','feeItems','questionBank','attendanceSessions'].map(k=>[k,[]]));
   resources.forEach((kind,i)=>{collections[kind]=queries[i].data?.items||[];});
   const loadResource=useCallback((kind:string)=>setModules(previous=>previous.includes(kind)?previous:[...previous,kind]),[]);
-  const summary=useQuery({queryKey:['dashboard',scope.membershipId,activeYear?.id],enabled:!!metadata.data,queryFn:({signal})=>request<Record<string,number>>('/dashboard',{scope:effectiveScope,signal}),staleTime:30000});
+  const summary=useQuery({queryKey:['dashboard',scope.membershipId,activeYear?.id],enabled:!!metadata.data&&auth.member.role!=='teacher',queryFn:({signal})=>request<Record<string,number>>('/dashboard',{scope:effectiveScope,signal}),staleTime:30000});
   const absencePage=pages.dailyAbsences||{offset:0,search:''};
   const absences=useQuery({queryKey:['daily-absences',scope.membershipId,activeYear?.id,absencePage],enabled:!!metadata.data&&!!activeYear&&['principal','vice_principal'].includes(auth.member.role),queryFn:({signal})=>request<{items:RemoteApp['dailyAbsences'];total:number}>(`/attendance/daily-absences?${new URLSearchParams({limit:'25',offset:String(absencePage.offset),search:absencePage.search})}`,{scope:effectiveScope,signal}),staleTime:30000});
   const linked=metadata.data?.currentStudentId;
@@ -69,7 +70,11 @@ export const AppProvider=({children}:{children:React.ReactNode})=>{
       retryKeys.current.delete(fingerprint);
       const [,group,name]=path.split('/');
       const refreshKinds=group==='resources'?independentResourceRefresh[name]:group==='commands'?independentCommandRefresh[name]:undefined;
-      if(refreshKinds){
+      const teacherKind:TeacherChange['kind']|undefined=group==='resources'&&['grades','homework','exams'].includes(name)?name as TeacherChange['kind']:group==='commands'&&name==='attendance'?'attendance':group==='commands'&&name==='homework-grade'?'submission':undefined;
+      if(auth.member.role==='teacher'&&teacherKind){
+        const input=body as {classGroupId?:string;subject?:string;scheduleSlotId?:string};
+        void refreshTeacherData(client,scope.membershipId,activeYear?.id,{kind:teacherKind,classId:input.classGroupId,subject:input.subject,slotId:input.scheduleSlotId}).catch(()=>{});
+      }else if(refreshKinds){
         // A committed write succeeds independently of the subsequent list refresh.
         void client.invalidateQueries({predicate:q=>q.queryKey[0]==='resource'&&q.queryKey[1]===scope.membershipId&&q.queryKey[2]===activeYear?.id&&refreshKinds.includes(String(q.queryKey[3]))}).catch(()=>{
           // Fetch errors remain visible through the existing query error/retry UI.
@@ -101,7 +106,7 @@ export const AppProvider=({children}:{children:React.ReactNode})=>{
     addTeacher:(v:Record<string,unknown>)=>create('teachers',v),updateTeacher:(id:string,v:Record<string,unknown>)=>update('teachers',id,v),deleteTeacher:(id:string)=>remove('teachers',id),addVicePrincipal:(v:Record<string,unknown>)=>create('vicePrincipals',v),updateVicePrincipal:(id:string,v:Record<string,unknown>)=>update('vicePrincipals',id,v),deleteVicePrincipal:(id:string)=>remove('vicePrincipals',id),
     convertTeacherToVicePrincipal:(id:string,roleTitle:string,permissions?:object)=>command('convert-staff',{id,to:'vice_principal',roleTitle,permissions}),convertVicePrincipalToTeacher:(id:string,teachingSubjects:string[],assignedClassIds:string[])=>command('convert-staff',{id,to:'teacher',teachingSubjects,assignedClassIds}),
     updateVicePrincipalProfilePermissions:(vpId:string,permissions:object)=>command('permissions',{vpId,permissions}),updateVicePrincipalPermissions:(permissions:object)=>command('permissions',{vpId:metadata.data?.profile?.id,permissions}),
-    submitAttendance:(scheduleSlotId:string,records:unknown[],platform:string)=>command('attendance',{scheduleSlotId,records,platform}),addGradeItem:(v:Record<string,unknown>)=>create('grades',v),addHomework:(v:Record<string,unknown>)=>create('homework',v),submitHomework:(v:Record<string,unknown>)=>create('homeworkSubmissions',v),gradeHomeworkSubmission:(submissionId:string,score:number,feedback:string)=>command('homework-grade',{submissionId,score,feedback}),addOnlineExam:(v:Record<string,unknown>)=>create('exams',v),
+    submitAttendance:(scheduleSlotId:string,records:unknown[],platform:string,notifyParents=true)=>command('attendance',{scheduleSlotId,records,platform,notifyParents}),addGradeItem:(v:Record<string,unknown>)=>create('grades',v),addHomework:(v:Record<string,unknown>)=>create('homework',v),submitHomework:(v:Record<string,unknown>)=>create('homeworkSubmissions',v),gradeHomeworkSubmission:(submissionId:string,score:number,feedback:string)=>command('homework-grade',{submissionId,score,feedback}),addOnlineExam:(v:Record<string,unknown>)=>create('exams',v),
     addQuestionBankItem:(v:Record<string,unknown>)=>create('questionBank',v),addBannerAd:(v:Record<string,unknown>)=>create('banners',v),updateBannerAd:(id:string,v:Record<string,unknown>)=>update('banners',id,v),toggleBannerStatus:(id:string)=>command('banner-status',{id}),clickBanner:(id:string)=>request<Record<string,unknown>>('/commands/banner-click',{method:'POST',body:{id},scope:effectiveScope,key:crypto.randomUUID()}).then(result=>({ok:true,...result})).catch(e=>({ok:false,error:e instanceof Error?e.message:'ثبت کلیک ممکن نشد.'})),addAnnouncement:(v:Record<string,unknown>)=>create('announcements',v),updateAnnouncement:async(id:string,v:Record<string,unknown>)=>{try{return await update('announcements',id,await prepare('announcements',v));}catch(e){return {ok:false,error:(e as Error).message};}},deleteAnnouncement:(id:string)=>remove('announcements',id),togglePinAnnouncement:(id:string)=>command('pin-announcement',{id}),
     addDisciplinaryRecord:(studentId:string,record:object)=>command('discipline',{studentId,record}),updateParentContact:(studentId:string,changes:object)=>command('contact',{studentId,changes}),sendNotification:(v:Record<string,unknown>)=>command('notify',{studentId:v.studentId,message:v.message,platform:v.platform}),
     transferStudentClass:(studentId:string,classGroupId:string)=>command('student-status',{studentId,status:'active',classGroupId}),markStudentActive:(studentId:string,classGroupId:string)=>command('student-status',{studentId,status:'active',classGroupId}),markStudentGraduated:(studentId:string,details:object)=>command('student-status',{studentId,status:'graduated',details}),markStudentTransferred:(studentId:string,details:object)=>command('student-status',{studentId,status:'transferred',details}),
@@ -126,5 +131,5 @@ export const AppProvider=({children}:{children:React.ReactNode})=>{
   return <Context.Provider value={value}>{errors.length>0&&<div role="alert" className="bg-rose-50 text-rose-800 p-3 text-sm text-center">{errors[0]}<button className="min-h-11 px-3 font-bold" onClick={()=>void client.invalidateQueries({queryKey:['resource']})}>تلاش مجدد</button></div>}{selectedId&&dossier.error&&<div role="alert" className="p-3 bg-rose-50 text-rose-800">{dossier.error.message}<button className="min-h-11 px-3" onClick={()=>setSelectedId(null)}>بستن</button></div>}{children}</Context.Provider>;
 };
 export function useApp(){const context=useContext(Context);if(!context)throw new Error('useApp requires AppProvider');return context;}
-export function useResource(kind:string){const app=useApp();useEffect(()=>app.loadResource(kind),[kind,app.loadResource]);}
+export function useResource(kind:string,enabled=true){const app=useApp();useEffect(()=>{if(enabled)app.loadResource(kind);},[kind,enabled,app.loadResource]);}
 export function useClassRoster(classId:string|undefined){const auth=useAuth();const app=useApp();return useQuery({queryKey:['roster',auth.member.id,app.activeAcademicYearId,classId],enabled:!!classId,queryFn:({signal})=>request<{items:Student[]}>(`/classes/${classId}/roster`,{signal,scope:{membershipId:auth.member.id,csrf:auth.user.csrf,yearId:app.activeAcademicYearId}}),retry:false,staleTime:30000});}

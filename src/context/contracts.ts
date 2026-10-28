@@ -92,7 +92,8 @@ export interface AppContextType {
   submitAttendance: (
     scheduleSlotId: string,
     records: { studentId: string; status: AttendanceStatus; note?: string }[],
-    platform: 'bale' | 'sms'
+    platform: 'bale' | 'sms',
+    notifyParents?: boolean
   ) => AttendanceActionResult;
   addQuestionBankItem: (item: Omit<QuestionBankItem, 'id' | 'createdAt' | 'usageCount'>) => void;
   addBannerAd: (banner: Omit<BannerAd, 'id' | 'clicksCount'>) => void;

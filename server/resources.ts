@@ -66,7 +66,8 @@ export async function visibleFilter(tx:Tx,m:Membership,school:string,year:string
     const col=kind==='classes'?'id':'class_id';
     let filter=`${col}=ANY(${add(classes)}::uuid[])`;
     if(['grades','homework','exams','schedule'].includes(kind)) filter+=` AND subject=ANY(${add(profile?.teachingSubjects||[])}::text[])`;
-    if(['homework','schedule'].includes(kind)) filter+=` AND teacher_id=${add(profile?.id||null)}`;
+    if(['grades','exams'].includes(kind))filter+=` AND (teacher_id=${add(profile?.id||null)} OR (teacher_id IS NULL AND data->>'_actor'=(SELECT user_id::text FROM memberships WHERE id=${add(m.id)})))`;
+    if(['homework','schedule','attendanceSessions'].includes(kind)) filter+=` AND teacher_id=${add(profile?.id||null)}`;
     if(kind==='homeworkSubmissions') filter+=` AND data->>'homeworkId' IN (SELECT id::text FROM records WHERE school_id=${add(school)} AND year_id=${add(year)} AND kind='homework' AND teacher_id=${add(profile?.id||null)})`;
     return filter;
   }
@@ -109,8 +110,10 @@ export async function validateReferences(tx:Tx,m:Membership,school:string,year:s
     if(kind==='exams')requireValue(schoolTimeMinutes(String(data.startTime))!==undefined,'ساعت آغاز آزمون معتبر نیست.');
     const profile=await memberProfile(tx,m,school,year);requireValue(profile,'پروفایل دبیر پیدا نشد.');
     data.teacherId=profile.id;data.teacherName=profile.name;
+    if(kind==='homework'){const roster=await tx.query("SELECT count(*)::int AS n FROM records WHERE school_id=$1 AND year_id=$2 AND kind='students' AND class_id=$3 AND COALESCE(data->>'status','active')='active'",[school,year,data.classGroupId]);data.totalStudents=roster.rows[0].n;data.assignedDate=getSchoolDate();}
   }
   if(kind==='grades') {
+    const profile=await memberProfile(tx,m,school,year);requireValue(profile,'پروفایل دبیر پیدا نشد.',403);data.teacherId=profile.id;
     requireValue(!validateGradeItem({...data,schoolId:school} as unknown as Omit<GradeItem,'id'>), 'نمره یا فهرست ارزشیابی معتبر نیست.');
     const roster=await tx.query("SELECT id FROM records WHERE school_id=$1 AND year_id=$2 AND kind='students' AND class_id=$3 AND COALESCE(data->>'status','active')='active'",[school,year,data.classGroupId]);
     const scores=data.scores as {studentId:string}[];
@@ -147,7 +150,7 @@ export async function resourceRoutes(app:FastifyInstance) {
       await classAccess(tx,{...member,profile_id:(await memberProfile(tx,member,school,year))?.id||null},school,year,classId);
       const result=await tx.query("SELECT * FROM records WHERE school_id=$1 AND year_id=$2 AND kind='students' AND class_id=$3 AND COALESCE(data->>'status','active')='active' ORDER BY data->>'name' LIMIT 201",[school,year,classId]);
       requireValue(result.rows.length<=200,'این کلاس بیش از سقف مجاز دانش‌آموز دارد؛ کلاس‌بندی را بررسی کنید.');
-      return {items:result.rows.map(row=>{const data=entity(row);delete data.financialSummary;data.reportCards=[];data.disciplinaryRecords=[];data.pastYearHistory=[];return data;})};
+      return {items:result.rows.map(row=>{const data=entity(row);if(member.role==='teacher')return {id:data.id,name:data.name,studentNumber:data.studentNumber,classGroupId:data.classGroupId,status:data.status};delete data.financialSummary;data.reportCards=[];data.disciplinaryRecords=[];data.pastYearHistory=[];return data;})};
     },school);
   });
   app.get('/api/v1/attendance/session',async request=>{
@@ -158,11 +161,12 @@ export async function resourceRoutes(app:FastifyInstance) {
       await classAccess(tx,{...member,profile_id:profile?.id||null},school,year,String(slot.classGroupId),String(slot.subject));
       if(member.role==='teacher')requireValue(slot.teacherId===profile?.id,'این برنامه متعلق به شما نیست.',403);
       const row=(await tx.query("SELECT * FROM records WHERE school_id=$1 AND year_id=$2 AND kind='attendanceSessions' AND class_id=$3 AND civil_day=$4::date AND data->>'period'=$5",[school,year,slot.classGroupId,new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Tehran'}),String(slot.period)])).rows[0];
-      if(!row)return null;const item=entity(row);delete item.previousVersions;return item;
+      if(!row)return null;const item=entity(row);if(member.role==='teacher')requireValue(item.teacherId===profile?.id,'ثبت این جلسه متعلق به دبیر دیگری است.',403);delete item.previousVersions;return item;
     },school);
   });
   app.get('/api/v1/students/:id/records/:kind',async request=>{
     const {member,school,year}=await scope(request);const params=z.object({id:z.uuid(),kind:z.enum(['grades','attendanceSessions'])}).parse(request.params);const page=paging.parse(request.query);
+    requireValue(member.role!=='teacher','پرونده عمومی برای دبیر در دسترس نیست؛ از عملکرد همان درس استفاده کنید.',403);
     requireValue(school&&year&&member.role!=='platform_admin','رکورد پیدا نشد.',404);
     if(member.role==='vice_principal'&&!allowed(member,'canViewFullDossier'))deny();
     return transaction(async tx=>{
@@ -213,6 +217,7 @@ export async function resourceRoutes(app:FastifyInstance) {
       const child=await linkedRecord(tx,member,school,year);
       const items=rows.rows.map(r=>{
         const row=sanitize(entity(r),member,child?.id);
+        if(kind==='students'&&member.role==='teacher')return {id:row.id,name:row.name,studentNumber:row.studentNumber,classGroupId:row.classGroupId,status:row.status};
         if(kind==='students') { if(page.includeFinance!=='true'||!allowed(member,'canManageFinances'))delete row.financialSummary;row.reportCards=[];row.disciplinaryRecords=[];row.pastYearHistory=[]; }
         return row;
       });
@@ -221,6 +226,7 @@ export async function resourceRoutes(app:FastifyInstance) {
   });
   app.get('/api/v1/students/:id',async request=>{
     const {member,school,year}=await scope(request);const id=z.uuid().parse((request.params as {id:string}).id);
+    requireValue(member.role!=='teacher','پرونده عمومی برای دبیر در دسترس نیست؛ از عملکرد همان درس استفاده کنید.',403);
     requireValue(school&&year&&member.role!=='platform_admin','رکورد پیدا نشد.',404);
     if(member.role==='vice_principal'&&!allowed(member,'canViewFullDossier'))deny();
     return transaction(async tx=>{
@@ -329,8 +335,9 @@ export async function resourceRoutes(app:FastifyInstance) {
       }
       const old=await getRecord(tx,id,school,year,kind,true);requireValue(old.version===input.version,'اطلاعات تغییر کرده؛ دوباره بارگذاری کنید.',409);
       if(member.role==='teacher'){
+        requireValue(kind!=='grades','اصلاح نمره از دفتر نمره و با ثبت علت انجام می‌شود.',403);
         await classAccess(tx,{...member,profile_id:(await memberProfile(tx,member,school,year))?.id||null},school,year,String(old.classGroupId),String(old.subject));
-        if(kind==='homework')requireValue(old.teacherId===(await memberProfile(tx,member,school,year))?.id,'این تکلیف متعلق به شما نیست.',403);
+        if(['homework','exams'].includes(kind))requireValue(old.teacherId===(await memberProfile(tx,member,school,year))?.id||(!old.teacherId&&old._actor===requireAuth(request).id),'این رکورد متعلق به شما نیست.',403);
       }
       if(kind==='feeItems') { const used=await tx.query("SELECT 1 FROM records WHERE school_id=$1 AND year_id=$2 AND kind='students' AND data->'financialSummary'->'assignedFees' @> $3::jsonb",[school,year,JSON.stringify([{feeItemId:id}])]);requireValue(!used.rowCount,'تعرفه تخصیص‌یافته قابل ویرایش نیست.'); }
       const changes=resourceSchemas[kind as keyof typeof resourceSchemas].partial().parse(input.changes) as Record<string,unknown>;
@@ -350,8 +357,9 @@ export async function resourceRoutes(app:FastifyInstance) {
     return transaction(async tx=>{
       const old=await getRecord(tx,id,school,year,kind,true);
       if(member.role==='teacher'){
+        requireValue(kind!=='grades','اصلاح نمره از دفتر نمره و با ثبت علت انجام می‌شود.',403);
         await classAccess(tx,{...member,profile_id:(await memberProfile(tx,member,school,year))?.id||null},school,year,String(old.classGroupId),String(old.subject));
-        if(kind==='homework')requireValue(old.teacherId===(await memberProfile(tx,member,school,year))?.id,'این تکلیف متعلق به شما نیست.',403);
+        if(['homework','exams'].includes(kind))requireValue(old.teacherId===(await memberProfile(tx,member,school,year))?.id||(!old.teacherId&&old._actor===requireAuth(request).id),'این رکورد متعلق به شما نیست.',403);
       }
       const version=z.coerce.number().int().positive().parse(request.headers['if-match']);requireValue(version===old.version,'اطلاعات تغییر کرده است.',409);
       if(kind==='feeItems') { const used=await tx.query("SELECT 1 FROM records WHERE school_id=$1 AND year_id=$2 AND kind='students' AND data->'financialSummary'->'assignedFees' @> $3::jsonb",[school,year,JSON.stringify([{feeItemId:id}])]);requireValue(!used.rowCount,'تعرفه تخصیص‌یافته قابل حذف نیست.'); }

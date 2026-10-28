@@ -1,7 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {motion,useReducedMotion} from 'motion/react';
 import {BookOpen, Check, GraduationCap, LockKeyhole, Phone, Save, Settings2, ShieldCheck, X} from 'lucide-react';
-import {useApp} from '../context/AppContext';
+import {useApp,useResource} from '../context/AppContext';
 import {useAuth} from '../auth/AuthContext';
 import type {UserRole} from '../types';
 import {toPersianDigits} from '../utils/persianUtils';
@@ -12,6 +12,7 @@ const titles:Record<UserRole,string>={platform_admin:'مدیر پلتفرم',pri
 function Detail({label,children}:{label:string;children:React.ReactNode}){return <div className="min-w-0 rounded-xl border border-[#e7ecdf] bg-white p-3"><dt className="mb-2 text-[10px] leading-5 text-[#95a587]">{label}</dt><dd className="break-words text-xs font-bold leading-7 text-[#607b4b]">{children||'—'}</dd></div>;}
 
 export const UserProfileModal:React.FC<Props>=({onClose})=>{
+  useResource('classes');
   const auth=useAuth(),reducedMotion=useReducedMotion();
   const {currentUser,currentRole,currentSchool,currentStudent:child,updateParentContact,activeAcademicYear,classes,canManageSchool}=useApp();
   const [securityOpen,setSecurityOpen]=useState(false),[parentBale,setParentBale]=useState(child?.parentBaleAccount||''),[parentPhone,setParentPhone]=useState(child?.parentPhone||''),[emergencyPhone,setEmergencyPhone]=useState(child?.emergencyPhone||'');

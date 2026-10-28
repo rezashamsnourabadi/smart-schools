@@ -121,6 +121,44 @@ body.student-dossier-open, body.student-submit-open { overflow: hidden; }
 .student-dashboard #student-workspace-panel > section,
 .student-dashboard #student-workspace-panel > div > section { box-shadow: 0 6px 24px -22px #65784c60; }
 
+/* Teacher controls share the student palette without affecting other roles. */
+.teacher-dashboard :where(button, input, select):focus-visible {
+  outline: 2px solid #809c68;
+  outline-offset: 3px;
+}
+.teacher-dashboard :where(select, input) { max-width: 100%; }
+
+.teacher-tool-dialog { max-height: 96dvh; }
+body.teaching-dialog-open { overflow: hidden; }
+.teaching-dialog { height: 100vh; height: 100dvh; }
+.teaching-label { display: block; min-width: 0; font-size: 11px; font-weight: 700; line-height: 1.9; color: #81916f; }
+.teaching-label > :where(input, select, textarea) { margin-top: 8px; }
+.teaching-dialog :where(input:not([type="file"]), select, textarea) {
+  width: 100%; min-height: 46px; border: 1px solid #dfe6d4; border-radius: 12px;
+  background: #fcfdf9; padding: 10px 12px; color: #58684b; font-size: 12px; font-weight: 400;
+}
+.teaching-dialog textarea { line-height: 2; resize: vertical; }
+.teaching-dialog :where(input, textarea)[aria-invalid="true"] { border-color: #e7a2a8; background: #fff8f8; }
+.teaching-dialog :where(button, input, select, textarea, a):focus-visible { outline: 2px solid #97af7d; outline-offset: 3px; }
+.teaching-primary, .teaching-secondary, .teaching-choice {
+  display: inline-flex; min-height: 44px; min-width: 44px; align-items: center; justify-content: center;
+  gap: 8px; border-radius: 12px; padding: 10px 14px; font-size: 11px; font-weight: 700; line-height: 1.8;
+}
+.teaching-primary { background: #56794a; color: white; }
+.teaching-primary:hover { background: #426039; }
+.teaching-secondary { background: #f3f6ec; color: #8a9d72; }
+.teaching-secondary:hover { background: #eaf0df; }
+.teaching-choice { border: 1px solid #e2e8d9; background: white; color: #9aa78b; }
+.teaching-choice-active { border-color: #cfdcbe; background: #ecf3e2; color: #718b54; }
+.teaching-dialog :where(button, fieldset):disabled { opacity: .55; }
+.teaching-error { border: 1px solid #f3d3d5; border-radius: 14px; background: #fff4f4; padding: 12px; font-size: 11px; line-height: 2; color: #a35660; }
+.teaching-empty { border: 1px dashed #dde5d3; border-radius: 16px; background: #fafcf6; padding: 24px 14px; text-align: center; font-size: 11px; line-height: 2; color: #96a186; }
+@media (min-width: 640px) {
+  .teacher-tool-dialog { max-height: 92dvh; }
+  .teaching-dialog { height: auto; max-height: 92vh; max-height: 92dvh; }
+}
+
+
 /* Shared header tools and the question bank follow the same quiet sage palette. */
 body.question-bank-open, body.dana-profile-open { overflow: hidden; }
 .dana-header :where(button, a, select):focus-visible,
@@ -140,3 +178,5 @@ body.question-bank-open, body.dana-profile-open { overflow: hidden; }
   .question-bank-sheet { height: 92vh; height: 92dvh; }
 }
 
+.teacher-text-input { width: 100%; min-height: 46px; margin-top: 8px; border: 1px solid #dfe6d4; border-radius: 12px; background: #fcfdf9; padding: 10px 12px; color: #58684b; font-size: 12px; font-weight: 400; }
+.teacher-dashboard summary::-webkit-details-marker { display: none; }

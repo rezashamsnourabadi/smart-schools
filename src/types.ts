@@ -218,6 +218,7 @@ export interface AttendanceSession {
   submittedAt: string;
   records: AttendanceEntry[];
   sentNotificationsCount: number;
+  notifyParents?: boolean;
   scheduleSlotId?: string;
   academicYearId?: string;
   recordedBy?: string;

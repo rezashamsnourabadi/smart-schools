@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
+import {config} from './config';
 import { transaction, type Tx } from './db';
 import { allowed, scope, linkedRecord, memberProfile, assertRead } from './resources';
 import { deny, requireValue } from './errors';
@@ -15,7 +16,7 @@ import type { AttendanceSession, PaymentTransaction, StudentFinancialSummary, Sc
 const id=z.uuid();const text=z.string().trim().max(2000);const amount=z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const payment=z.object({studentId:id,studentName:text,schoolId:id,amount,trackingCode:text.min(1).max(100),method:z.enum(['pos','card_to_card','bank_receipt','cheque','cash']),methodDetails:z.object({bankName:text.optional(),chequeNumber:text.optional(),chequeDueDate:text.optional(),receiptImageUrl:z.string().regex(/^\/api\/v1\/files\/[a-f0-9-]+$/).optional(),payerName:text.optional(),accountTail:text.optional()}).strict().optional(),note:text.optional(),feeItemId:id.optional(),feeTitle:text.optional(),recordedBy:text,status:z.enum(['confirmed','pending_verification','rejected']),isSimulated:z.boolean().optional()}).strict();
 export async function enqueue(tx:Tx,school:string,year:string,student:Entity,input:{message:string;platform?:'bale'|'sms';type?:string;attendanceSessionId?:string;attendanceRevision?:number}) {
-  const channel=input.platform==='bale'&&student.parentBaleAccount?'bale':'sms';
+  const channel=input.platform==='bale'&&config.BALE_BOT_TOKEN&&student.parentBaleAccount?'bale':'sms';
   const notification={studentId:student.id,studentName:student.name,recipientName:student.parentName,recipientPhone:student.parentPhone,platform:channel==='bale'?'بله':'پیامک',status:'queued',message:input.message,timestamp:new Date().toISOString(),schoolName:'',type:input.type||'general',attendanceSessionId:input.attendanceSessionId,attendanceRevision:input.attendanceRevision};
   const row=await saveRecord(tx,school,year,'notifications',notification);
   await tx.query('INSERT INTO outbox(school_id,payload) VALUES($1,$2)',[school,{channel,phone:student.parentPhone,chatId:student.parentBaleAccount,message:input.message,notificationId:row.id,yearId:year}]);
@@ -33,7 +34,7 @@ export async function commandRoutes(app:FastifyInstance) {
         const changes=await change(old);return saveRecord(tx,school,year,'students',{...old,...changes},old);
       };
       if(action==='attendance') {
-        const input=z.object({scheduleSlotId:id,records:z.array(z.object({studentId:id,status:z.enum(['present','absent','late','excused']),note:text.optional()}).strict()).min(1).max(200),platform:z.enum(['bale','sms'])}).strict().parse(body);
+        const input=z.object({scheduleSlotId:id,records:z.array(z.object({studentId:id,status:z.enum(['present','absent','late','excused']),note:text.optional()}).strict()).min(1).max(200),platform:z.enum(['bale','sms']).default('bale'),notifyParents:z.boolean().default(true)}).strict().parse(body);
         requireValue(['principal','vice_principal','teacher'].includes(member.role),'دسترسی مجاز نیست.',403);
         const slot=await getRecord(tx,input.scheduleSlotId,school,year,'schedule');
         await classAccess(tx,{...member,profile_id:(await memberProfile(tx,member,school,year))?.id||null},school,year,String(slot.classGroupId),String(slot.subject));
@@ -44,18 +45,20 @@ export async function commandRoutes(app:FastifyInstance) {
         await tx.query('SELECT id FROM records WHERE id=$1 FOR UPDATE',[slot.classGroupId]);
         const prior=await tx.query("SELECT * FROM records WHERE school_id=$1 AND year_id=$2 AND kind='attendanceSessions' AND class_id=$3 AND data->>'date'=$4 AND data->>'period'=$5 FOR UPDATE",[school,year,slot.classGroupId,clock.date,String(slot.period)]);
         const previous=prior.rows.map(entity);
-        const draft={id:randomUUID(),schoolId:school,academicYearId:year,classGroupId:slot.classGroupId,className:slot.className,subject:slot.subject,teacherId:slot.teacherId,teacherName:slot.teacherName,date:clock.date,period:slot.period,submittedAt:clock.time,records:input.records,sentNotificationsCount:0,scheduleSlotId:slot.id,recordedBy:user.id} as AttendanceSession;
+        if(member.role==='teacher'&&previous.length)requireValue(previous[0].teacherId===slot.teacherId,'ثبت این جلسه متعلق به دبیر دیگری است.',403);
+        const draft={id:randomUUID(),schoolId:school,academicYearId:year,classGroupId:slot.classGroupId,className:slot.className,subject:slot.subject,teacherId:slot.teacherId,teacherName:slot.teacherName,date:clock.date,period:slot.period,submittedAt:clock.time,records:input.records,studentNames:Object.fromEntries(roster.rows.map(row=>[row.id,row.data.name])),sentNotificationsCount:0,scheduleSlotId:slot.id,recordedBy:user.id} as AttendanceSession;
         const change=upsertAttendance(previous as unknown as AttendanceSession[],draft);
         if(change.changed) {
-          const saved=await saveRecord(tx,school,year,'attendanceSessions',change.session as unknown as Record<string,unknown>,previous[0]);
-          for(const incident of change.changes) {
+          change.session.sentNotificationsCount=(previous[0]?.sentNotificationsCount as number||0)+(input.notifyParents?change.changes.length:0);
+          const saved=await saveRecord(tx,school,year,'attendanceSessions',{...change.session,notifyParents:input.notifyParents},previous[0]);
+          for(const incident of input.notifyParents?change.changes:[]) {
             const student=entity(roster.rows.find(r=>r.id===incident.studentId));
-            await enqueue(tx,school,year,student,{message:`وضعیت حضور ${student.name} در زنگ ${slot.period} به ${incident.status} ثبت شد.`,platform:input.platform,type:incident.previousStatus?'attendance_correction':incident.status==='absent'?'attendance_absent':'attendance_late',attendanceSessionId:saved.id,attendanceRevision:change.session.revision});
+            await enqueue(tx,school,year,student,{message:`وضعیت حضور ${student.name} در زنگ ${slot.period} به ${incident.status} ثبت شد.`,platform:member.role==='teacher'?'bale':input.platform,type:incident.previousStatus?'attendance_correction':incident.status==='absent'?'attendance_absent':'attendance_late',attendanceSessionId:saved.id,attendanceRevision:change.session.revision});
           }
           const daily=(await tx.query("WITH daily AS (SELECT entry->>'studentId' AS student,max(CASE entry->>'status' WHEN 'absent' THEN 3 WHEN 'late' THEN 2 WHEN 'excused' THEN 1 ELSE 0 END) severity FROM records CROSS JOIN LATERAL jsonb_array_elements(data->'records') entry WHERE school_id=$1 AND year_id=$2 AND kind='attendanceSessions' AND civil_day=$3::date GROUP BY entry->>'studentId') SELECT count(*)::int AS recorded,count(*) FILTER(WHERE severity IN (0,2))::int AS present FROM daily",[school,year,new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Tehran'})])).rows[0];
           await tx.query('UPDATE schools SET data=data||$1::jsonb WHERE id=$2',[JSON.stringify({todayAttendanceDate:clock.date,todayAttendanceSubmitted:daily.recorded>0,attendanceRateToday:daily.recorded?Math.round(daily.present/daily.recorded*1000)/10:0,attendanceRecordedCount:daily.recorded}),school]);
         }
-        result={ok:true,changed:change.changed,notificationsSent:change.changes.length};
+        result={ok:true,changed:change.changed,notificationsSent:input.notifyParents?change.changes.length:0};
       } else if(action==='payment'||action==='payment-status'||action==='discount') {
         let studentId:string;
         if(action==='payment')studentId=payment.parse(body).studentId;

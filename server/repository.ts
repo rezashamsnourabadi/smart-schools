@@ -38,6 +38,7 @@ export async function classAccess(tx: Tx, member: Membership, school: string, ye
   requireValue(member.profile_id,'انتساب دبیر پیدا نشد.',403);
   const profile=await getRecord(tx,member.profile_id,school,year,'teachers');
   requireValue((profile.assignedClassIds as string[]).includes(classId) && (!subject || (profile.teachingSubjects as string[]).includes(subject)), 'این کلاس یا درس به شما اختصاص ندارد.',403);
+  if(subject){const match=await tx.query("SELECT 1 FROM records WHERE school_id=$1 AND year_id=$2 AND kind='schedule' AND class_id=$3 AND teacher_id=$4 AND subject=$5 LIMIT 1",[school,year,classId,profile.id,subject]);requireValue(match.rowCount,'این ترکیب کلاس و درس در برنامه دبیر نیست.',403);}
   return group;
 }
 export async function audit(tx:Tx,userId:string,schoolId:string|null,action:string,id?:string) {

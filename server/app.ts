@@ -11,6 +11,7 @@ import { config } from './config';
 import { pool, transaction } from './db';
 import { authRoutes, membership, requireAuth } from './auth';
 import { resourceRoutes } from './resources';
+import {teacherRoutes} from './teacher';
 import { commandRoutes } from './commands';
 import { adminRoutes } from './admin';
 import { fileRoutes } from './files';
@@ -55,8 +56,8 @@ export async function createApp() {
   app.addHook('onRoute',options=>{
     const methods=Array.isArray(options.method)?options.method:[options.method];
     const mutation=methods.some(m=>['POST','PATCH','DELETE'].includes(m));
-    const protectedRead=methods.includes('GET')&&/^\/api\/v1\/(resources|workspace|students|dashboard|attendance)/.test(options.url);
-    if(!protectedRead&&(!mutation||!/^\/api\/v1\/(resources|commands|accounts)/.test(options.url)))return;
+    const protectedRead=methods.includes('GET')&&/^\/api\/v1\/(resources|workspace|students|dashboard|attendance|teacher)/.test(options.url);
+    if(!protectedRead&&(!mutation||!/^\/api\/v1\/(resources|commands|accounts|teacher)/.test(options.url)))return;
     const original=options.handler;
     options.handler=async function(request,reply){
       const actor=requireAuth(request);const m=await membership(request);
@@ -78,7 +79,7 @@ export async function createApp() {
     };
   });
   // Register directly, sharing authentication hooks with all protected routes.
-  await authRoutes(app);await resourceRoutes(app);await commandRoutes(app);await adminRoutes(app);await fileRoutes(app);
+  await authRoutes(app);await resourceRoutes(app);await commandRoutes(app);await teacherRoutes(app);await adminRoutes(app);await fileRoutes(app);
   app.get('/api/v1/health',async()=>({ok:true}));
   app.get('/api/v1/ready',async()=>{await readiness();await redis.ping();return {ok:true};});
   app.get('/api/v1/openapi.json',async request=>{requireAuth(request);return app.swagger();});

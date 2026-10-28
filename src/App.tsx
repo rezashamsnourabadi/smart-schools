@@ -27,6 +27,7 @@ const SystemDocsModal = lazy(() => import('./components/SystemDocsModal').then(m
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { GraduationCap, BookOpen } from 'lucide-react';
 import { Student } from './types';
+import type {TeachingContext,TeacherGrade} from './types/teacher';
 
 const AppContent: React.FC = () => {
   const {
@@ -45,6 +46,8 @@ const AppContent: React.FC = () => {
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isVpPermsModalOpen, setIsVpPermsModalOpen] = useState(false);
+  const [teacherContext,setTeacherContext]=useState<TeachingContext>();
+  const [editingTeacherGrade,setEditingTeacherGrade]=useState<TeacherGrade>();
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false);
   const [isHomeworkExamModalOpen, setIsHomeworkExamModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -90,9 +93,9 @@ const AppContent: React.FC = () => {
         return (
           <TeacherDashboard
             onOpenQuestionBank={() => setIsQuestionBankOpen(true)}
-            onOpenGradeEntryModal={() => setIsGradeModalOpen(true)}
-            onOpenHomeworkExamModal={() => setIsHomeworkExamModalOpen(true)}
-            onOpenStudentDossier={handleOpenStudentDossier}
+            onOpenGradeEntryModal={(context,grade) => {setTeacherContext(context);setEditingTeacherGrade(grade);setIsGradeModalOpen(true);}}
+            onOpenHomeworkExamModal={context => {setTeacherContext(context);setIsHomeworkExamModalOpen(true);}}
+            onContextChange={setTeacherContext}
           />
         );
       case 'student':
@@ -114,14 +117,13 @@ const AppContent: React.FC = () => {
             onOpenQuestionBank={() => setIsQuestionBankOpen(true)}
             onOpenGradeEntryModal={() => setIsGradeModalOpen(true)}
             onOpenHomeworkExamModal={() => setIsHomeworkExamModalOpen(true)}
-            onOpenStudentDossier={handleOpenStudentDossier}
           />
         );
     }
   };
 
   return (
-    <div className={`min-h-screen w-full max-w-full overflow-x-clip flex flex-col text-slate-800 antialiased selection:bg-teal-200 ${currentRole==='student'?'bg-[#f7f8f4]':'bg-slate-100/70'}`} dir="rtl">
+    <div className={`min-h-screen w-full max-w-full overflow-x-clip flex flex-col text-slate-800 antialiased selection:bg-teal-200 ${(currentRole==='student'||currentRole==='teacher')?'bg-[#f7f8f4]':'bg-slate-100/70'}`} dir="rtl">
       {/* Top Header with Profile Modal trigger and Brand Switcher */}
       <Header
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
@@ -143,7 +145,7 @@ const AppContent: React.FC = () => {
         onOpenSchedule={() => setIsScheduleModalOpen(true)}
         onOpenPosts={() => setIsPostModalOpen(true)}
         onOpenQuestionBank={() => setIsQuestionBankOpen(true)}
-        onOpenGrades={() => setIsGradeModalOpen(true)}
+        onOpenGrades={() => {setEditingTeacherGrade(undefined);setIsGradeModalOpen(true);}}
         onOpenHomework={() => setIsHomeworkExamModalOpen(true)}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onOpenDossier={() => {
@@ -222,7 +224,7 @@ const AppContent: React.FC = () => {
       {/* Homework manager and exam schedule planner */}
       <AnimatePresence>
         {isHomeworkExamModalOpen && currentRole === 'teacher' && <TeacherHomeworkAndExamModal
-          key="teacher-homework-exam"
+          key="teacher-homework-exam" initialContext={teacherContext}
           onClose={() => setIsHomeworkExamModalOpen(false)}
         />}
       </AnimatePresence>

@@ -1,719 +1,86 @@
-import React, { useState } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
-import {
-  X,
-  BookOpen,
-  Plus,
-  Calendar,
-  Clock,
-  CheckCircle2,
-  FileQuestion,
-  Send,
-  Users,
-  Award,
-  ChevronDown,
-  ChevronUp,
-  MessageSquare,
-  Paperclip,
-  Check,
-  UploadCloud,
-  Trash2,
-  FileText
-} from 'lucide-react';
-import { useApp, useResource } from '../context/AppContext';
-import { toPersianDigits, getSchoolDate } from '../utils/persianUtils';
-import { MAX_LOCAL_ATTACHMENT_BYTES, MAX_LOCAL_ATTACHMENT_LABEL } from '../utils/localAttachments';
+import React,{useState} from 'react';
+import {BookOpen,CalendarDays,Check,ChevronDown,Clock3,FileQuestion,Paperclip,Plus,Send,Trash2,UploadCloud} from 'lucide-react';
+import {useApp,useResource} from '../context/AppContext';
+import {getSchoolDate,toEnglishDigits,toPersianDigits} from '../utils/persianUtils';
+import {parseGradeScore} from '../utils/gradeUtils';
+import {MAX_LOCAL_ATTACHMENT_BYTES,MAX_LOCAL_ATTACHMENT_LABEL} from '../utils/localAttachments';
+import {TeachingDialog,TeachingSection} from './TeachingDialog';
+import type {TeachingContext} from '../types/teacher';
+import {useTeacherRecords} from '../api/teacher';
+import {TeacherRecordPager} from './TeacherRecordPager';
+import {ResourcePager} from './ResourcePager';
 
-interface TeacherHomeworkAndExamModalProps {
-  onClose: () => void;
+interface Props {onClose:()=>void;initialContext?:TeachingContext}
+interface Attachment {name:string;size?:string;url?:string;type:'image'|'pdf'|'doc'}
+function Attachments({items}:{items?:{name:string;url?:string}[]}){
+  return items?.length?<div className="flex flex-wrap gap-2">{items.map((item,index)=>item.url?<a key={index} href={item.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-[#e3e8db] bg-white px-3 text-[11px] text-[#81976c]"><Paperclip className="size-3.5 shrink-0" aria-hidden="true"/><span className="min-w-0 break-all">{item.name}</span></a>:<span key={index} className="break-all text-[11px] text-slate-500">{item.name}</span>)}</div>:null;
 }
-
-export const TeacherHomeworkAndExamModal: React.FC<TeacherHomeworkAndExamModalProps> = ({ onClose }) => {
-  useResource('homework');
-  useResource('homeworkSubmissions');
-  useResource('exams');
-  useResource('classes');
-  const shouldReduceMotion = useReducedMotion();
-  const {
-    classes,
-    homework,
-    homeworkSubmissions,
-    gradeHomeworkSubmission,
-    exams,
-    currentSchoolId,
-    currentUser,
-    addHomework,
-    addOnlineExam
-  } = useApp();
-
-  const [activeTab, setActiveTab] = useState<'homework' | 'exams'>('homework');
-  const [showAddHw, setShowAddHw] = useState(false);
-  const [showAddExam, setShowAddExam] = useState(false);
-  const [expandedGradingHwId, setExpandedGradingHwId] = useState<string | null>(null);
-  const [gradingDrafts, setGradingDrafts] = useState<Record<string, { score: number; feedback: string }>>({});
-
-  // Homework form states
-  const [hwClassId, setHwClassId] = useState(classes[0]?.id || '');
-  const [hwSubject, setHwSubject] = useState(currentUser.teachingSubjects?.[0] || '');
-  const [hwTitle, setHwTitle] = useState('');
-  const [hwDesc, setHwDesc] = useState('');
-  const [hwDueDate, setHwDueDate] = useState(() => getSchoolDate());
-  const [hwUploadedFile, setHwUploadedFile] = useState<{
-    name: string;
-    size: string;
-    url: string;
-    type: 'image' | 'pdf' | 'doc';
-  } | null>(null);
-  const [hwAttachmentError, setHwAttachmentError] = useState('');
-
-  const handleHwFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > MAX_LOCAL_ATTACHMENT_BYTES) {
-      setHwAttachmentError(`اندازه فایل باید حداکثر ${MAX_LOCAL_ATTACHMENT_LABEL} باشد.`);
-      e.currentTarget.value = '';
-      return;
-    }
-
-    const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
-    const isImg = file.type.startsWith('image/');
-    const isPdf = file.type === 'application/pdf';
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        setHwAttachmentError('خواندن فایل ممکن نشد. دوباره تلاش کنید.');
-        return;
+export const TeacherHomeworkAndExamModal:React.FC<Props>=({onClose,initialContext})=>{
+  useResource('homework',!initialContext);useResource('homeworkSubmissions',!initialContext);useResource('exams',!initialContext);useResource('classes',!initialContext);
+  const {classes,homework:allHomework,homeworkSubmissions:allSubmissions,gradeHomeworkSubmission,exams:allExams,currentSchoolId,currentUser,addHomework,addOnlineExam,page,activeAcademicYear}=useApp();
+  const [tab,setTab]=useState<'homework'|'exams'>('homework'),[editing,setEditing]=useState(false);
+  const [expanded,setExpanded]=useState<string|null>(null);
+  const [offsets,setOffsets]=useState({homework:0,exams:0,submissions:0});
+  const scopedHw=useTeacherRecords(initialContext,'homework',offsets.homework,tab==='homework'),scopedExams=useTeacherRecords(initialContext,'exams',offsets.exams,tab==='exams'),scopedSubmissions=useTeacherRecords(initialContext,'submissions',offsets.submissions,tab==='homework'&&expanded!==null);
+  const homework=initialContext?scopedHw.data?.items||[]:allHomework,exams=initialContext?scopedExams.data?.items||[]:allExams,homeworkSubmissions=initialContext?scopedSubmissions.data?.items||[]:allSubmissions;
+  const [grading,setGrading]=useState<Record<string,{score:string;feedback:string}>>({});
+  const [selectedHwClass,setSelectedHwClass]=useState(initialContext?.classId||''),[hwSubject,setHwSubject]=useState(initialContext?.subject||currentUser.teachingSubjects?.[0]||'');
+  const [hwTitle,setHwTitle]=useState(''),[hwDescription,setHwDescription]=useState(''),[hwDate,setHwDate]=useState(getSchoolDate);
+  const [attachment,setAttachment]=useState<Attachment|null>(null),[attachmentError,setAttachmentError]=useState(''),[reading,setReading]=useState(false);
+  const [selectedExamClass,setSelectedExamClass]=useState(initialContext?.classId||''),[examSubject,setExamSubject]=useState(initialContext?.subject||currentUser.teachingSubjects?.[0]||'');
+  const [examTitle,setExamTitle]=useState(''),[examDate,setExamDate]=useState(getSchoolDate),[examTime,setExamTime]=useState('10:00'),[examDuration,setExamDuration]=useState(45);
+  const [pending,setPending]=useState(''),[error,setError]=useState(''),[message,setMessage]=useState('');
+  const hwClass=selectedHwClass||classes[0]?.id||'',examClass=selectedExamClass||classes[0]?.id||'';
+  const enabled=!!activeAcademicYear?.isCurrent&&activeAcademicYear.status==='active';
+  const fileChange=(event:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=event.target.files?.[0];event.target.value='';if(!file)return;setAttachmentError('');
+    if(file.size>MAX_LOCAL_ATTACHMENT_BYTES){setAttachmentError(`حداکثر اندازه فایل ${MAX_LOCAL_ATTACHMENT_LABEL} است.`);return;}
+    const allowed=['image/jpeg','image/png','image/webp','application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if(!allowed.includes(file.type)){setAttachmentError('تصویر JPG، PNG، WEBP یا فایل PDF و DOCX انتخاب کنید.');return;}
+    setReading(true);const reader=new FileReader();reader.onerror=()=>{setReading(false);setAttachmentError('خواندن فایل ممکن نشد؛ دوباره انتخاب کنید.');};
+    reader.onload=()=>{setReading(false);if(typeof reader.result!=='string'){setAttachmentError('خواندن فایل ممکن نشد.');return;}setAttachment({name:file.name,size:`${toPersianDigits((file.size/1024/1024).toFixed(1))} مگابایت`,url:reader.result,type:file.type.startsWith('image/')?'image':file.type==='application/pdf'?'pdf':'doc'});};reader.readAsDataURL(file);
+  };
+  const create=async(event:React.FormEvent)=>{
+    event.preventDefault();if(pending||reading)return;setError('');setMessage('');
+    const classId=tab==='homework'?hwClass:examClass,target=classes.find(group=>group.id===classId)||(initialContext?{id:initialContext.classId,name:initialContext.className,studentCount:0}:undefined);
+    if(!target){setError('کلاس آموزشی را انتخاب کنید.');return;}
+    setPending('create');
+    try{
+      if(tab==='homework'){
+        const result=await addHomework({schoolId:currentSchoolId,classGroupId:classId,className:target.name,subject:hwSubject.trim(),title:hwTitle.trim(),description:hwDescription,dueDate:hwDate,assignedDate:getSchoolDate(),teacherId:currentUser.id,teacherName:currentUser.name,status:'active',totalStudents:target.studentCount,attachments:attachment?[attachment]:undefined});
+        if(!result.ok){setError(result.error);return;}setHwTitle('');setHwDescription('');setAttachment(null);setAttachmentError('');setMessage('تکلیف برای کلاس ثبت شد.');
+      }else{
+        const result=await addOnlineExam({schoolId:currentSchoolId,classGroupId:classId,className:target.name,subject:examSubject.trim(),title:examTitle.trim(),durationMinutes:examDuration,examDate,startTime:toEnglishDigits(examTime),teacherName:currentUser.name,totalScore:0,status:'scheduled',questions:[]});
+        if(!result.ok){setError(result.error);return;}setExamTitle('');setMessage('زمان‌بندی آزمون ثبت شد.');
       }
-      setHwAttachmentError('');
-      setHwUploadedFile({
-        name: file.name,
-        size: `${toPersianDigits(sizeInMb)} مگابایت`,
-        url: reader.result as string,
-        type: isImg ? 'image' : isPdf ? 'pdf' : 'doc'
-      });
-    };
-    reader.onerror = () => setHwAttachmentError('خواندن فایل ممکن نشد. دوباره تلاش کنید.');
-    reader.readAsDataURL(file);
+      setEditing(false);
+    }catch(error){setError(error instanceof Error?error.message:'ثبت ممکن نشد؛ دوباره تلاش کنید.');}finally{setPending('');}
   };
-
-  // Exam form states
-  const [exClassId, setExClassId] = useState(classes[0]?.id || '');
-  const [exSubject, setExSubject] = useState(currentUser.teachingSubjects?.[0] || '');
-  const [exTitle, setExTitle] = useState('');
-  const [exDate, setExDate] = useState(() => getSchoolDate());
-  const [exTime, setExTime] = useState('۱۰:۰۰');
-  const [exDuration, setExDuration] = useState(45);
-
-  const handleSaveGrade = async (submissionId: string) => {
-    const draft = gradingDrafts[submissionId];
-    if (!draft || draft.score === undefined || isNaN(draft.score)) return;
-    const saved0 = await gradeHomeworkSubmission(submissionId, draft.score, draft.feedback || ''); if (!saved0.ok) return;
+  const saveGrade=async(id:string,values:{score:string;feedback:string})=>{
+    if(pending)return;const parsed=parseGradeScore(values.score,20);if(!parsed.ok){setError(parsed.error);return;}
+    setPending(id);setError('');setMessage('');
+    try{const result=await gradeHomeworkSubmission(id,parsed.value,values.feedback);if(!result.ok){setError(result.error);return;}setMessage('نمره و بازخورد ثبت شد.');}catch(error){setError(error instanceof Error?error.message:'ثبت بازخورد ممکن نشد.');}finally{setPending('');}
   };
-
-  const handleAddHw = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!hwTitle.trim()) return;
-
-    const targetClass = classes.find((c) => c.id === hwClassId);
-
-    const saved1 = await addHomework({
-      schoolId: currentSchoolId,
-      classGroupId: hwClassId,
-      className: targetClass?.name || 'کلاس درس',
-      subject: hwSubject,
-      title: hwTitle,
-      description: hwDesc,
-      dueDate: hwDueDate,
-      assignedDate: new Intl.DateTimeFormat('fa-IR', { timeZone: 'Asia/Tehran' }).format(new Date()),
-      teacherId: currentUser.id,
-      status: 'active',
-      teacherName: currentUser.name,
-      totalStudents: targetClass?.studentCount || 30,
-      attachments: hwUploadedFile ? [hwUploadedFile] : undefined
-    }); if (!saved1.ok) return;
-
-    setHwTitle('');
-    setHwDesc('');
-    setHwUploadedFile(null);
-    setShowAddHw(false);
-  };
-
-  const handleAddExam = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!exTitle.trim()) return;
-
-    const targetClass = classes.find((c) => c.id === exClassId);
-
-    const saved2 = await addOnlineExam({
-      schoolId: currentSchoolId,
-      classGroupId: exClassId,
-      className: targetClass?.name || 'کلاس درس',
-      subject: exSubject,
-      title: exTitle,
-      durationMinutes: exDuration,
-      examDate: exDate,
-      startTime: exTime,
-      teacherName: currentUser.name,
-      totalScore: 0,
-      status: 'scheduled',
-      questions: []
-    }); if (!saved2.ok) return;
-
-    setExTitle('');
-    setShowAddExam(false);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto w-full max-w-full"
-    >
-      <motion.div
-        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
-        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
-        className="bg-white w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl m-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="bg-slate-900 text-white p-3.5 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 sm:p-2 rounded-xl bg-teal-500/20 text-teal-300">
-              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-sm sm:text-lg">مدیریت تکالیف درسی و آزمون‌ها</h3>
-              <p className="text-[11px] sm:text-xs text-slate-400">تعریف تکالیف هفتگی، تحویل فایل، تصحیح و ثبت نتایج</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
-            title="بستن"
-            aria-label="بستن پنجره"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Tab switcher */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab('homework')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === 'homework'
-                  ? 'bg-teal-700 text-white shadow-xs'
-                  : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              تکالیف درسی ({toPersianDigits(homework.length)})
-            </button>
-            <button
-              onClick={() => setActiveTab('exams')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === 'exams'
-                  ? 'bg-teal-700 text-white shadow-xs'
-                  : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
-              }`}
-            >
-              <FileQuestion className="w-4 h-4" />
-              آزمون‌های آنلاین ({toPersianDigits(exams.length)})
-            </button>
-          </div>
-
-          {activeTab === 'homework' ? (
-            <button
-              onClick={() => setShowAddHw(!showAddHw)}
-              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-medium flex items-center gap-1 shadow-xs transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              تعریف تکلیف
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowAddExam(!showAddExam)}
-              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-medium flex items-center gap-1 shadow-xs transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              برنامه‌ریزی آزمون
-            </button>
-          )}
-        </div>
-
-        {/* Add Homework Form */}
-        {activeTab === 'homework' && showAddHw && (
-          <form onSubmit={handleAddHw} className="bg-teal-50/70 p-4 border-b border-teal-200 space-y-3 shrink-0">
-            <div className="font-bold text-xs text-teal-900">تعریف تکلیف جدید برای دانش‌آموزان</div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">کلاس هدف:</label>
-                <select
-                  value={hwClassId}
-                  onChange={(e) => setHwClassId(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">درس:</label>
-                <input
-                  type="text"
-                  value={hwSubject}
-                  onChange={(e) => setHwSubject(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">مهلت ارسال پاسخ:</label>
-                <input
-                  type="text"
-                  value={hwDueDate}
-                  onChange={(e) => setHwDueDate(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-mono"
-                  required
-                />
-              </div>
-              <div className="sm:col-span-3">
-                <label className="block text-xs font-medium text-slate-700 mb-1">عنوان تکلیف:</label>
-                <input
-                  type="text"
-                  placeholder="مثال: حل تمرین‌های دوره فصل اول هندسه"
-                  value={hwTitle}
-                  onChange={(e) => setHwTitle(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                  required
-                />
-              </div>
-              <div className="sm:col-span-3">
-                <label className="block text-xs font-medium text-slate-700 mb-1">شرح و سوالات تکلیف:</label>
-                <textarea
-                  rows={2}
-                  placeholder="صفحات مورد نظر و نکات مهم در حل..."
-                  value={hwDesc}
-                  onChange={(e) => setHwDesc(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                />
-              </div>
-
-              {/* Real Homework File / Sheet Upload */}
-              <div className="sm:col-span-3">
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                  <UploadCloud className="w-4 h-4 text-teal-600" />
-                  <span>آپلود فایل یا تصویر برگ تکلیف (PDF یا عکس تمرین):</span>
-                </label>
-
-                <input
-                  type="file"
-                  id="hw-file-upload"
-                  onChange={handleHwFileChange}
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                />
-
-                {!hwUploadedFile ? (
-                  <label
-                    htmlFor="hw-file-upload"
-                    className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 hover:border-teal-500 bg-white hover:bg-teal-50/50 rounded-xl cursor-pointer transition-colors text-center"
-                  >
-                    <UploadCloud className="w-4 h-4 text-slate-400" />
-                    <span className="text-xs text-slate-600 font-medium">
-                      فایل تا {MAX_LOCAL_ATTACHMENT_LABEL} (فایل خصوصی)
-                    </span>
-                  </label>
-                ) : (
-                  <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs">
-                      {hwUploadedFile.type === 'image' ? (
-                        <img
-                          src={hwUploadedFile.url}
-                          alt="preview"
-                          className="w-9 h-9 rounded-lg object-cover border border-teal-300"
-                        />
-                      ) : (
-                        <FileText className="w-6 h-6 text-teal-700" />
-                      )}
-                      <div>
-                        <span className="font-bold text-slate-900 block truncate max-w-xs">{hwUploadedFile.name}</span>
-                        <span className="text-[10px] text-slate-500">{hwUploadedFile.size}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setHwUploadedFile(null)}
-                      className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-                {hwAttachmentError && <p role="alert" className="mt-2 text-xs font-medium text-rose-700">{hwAttachmentError}</p>}
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAddHw(false)}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-200 rounded-lg"
-              >
-                انصراف
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold"
-              >
-                ارسال به کلاس
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Add Exam Form */}
-        {activeTab === 'exams' && showAddExam && (
-          <form onSubmit={handleAddExam} className="bg-teal-50/70 p-4 border-b border-teal-200 space-y-3 shrink-0">
-            <div className="font-bold text-xs text-teal-900">طراحی آزمون آنلاین چندگزینه‌ای</div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">کلاس هدف:</label>
-                <select
-                  value={exClassId}
-                  onChange={(e) => setExClassId(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">درس:</label>
-                <input
-                  type="text"
-                  value={exSubject}
-                  onChange={(e) => setExSubject(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">مدت زمان (دقیقه):</label>
-                <input
-                  type="number"
-                  value={exDuration}
-                  onChange={(e) => setExDuration(Number(e.target.value))}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-mono text-center"
-                  required
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-slate-700 mb-1">عنوان آزمون:</label>
-                <input
-                  type="text"
-                  placeholder="مثال: آزمون هماهنگ ماهانه ریاضی و تابع"
-                  value={exTitle}
-                  onChange={(e) => setExTitle(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">تاریخ آزمون:</label>
-                <input
-                  type="text"
-                  value={exDate}
-                  onChange={(e) => setExDate(e.target.value)}
-                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-mono"
-                  required
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAddExam(false)}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-200 rounded-lg"
-              >
-                انصراف
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold"
-              >
-                انتشار و زمان‌بندی آزمون
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Content Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50 space-y-3">
-          {activeTab === 'homework' ? (
-            homework.map((hw) => (
-              <div
-                key={hw.id}
-                className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow"
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200 text-xs font-semibold">
-                        {hw.subject}
-                      </span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        کلاس: {hw.className}
-                      </span>
-                    </div>
-                    <h4 className="font-bold text-slate-800 text-sm sm:text-base">{hw.title}</h4>
-                  </div>
-                  <div className="text-left">
-                    <span className="text-[11px] text-slate-400 block">مهلت ارسال</span>
-                    <span className="text-xs font-bold text-rose-700 font-mono">{toPersianDigits(hw.dueDate)}</span>
-                  </div>
-                </div>
-
-                <p className="text-xs text-slate-600 leading-relaxed mb-3">
-                  {hw.description}
-                </p>
-
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
-                  <span>دبیر: <strong>{hw.teacherName}</strong></span>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 text-teal-700 font-medium">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>تحویل داده‌شده: {toPersianDigits(hw.submissionsCount)} از {toPersianDigits(hw.totalStudents)} نفر</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setExpandedGradingHwId(expandedGradingHwId === hw.id ? null : hw.id)}
-                      className="px-3 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs flex items-center gap-1 transition-colors"
-                    >
-                      {expandedGradingHwId === hw.id ? (
-                        <>
-                          <ChevronUp className="w-3.5 h-3.5" />
-                          <span>بستن لیست پاسخ‌ها</span>
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="w-3.5 h-3.5" />
-                          <span>مشاهده و تصحیح پاسخ‌ها</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Submissions Grading Drawer */}
-                {expandedGradingHwId === hw.id && (
-                  <div className="mt-4 pt-3 border-t border-teal-100 bg-teal-50/40 rounded-xl p-3 sm:p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h5 className="font-bold text-xs text-teal-900 flex items-center gap-1.5">
-                        <Award className="w-4 h-4 text-teal-700" />
-                        <span>پاسخ‌های ارسال‌شده دانش‌آموزان برای این تکلیف:</span>
-                      </h5>
-                      <span className="text-[11px] text-teal-700 font-semibold">
-                        {toPersianDigits(homeworkSubmissions.filter((s) => s.homeworkId === hw.id).length)} پاسخ ثبت‌شده
-                      </span>
-                    </div>
-
-                    {homeworkSubmissions.filter((s) => s.homeworkId === hw.id).length === 0 ? (
-                      <div className="p-4 rounded-xl bg-white text-center text-xs text-slate-500 border border-slate-200">
-                        تاکنون پاسخی از سوی دانش‌آموزان برای این تکلیف ثبت نگردیده است.
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {homeworkSubmissions
-                          .filter((s) => s.homeworkId === hw.id)
-                          .map((sub) => {
-                            const currentDraft = gradingDrafts[sub.id] || {
-                              score: sub.teacherScore ?? 20,
-                              feedback: sub.teacherFeedback || ''
-                            };
-
-                            return (
-                              <div
-                                key={sub.id}
-                                className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5"
-                              >
-                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-full bg-teal-600 text-white font-bold text-xs flex items-center justify-center">
-                                      {sub.studentName.slice(0, 1)}
-                                    </div>
-                                    <span className="font-bold text-xs text-slate-900">{sub.studentName}</span>
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                      تاریخ ارسال: {toPersianDigits(sub.submissionDate)}
-                                    </span>
-                                  </div>
-
-                                  <div className="flex items-center gap-2">
-                                    {sub.status === 'graded' ? (
-                                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                                        تصحیح شده (نمره: {toPersianDigits(sub.teacherScore ?? 0)} از ۲۰)
-                                      </span>
-                                    ) : (
-                                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold">
-                                        در انتظار تصحیح
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs text-slate-700 leading-relaxed">
-                                  <div className="text-[10px] text-slate-400 font-medium mb-1">متن پاسخ دانش‌آموز:</div>
-                                  <p>{sub.textContent}</p>
-                                </div>
-
-                                {sub.attachments && sub.attachments.length > 0 && (
-                                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                                    <span className="text-[10px] text-slate-400">فایل‌های پیوست:</span>
-                                    {sub.attachments.map((att, idx) => (
-                                      <span
-                                        key={idx}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[11px]"
-                                      >
-                                        <Paperclip className="w-3 h-3 text-slate-400" />
-                                        <span>{att.name}</span>
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Grading Form Controls */}
-                                <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
-                                  <div className="sm:col-span-3">
-                                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                                      نمره ارزشیابی (از ۲۰):
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      max={20}
-                                      step={0.25}
-                                      value={currentDraft.score}
-                                      onChange={(e) =>
-                                        setGradingDrafts({
-                                          ...gradingDrafts,
-                                          [sub.id]: {
-                                            ...currentDraft,
-                                            score: parseFloat(e.target.value) || 0
-                                          }
-                                        })
-                                      }
-                                      className="w-full text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-center font-mono font-bold"
-                                    />
-                                  </div>
-
-                                  <div className="sm:col-span-6">
-                                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                                      بازخورد آموزشی و توصیه دبیر:
-                                    </label>
-                                    <input
-                                      type="text"
-                                      placeholder="مثال: روش حل عالی بود، به نکات صفحه ۴ دقت شود..."
-                                      value={currentDraft.feedback}
-                                      onChange={(e) =>
-                                        setGradingDrafts({
-                                          ...gradingDrafts,
-                                          [sub.id]: {
-                                            ...currentDraft,
-                                            feedback: e.target.value
-                                          }
-                                        })
-                                      }
-                                      className="w-full text-xs p-1.5 bg-slate-50 border border-slate-300 rounded-lg"
-                                    />
-                                  </div>
-
-                                  <div className="sm:col-span-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSaveGrade(sub.id)}
-                                      className="w-full px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
-                                    >
-                                      <Check className="w-3.5 h-3.5" />
-                                      <span>ثبت نمره و نظر</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            exams.map((exam) => (
-              <div
-                key={exam.id}
-                className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow"
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold">
-                        {exam.subject}
-                      </span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        کلاس: {exam.className}
-                      </span>
-                    </div>
-                    <h4 className="font-bold text-slate-800 text-sm sm:text-base">{exam.title}</h4>
-                  </div>
-                  <div className="text-left">
-                    <span className="text-[11px] text-slate-400 block">زمان آزمون</span>
-                    <span className="text-xs font-bold text-purple-700 font-mono">
-                      {toPersianDigits(exam.examDate)} ساعت {toPersianDigits(exam.startTime)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 mb-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>مدت زمان: <strong>{toPersianDigits(exam.durationMinutes)} دقیقه</strong></span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <FileQuestion className="w-3.5 h-3.5 text-slate-400" />
-                    <span>تعداد سؤال ثبت‌شده: <strong>{toPersianDigits(exam.questions.length)}</strong></span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-slate-400" />
-                    <span>وضعیت: <strong className="text-emerald-700">برنامه‌ریزی‌شده</strong></span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
-                  <span>طراح آزمون: <strong>{exam.teacherName}</strong></span>
-                  <span className="text-[11px] text-amber-800">موتور افزودن سؤال و شرکت آنلاین فعال نیست.</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-3.5 bg-white border-t border-slate-200 flex justify-end shrink-0">
-          <button
-            onClick={onClose}
-            className="min-h-[44px] px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold"
-          >
-            بستن
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
+  return <TeachingDialog id="teacher-homework-exam-dialog" title={editing?(tab==='homework'?'تکلیف تازه':'زمان‌بندی آزمون'):'تکلیف و آزمون کلاس'} description={editing?'جزئیات را بنویسید؛ پس از ثبت موفق، فهرست تازه می‌شود.':'تمرین‌ها، پاسخ‌های دانش‌آموزان و برنامه آزمون‌ها'} icon={tab==='homework'?BookOpen:FileQuestion} onClose={onClose} busy={!!pending||reading} notice={<>{error&&<p role="alert" className="teaching-error">{toPersianDigits(error)}</p>}{message&&<p role="status" className="rounded-2xl border border-[#dce7cf] bg-[#f0f6e8] p-3 text-xs leading-7 text-[#729052]">{message}</p>}</>} footer={editing?<div className="flex items-center gap-2"><button type="submit" form="teacher-learning-form" disabled={!!pending||reading||!enabled||!!attachmentError&&tab==='homework'} className="teaching-primary flex-1"><Send className="size-4" aria-hidden="true"/>{pending?'در حال ثبت…':tab==='homework'?'ثبت تکلیف برای کلاس':'ثبت زمان‌بندی'}</button><button type="button" disabled={!!pending||reading} onClick={()=>{setEditing(false);setError('');}} className="teaching-secondary">بازگشت به فهرست</button></div>:<div className="flex items-center justify-between gap-3"><p className="text-[10px] leading-6 text-[#9aa68e]">{tab==='homework'?'برای دیدن پاسخ‌ها، یک تکلیف را باز کنید.':'شرکت آنلاین در آزمون هنوز فعال نیست.'}</p><button type="button" onClick={onClose} disabled={!!pending} className="teaching-secondary">بستن</button></div>}>
+    <div className="space-y-4">
+      <div role="group" aria-label="تکلیف یا آزمون" className="grid grid-cols-2 gap-2">{(['homework','exams'] as const).map(value=><button id={`teacher-learning-tab-${value}`} key={value} type="button" disabled={!!pending||reading} aria-pressed={tab===value} onClick={()=>{setTab(value);setEditing(false);setError('');setMessage('');}} className={`teaching-choice ${tab===value?'teaching-choice-active':''}`}>{value==='homework'?<BookOpen className="size-4" aria-hidden="true"/>:<FileQuestion className="size-4" aria-hidden="true"/>}{value==='homework'?'تکالیف':'آزمون‌ها'}<span className="text-[10px] opacity-60">{initialContext?((value==='homework'?scopedHw.data:scopedExams.data)?toPersianDigits((value==='homework'?scopedHw.data:scopedExams.data)?.total):''):toPersianDigits(page(value).total)}</span></button>)}</div>
+      {initialContext&&(scopedHw.error||scopedExams.error||scopedSubmissions.error)&&<div role="alert" className="teaching-error">{scopedHw.error?.message||scopedExams.error?.message||scopedSubmissions.error?.message}<button type="button" onClick={()=>{void scopedHw.refetch();void scopedExams.refetch();void scopedSubmissions.refetch();}} className="teaching-secondary">تلاش مجدد</button></div>}
+      {!enabled&&<p role="status" className="teaching-error">ثبت فقط در سال تحصیلی جاری و فعال ممکن است.</p>}
+      {editing?<form id="teacher-learning-form" onSubmit={create} className="space-y-4"><fieldset disabled={!!pending||reading} className="min-w-0 space-y-4">
+        <TeachingSection title="کلاس و درس"><div className="grid grid-cols-2 gap-3"><label className="teaching-label">کلاس<select required disabled={!!initialContext} value={tab==='homework'?hwClass:examClass} onChange={event=>tab==='homework'?setSelectedHwClass(event.target.value):setSelectedExamClass(event.target.value)}>{!classes.length&&<option value="">کلاسی در دسترس نیست</option>}{initialContext&&!classes.some(group=>group.id===initialContext.classId)&&<option value={initialContext.classId}>{initialContext.className}</option>}{classes.map(group=><option key={group.id} value={group.id}>{group.name}</option>)}</select></label><label className="teaching-label">درس<input required readOnly={!!initialContext} value={tab==='homework'?hwSubject:examSubject} onChange={event=>tab==='homework'?setHwSubject(event.target.value):setExamSubject(event.target.value)}/></label></div></TeachingSection>
+        {tab==='homework'?<>
+          <TeachingSection title="صورت تکلیف"><label className="teaching-label">عنوان<input required value={hwTitle} onChange={event=>setHwTitle(event.target.value)} placeholder="مثلاً: تمرین فصل دوم"/></label><label className="teaching-label">شرح و راهنمای انجام<textarea rows={5} value={hwDescription} onChange={event=>setHwDescription(event.target.value)} placeholder="چه کاری انجام شود و چه چیزی تحویل داده شود؟"/></label><label className="teaching-label">مهلت تحویل<input required value={hwDate} onChange={event=>setHwDate(event.target.value)} placeholder="۱۴۰۵/۰۸/۱۰" dir="ltr"/></label></TeachingSection>
+          <TeachingSection title="فایل تکلیف" description={`اختیاری · تصویر، PDF یا DOCX · حداکثر ${MAX_LOCAL_ATTACHMENT_LABEL}`}><input id="teacher-homework-file" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={fileChange} className="peer sr-only"/><label htmlFor="teacher-homework-file" className="flex min-h-24 cursor-pointer items-center justify-center gap-3 rounded-2xl border border-dashed border-[#cbd8bc] bg-[#f8faf3] p-4 text-xs text-[#8b9d75] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2"><UploadCloud className="size-5" aria-hidden="true"/>{reading?'در حال خواندن فایل…':'انتخاب فایل'}</label>{attachment&&<div className="flex items-center gap-2 rounded-xl bg-[#f1f5e9] p-3"><Paperclip className="size-4 shrink-0 text-[#8ba073]" aria-hidden="true"/><p className="min-w-0 flex-1 break-all text-[11px] leading-6 text-[#84936f]">{attachment.name}<span className="block text-[10px] opacity-70">{attachment.size}</span></p><button type="button" aria-label="حذف پیوست" onClick={()=>{setAttachment(null);setAttachmentError('');}} className="teaching-secondary"><Trash2 className="size-4" aria-hidden="true"/></button></div>}{attachmentError&&<div className="teaching-error"><p role="alert">{attachmentError}</p><button type="button" onClick={()=>setAttachmentError('')} className="min-h-11 font-bold">ادامه بدون فایل جدید</button></div>}</TeachingSection>
+        </>:<TeachingSection title="جزئیات آزمون" description="در این مرحله فقط برنامه آزمون ثبت می‌شود؛ افزودن سؤال و شرکت آنلاین فعال نیست."><label className="teaching-label">عنوان آزمون<input required value={examTitle} onChange={event=>setExamTitle(event.target.value)} placeholder="مثلاً: آزمون فصل دوم"/></label><div className="grid grid-cols-2 gap-3"><label className="teaching-label">تاریخ<input required dir="ltr" value={examDate} onChange={event=>setExamDate(event.target.value)}/></label><label className="teaching-label">ساعت شروع<input required dir="ltr" value={examTime} onChange={event=>setExamTime(event.target.value)} placeholder="۱۰:۰۰"/></label><label className="teaching-label col-span-2">مدت (دقیقه)<input required type="number" min={1} value={examDuration} onChange={event=>setExamDuration(Number(event.target.value))}/></label></div></TeachingSection>}
+      </fieldset></form>:<>
+        <button id="teacher-new-learning-item" type="button" disabled={!enabled||!!pending} onClick={()=>{setEditing(true);setError('');setMessage('');}} className="flex min-h-16 w-full items-center gap-3 rounded-2xl border border-dashed border-[#d4dfc7] bg-[#f4f8ee] px-4 text-xs font-bold text-[#7c9564] disabled:opacity-50"><span className="flex size-9 items-center justify-center rounded-xl bg-white"><Plus className="size-4" aria-hidden="true"/></span>{tab==='homework'?'تعریف تکلیف تازه':'برنامه‌ریزی آزمون'}</button>
+        {tab==='homework'?<div className="space-y-4">{homework.map(item=><article id={`teacher-homework-${item.id}`} key={item.id} className="overflow-hidden rounded-2xl border border-[#e3e8db] bg-white p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-2 text-[10px] leading-6"><span className="rounded-lg bg-[#edf3e6] px-2 py-1 text-[#8a9c74]">{item.subject} · {item.className}</span><span className="text-[#ad9972]">تا {toPersianDigits(item.dueDate)}</span></div><h3 className="mt-3 break-words text-sm font-bold leading-7 text-[#526746]">{item.title}</h3><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-8 text-[#8f9a84]">{item.description}</p><div className="mt-3"><Attachments items={item.attachments}/></div><p className="mt-3 text-[10px] leading-6 text-[#a3ad98]">دبیر: {item.teacherName} · تحویل‌ها: {toPersianDigits(item.submissionsCount)} از {toPersianDigits(item.totalStudents)}</p><button id={`teacher-homework-responses-${item.id}`} type="button" aria-expanded={expanded===item.id} onClick={()=>setExpanded(expanded===item.id?null:item.id)} className="mt-3 flex min-h-12 w-full items-center justify-between gap-2 border-t border-[#edf0e6] pt-2 text-[11px] font-bold text-[#859e6c]">پاسخ‌ها و بازخورد<ChevronDown className={`size-4 transition-transform ${expanded===item.id?'rotate-180':''}`} aria-hidden="true"/></button>
+          {expanded===item.id&&<div className="mt-3 space-y-3 rounded-2xl bg-[#f5f8ef] p-3"><p className="text-[10px] leading-6 text-[#97a387]">پاسخ‌های موجود در صفحه فعلی تحویل‌ها</p>{homeworkSubmissions.filter(sub=>sub.homeworkId===item.id).map(sub=>{
+            const values=grading[sub.id]||{score:String(sub.teacherScore??20),feedback:sub.teacherFeedback||''};
+            return <article key={sub.id} className="space-y-3 rounded-2xl border border-[#e4eadd] bg-white p-3 sm:p-4"><div className="flex flex-wrap items-center justify-between gap-2"><h4 className="break-words text-xs font-bold leading-7 text-[#617650]">{sub.studentName}</h4><span className="rounded-lg bg-[#f5f1e5] px-2 py-1 text-[9px] text-[#a38f64]">{sub.status==='graded'?`تصحیح‌شده · ${toPersianDigits(sub.teacherScore??0)} از ${toPersianDigits(20)}`:'در انتظار بررسی'}</span></div><p className="text-[10px] text-[#a3ad98]">ارسال: {toPersianDigits(sub.submissionDate)}</p><p className="whitespace-pre-wrap break-words rounded-xl bg-[#fafbf7] p-3 text-xs leading-8 text-[#839074]">{sub.textContent}</p><Attachments items={sub.attachments}/><div className="grid grid-cols-1 gap-3 sm:grid-cols-[100px_1fr]"><label className="teaching-label">نمره از {toPersianDigits(20)}<input inputMode="decimal" value={values.score} disabled={!!pending} onChange={event=>setGrading(previous=>({...previous,[sub.id]:{...values,score:event.target.value}}))}/></label><label className="teaching-label">بازخورد آموزشی<textarea rows={2} value={values.feedback} disabled={!!pending} onChange={event=>setGrading(previous=>({...previous,[sub.id]:{...values,feedback:event.target.value}}))} placeholder="نکته‌ای برای ادامه یادگیری…"/></label></div><button type="button" disabled={!!pending||!enabled} onClick={()=>void saveGrade(sub.id,values)} className="teaching-primary w-full"><Check className="size-4" aria-hidden="true"/>{pending===sub.id?'در حال ثبت…':'ثبت نمره و بازخورد'}</button></article>;
+          })}{!homeworkSubmissions.some(sub=>sub.homeworkId===item.id)&&<p role="status" className="teaching-empty">{(initialContext?scopedSubmissions.isPending:page('homeworkSubmissions').loading)?'در حال دریافت پاسخ‌ها…':'برای این تکلیف، پاسخی در صفحه فعلی تحویل‌ها نیست.'}</p>}{initialContext?<TeacherRecordPager offset={offsets.submissions} total={scopedSubmissions.data?.total||0} onChange={value=>setOffsets(previous=>({...previous,submissions:value}))}/>:<ResourcePager kind="homeworkSubmissions" appearance="sage" showSearch={false}/>} </div>}
+        </article>)}{!homework.length&&<p role="status" className="teaching-empty">{(initialContext?scopedHw.isPending:page('homework').loading)?'در حال دریافت تکلیف‌ها…':'اولین تکلیف کلاس را همین‌جا تعریف کنید.'}</p>}{initialContext?<TeacherRecordPager offset={offsets.homework} total={scopedHw.data?.total||0} onChange={value=>setOffsets(previous=>({...previous,homework:value}))}/>:<ResourcePager kind="homework" appearance="sage" showSearch={false}/>} </div>:<div className="space-y-3">{exams.map(exam=><article key={exam.id} className="space-y-3 rounded-2xl border border-[#e3e8dd] bg-white p-4 sm:p-5"><span className="text-[10px] text-[#a08bad]">{exam.subject} · {exam.className}</span><h3 className="break-words text-sm font-bold leading-7 text-[#657755]">{exam.title}</h3><div className="flex flex-wrap gap-3 text-[11px] leading-6 text-[#94a286]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="size-3.5" aria-hidden="true"/>{toPersianDigits(exam.examDate)} · {toPersianDigits(exam.startTime)}</span><span className="inline-flex items-center gap-1.5"><Clock3 className="size-3.5" aria-hidden="true"/>{toPersianDigits(exam.durationMinutes)} دقیقه</span></div><p className="border-t border-[#edf0e7] pt-3 text-[10px] leading-7 text-[#a0aa94]">{toPersianDigits(exam.questions.length)} سؤال ثبت‌شده · طراح: {exam.teacherName}<br/>زمان‌بندی‌شده؛ شرکت آنلاین هنوز فعال نیست.</p></article>)}{!exams.length&&<p role="status" className="teaching-empty">{(initialContext?scopedExams.isPending:page('exams').loading)?'در حال دریافت آزمون‌ها…':'هنوز آزمونی در این فهرست برنامه‌ریزی نشده است.'}</p>}{initialContext?<TeacherRecordPager offset={offsets.exams} total={scopedExams.data?.total||0} onChange={value=>setOffsets(previous=>({...previous,exams:value}))}/>:<ResourcePager kind="exams" appearance="sage" showSearch={false}/>} </div>}
+      </>}
+    </div>
+  </TeachingDialog>;
 };

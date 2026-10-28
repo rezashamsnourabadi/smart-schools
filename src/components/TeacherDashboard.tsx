@@ -1,119 +1,125 @@
-import React, { useState } from 'react';
-import { Award, BookOpen, CalendarDays, CheckCheck, Eye, FileQuestion, MessageSquare, PlusCircle, Search, Send, Users } from 'lucide-react';
-import { useApp, useResource, useClassRoster } from '../context/AppContext';
+import React,{useEffect,useState} from 'react';
+import {Award,BookOpen,CalendarDays,Check,CheckCheck,ChevronDown,ChevronLeft,MoreHorizontal,Clock3,FileQuestion,History,LayoutGrid,MessageSquare,Plus,Search,Send,Users} from 'lucide-react';
+import {useApp} from '../context/AppContext';
 import {useAttendanceSession} from '../api/hooks';
-import { AttendanceStatus, Student } from '../types';
-import { attendanceKey, attendanceLabels, isSlotLive, schoolTimeMinutes } from '../utils/attendance';
-import { normalizeSchoolDate, toEnglishDigits, toPersianDigits } from '../utils/persianUtils';
-import { SponsorBannerCard } from './SponsorBannerCard';
-import { AddQuestionModal } from './AddQuestionModal';
+import {useTeacherClasses,useClassroom,useTeacherRecords,useTeacherWrite,usePrefetchTeacherPerformance} from '../api/teacher';
+import type {TeachingContext,TeacherGrade,TeacherSession,TeacherStudent} from '../types/teacher';
+import {attendanceNames} from '../types/teacher';
+import type {AttendanceStatus} from '../types';
+import {isSlotLive,schoolTimeMinutes} from '../utils/attendance';
+import {toPersianDigits} from '../utils/persianUtils';
+import {SponsorBannerCard} from './SponsorBannerCard';
+import {AddQuestionModal} from './AddQuestionModal';
+import {TeachingDialog} from './TeachingDialog';
+import {TeacherGradeTable} from './TeacherGradeTable';
+import {TeacherStudentPerformance} from './TeacherStudentPerformance';
 
-interface Props {
-  onOpenQuestionBank: () => void;
-  onOpenGradeEntryModal?: () => void;
-  onOpenHomeworkExamModal?: () => void;
-  onOpenStudentDossier?: (student: Student) => void;
+interface Props {onOpenQuestionBank:()=>void;onOpenGradeEntryModal?:(context:TeachingContext,grade?:TeacherGrade)=>void;onOpenHomeworkExamModal?:(context:TeachingContext)=>void;onContextChange?:(context:TeachingContext)=>void}
+const colors:Record<AttendanceStatus,string>={present:'border-emerald-300 bg-emerald-100 text-emerald-950',absent:'border-rose-200 bg-rose-50 text-rose-800',late:'border-amber-200 bg-amber-50 text-amber-800',excused:'border-sky-200 bg-sky-50 text-sky-800'};
+const nextAttendanceStatus:Record<AttendanceStatus,AttendanceStatus>={present:'absent',absent:'late',late:'excused',excused:'present'};
+function PageControls({offset,total,onChange}:{offset:number;total:number;onChange:(offset:number)=>void}){return total>25?<div className="flex items-center justify-between gap-2 text-[11px] text-[#889775]"><button type="button" disabled={!offset} onClick={()=>onChange(Math.max(0,offset-25))} className="teaching-secondary disabled:opacity-40">قبلی</button><span>{toPersianDigits(Math.floor(offset/25)+1)} · {toPersianDigits(total)} مورد</span><button type="button" disabled={offset+25>=total} onClick={()=>onChange(offset+25)} className="teaching-secondary disabled:opacity-40">بعدی</button></div>:null;}
+export const TeacherDashboard:React.FC<Props>=props=>{
+ const app=useApp(),classes=useTeacherClasses();
+ const [chosen,setChosen]=useState(''),[questions,setQuestions]=useState(false);
+ const live=classes.data?.schedule.find(slot=>isSlotLive(slot,app.schoolClock));
+ const today=classes.data?.schedule.find(slot=>slot.dayOfWeek===app.schoolClock.dayOfWeek);
+ const suggested=live||today;
+ const items=classes.data?.items||[];
+ const selected=items.find(item=>`${item.classId}:${item.subject}`===chosen)||items.find(item=>item.classId===suggested?.classGroupId&&item.subject===suggested?.subject)||items[0];
+ useEffect(()=>{if(selected){if(!chosen)setChosen(`${selected.classId}:${selected.subject}`);props.onContextChange?.(selected);}},[selected?.classId,selected?.subject]);
+ if(classes.isPending)return <p role="status" className="teaching-empty">در حال دریافت کلاس‌های شما…</p>;
+ if(classes.error)return <div role="alert" className="teaching-error">{classes.error.message}<button type="button" onClick={()=>void classes.refetch()} className="teaching-secondary">تلاش مجدد</button></div>;
+ return <div id="teacher-dashboard-view" className="teacher-dashboard min-w-0 space-y-4">
+  <section id="teacher-class-selector" className="rounded-2xl border border-[#e0e7d8] bg-white p-4"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h1 className="inline-flex items-center gap-2 text-sm font-bold text-[#537047]"><LayoutGrid className="size-4" aria-hidden="true"/>کلاس‌های من</h1><span className="text-[10px] text-[#99a48c]">{app.currentSchool?.name} · {toPersianDigits(app.schoolClock.dateLabel)}</span></div>{selected?<><label className="sr-only" htmlFor="teacher-class-select">انتخاب کلاس و درس</label><select id="teacher-class-select" value={`${selected.classId}:${selected.subject}`} onChange={event=>setChosen(event.target.value)} className="min-h-12 w-full min-w-0 rounded-xl border border-[#dce6d1] bg-[#f6f9ef] px-3 text-sm font-bold text-[#64824f]">{items.map(item=><option key={`${item.classId}:${item.subject}`} value={`${item.classId}:${item.subject}`}>{item.className} · {item.subject}{live?.classGroupId===item.classId&&live.subject===item.subject?' — کلاس جاری':''}</option>)}</select>{chosen&&live&&<button type="button" onClick={()=>setChosen(`${live.classGroupId}:${live.subject}`)} className="mt-2 min-h-11 text-[11px] font-bold text-[#879b6f]">رفتن به کلاس جاری</button>}</>:<p className="text-xs leading-7 text-slate-500">کلاس و درسی در برنامه تدریس شما تعریف نشده است.</p>}</section>
+  {selected&&<ClassWorkspace {...props} context={selected} slots={classes.data?.schedule.filter(slot=>slot.classGroupId===selected.classId&&slot.subject===selected.subject)||[]}/>}
+  <details className="rounded-2xl border border-[#e2e8da] bg-white px-4"><summary className="flex min-h-14 cursor-pointer list-none items-center gap-2 text-xs font-bold text-[#82966d]"><BookOpen className="size-4" aria-hidden="true"/>بانک سؤال و ابزارها<ChevronDown className="ms-auto size-4" aria-hidden="true"/></summary><div className="grid grid-cols-2 gap-2 pb-4"><button id="open-question-bank-btn" type="button" onClick={props.onOpenQuestionBank} className="teaching-secondary">بانک سؤال</button><button id="quick-add-question-btn" type="button" onClick={()=>setQuestions(true)} className="teaching-secondary">افزودن سؤال</button></div></details>
+  <SponsorBannerCard audienceFilter="teachers" variant="compact"/>
+  <AddQuestionModal isOpen={questions} onClose={()=>setQuestions(false)} defaultSubject={selected?.subject||'عمومی'}/>
+ </div>;
+};
+function ClassWorkspace({context,slots,onOpenGradeEntryModal,onOpenHomeworkExamModal}:Props&{context:TeachingContext;slots:import('../types').ScheduleSlot[]}){
+ const app=useApp(),write=useTeacherWrite(),prefetchStudent=usePrefetchTeacherPerformance();
+ const [tab,setTab]=useState<'session'|'grades'|'homework'|'activity'>('session');
+ const [chosenSlot,setChosenSlot]=useState(''),[search,setSearch]=useState('');
+ const [drafts,setDrafts]=useState<Record<string,Record<string,AttendanceStatus>>>({});
+ const [saving,setSaving]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const [notificationChoices,setNotificationChoices]=useState<Record<string,boolean>>({});
+ const [student,setStudent]=useState<TeacherStudent|null>(null);
+ const [historyOpen,setHistoryOpen]=useState(false);
+ const [confirmed,setConfirmed]=useState<Record<string,string>>({});
+ const [history,setHistory]=useState<TeacherSession|null>(null),[reason,setReason]=useState('');
+ const [offset,setOffset]=useState(0),[gradeOffset,setGradeOffset]=useState(0),[eventOffset,setEventOffset]=useState(0);
+ const [eventTarget,setEventTarget]=useState<TeacherStudent|null>(null),[eventKind,setEventKind]=useState<'positive'|'negative'|'journal'>('positive'),[eventOpen,setEventOpen]=useState(false),[eventTitle,setEventTitle]=useState(''),[eventNote,setEventNote]=useState('');
+ const [cancelEvent,setCancelEvent]=useState<{id:string;version:number}|null>(null),[cancelReason,setCancelReason]=useState('');
+ const todaySlots=slots.filter(slot=>slot.dayOfWeek===app.schoolClock.dayOfWeek).sort((a,b)=>a.period-b.period);
+ const slot=todaySlots.find(item=>item.id===chosenSlot)||todaySlots.find(item=>isSlotLive(item,app.schoolClock))||todaySlots[0];
+ const classroom=useClassroom(context,slot?.period||0),current=useAttendanceSession(slot?.id,tab==='session');
+ const sessions=useTeacherRecords(context,'sessions',offset,tab==='session'&&historyOpen);
+ const grades=useTeacherRecords(context,'grades',gradeOffset,tab==='grades');
+ const homework=useTeacherRecords(context,'homework',0,tab==='homework');
+ const events=useTeacherRecords(context,'events',eventOffset,tab==='activity');
+ const historical=history?.classGroupId===context.classId&&history.subject===context.subject?history:null;
+ const activeSession=historical||current.data;
+ const key=historical?`session:${historical.id}`:`today:${app.schoolClock.date}:${slot?.id||context.classId}`;
+ const notifyParents=notificationChoices[key]??activeSession?.notifyParents??true;
+ const roster=historical?historical.records.map(row=>({id:row.studentId,name:historical.studentNames?.[row.studentId]||classroom.data?.students.find(student=>student.id===row.studentId)?.name||'دانش‌آموز سابق کلاس',studentNumber:'',classGroupId:context.classId})):classroom.data?.students||[];
+ const filtered=roster.filter(student=>student.name.includes(search.trim())||student.studentNumber.includes(search.trim()));
+ const statuses=Object.fromEntries(roster.map(student=>[student.id,drafts[key]?.[student.id]||activeSession?.records.find(row=>row.studentId===student.id)?.status||'present'])) as Record<string,AttendanceStatus>;
+ const signature=JSON.stringify(roster.map(student=>[student.id,statuses[student.id]]));
+ const dirty=confirmed[key]!==signature&&(!activeSession||roster.some(student=>statuses[student.id]!==activeSession.records.find(row=>row.studentId===student.id)?.status));
+ const active=!!app.activeAcademicYear?.isCurrent&&app.activeAcademicYear.status==='active';
+ const loading=classroom.isPending||(!historical&&!!slot&&current.isPending);
+ const dataError=classroom.error||(!historical?current.error:null);
+ const begun=!!slot&&(schoolTimeMinutes(slot.startTime)??Infinity)<=app.schoolClock.minuteOfDay;
+ const canSubmit=active&&!loading&&!dataError&&!saving&&!!roster.length&&dirty&&(historical?reason.trim().length>=3:begun);
+ useEffect(()=>{
+  if(!confirmed[key]||!activeSession)return;
+  const remote=JSON.stringify(roster.map(student=>[student.id,activeSession.records.find(row=>row.studentId===student.id)?.status||'present']));
+  if(remote!==confirmed[key])return;
+  setDrafts(previous=>{const next={...previous};delete next[key];return next;});setConfirmed(previous=>{const next={...previous};delete next[key];return next;});
+ },[key,activeSession,confirmed[key]]);
+ useEffect(()=>{setStudent(null);setHistory(null);setHistoryOpen(false);setError('');setMessage('');setOffset(0);setGradeOffset(0);setEventOffset(0);setSearch('');},[context.classId,context.subject]);
+ useEffect(()=>{if(app.activeMobileTab==='dashboard')setTab('session');},[app.activeMobileTab]);
+ const openEvent=(target:TeacherStudent|null,kind:'positive'|'negative'|'journal')=>{setEventTarget(target);setEventKind(kind);setEventTitle(kind==='positive'?'مشارکت در کلاس':kind==='negative'?'نیاز به توجه بیشتر':'');setEventNote('');setError('');setEventOpen(true);};
+ const submit=async()=>{
+  if(!canSubmit)return;setSaving(true);setError('');setMessage('');
+  const records=roster.map(student=>({studentId:student.id,status:statuses[student.id],note:activeSession?.records.find(row=>row.studentId===student.id)?.note}));
+  try{
+   if(historical)await write(`/teacher/sessions/${historical.id}`,{version:historical.version,reason:reason.trim(),notifyParents,records},'PATCH',{...context,slotId:historical.scheduleSlotId});
+   else if(slot){const result=await app.submitAttendance(slot.id,records,'bale',notifyParents);if(!result.ok)throw new Error(result.error);}
+   setConfirmed(previous=>({...previous,[key]:signature}));setHistory(null);setReason('');setMessage(historical?'اصلاح جلسه ثبت شد.':'حضور و غیاب ثبت شد.');
+  }catch(error){setError(error instanceof Error?error.message:'ثبت انجام نشد؛ دوباره تلاش کنید.');}finally{setSaving(false);}
+ };
+ const recordsFeedback=(query:{isPending:boolean;error:Error|null;refetch:()=>unknown})=>query.isPending?<p className="teaching-empty" role="status">در حال دریافت…</p>:query.error?<div className="teaching-error" role="alert">{query.error.message}<button type="button" onClick={()=>query.refetch()} className="teaching-secondary">تلاش مجدد</button></div>:null;
+ return <>
+  <nav role="group" aria-label="بخش‌های میز کار کلاس" className="grid grid-cols-4 gap-1 rounded-2xl border border-[#e0e7d8] bg-white p-1">{([{id:'session',label:'حضور و غیاب',icon:CheckCheck},{id:'homework',label:'تکالیف',icon:BookOpen},{id:'grades',label:'نمره‌ها',icon:Award},{id:'activity',label:'یادداشت‌ها',icon:Users}] as const).map(({id,label,icon:Icon})=><button key={id} type="button" aria-pressed={tab===id} onClick={()=>{setTab(id);app.setActiveMobileTab(`teacher-${id}`);}} className={`flex min-h-12 min-w-0 items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold ${tab===id?'bg-[#eaf2e1] text-[#65814f]':'text-[#9ca98f]'}`}><span>{label}</span></button>)}</nav>
+  {classroom.data&&classroom.data.stats.pendingReview>0&&<button type="button" onClick={()=>onOpenHomeworkExamModal?.(context)} className="flex min-h-12 w-full items-center justify-between gap-2 rounded-xl border border-[#eee3c8] bg-[#fffaee] px-4 text-[11px] font-bold text-[#a18a5d]"><span>{toPersianDigits(classroom.data.stats.pendingReview)} پاسخ در انتظار تصحیح</span><span>بررسی پاسخ‌ها</span></button>}
+  {error&&<div role="alert" className="teaching-error"><p>{error}</p>{historical&&<button type="button" onClick={()=>{void sessions.refetch();setHistory(null);}} className="teaching-secondary">دریافت دوباره جلسات؛ پیش‌نویس حفظ می‌شود</button>}</div>}{message&&<p role="status" className="rounded-xl bg-emerald-50 p-3 text-xs leading-7 text-emerald-800">{message}</p>}
+  {tab==='session'&&<section id="attendance-section" className="space-y-4">
+   <div className="rounded-2xl border border-[#e1e8d9] bg-white px-4 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-xs font-bold leading-7 text-[#526e42]">{historical?`اصلاح ${toPersianDigits(historical.date)} · زنگ ${toPersianDigits(historical.period)}`:'حضور امروز'}</h2>{historical?<button type="button" onClick={()=>{setHistory(null);setReason('');}} className="teaching-secondary">بازگشت به امروز</button>:todaySlots.length>1?<select id="attendance-slot-select" aria-label="انتخاب زنگ امروز" disabled={saving} value={slot?.id||''} onChange={event=>{setChosenSlot(event.target.value);setError('');setMessage('');}} className="min-h-11 max-w-full rounded-xl border border-[#e3e9da] bg-[#f8faf4] px-2 text-[11px] text-[#82966d]">{todaySlots.map(item=><option key={item.id} value={item.id}>{toPersianDigits(`زنگ ${item.period} · ${item.startTime} تا ${item.endTime}`)}</option>)}</select>:slot?<span className="text-[10px] text-[#8b9c7a]">زنگ {toPersianDigits(slot.period)} · {toPersianDigits(slot.startTime)} تا {toPersianDigits(slot.endTime)}</span>:<span className="text-[11px] text-[#a08e69]">امروز زنگی برای این کلاس ندارید</span>}</div>
+    {historical&&<label className="teaching-label mt-2">علت اصلاح<input value={reason} onChange={event=>setReason(event.target.value)} className="teacher-text-input" placeholder="علت اصلاح این جلسه…"/></label>}
+    <details className="mt-1"><summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-[10px] text-[#95a385]">برنامه این کلاس<ChevronDown className="size-3" aria-hidden="true"/></summary><div className="space-y-2 pb-2">{slots.map(item=><p key={item.id} className="text-[11px] leading-7 text-[#899974]">{item.dayOfWeek} · زنگ {toPersianDigits(item.period)} · {toPersianDigits(item.startTime)} تا {toPersianDigits(item.endTime)}</p>)}</div></details>
+   </div>
+   {recordsFeedback(classroom)}
+   {!loading&&!dataError&&<>
+    <div className="flex flex-wrap gap-2 text-[11px]">{(Object.keys(colors) as AttendanceStatus[]).map(status=><span key={status} className={`rounded-lg border px-2 py-1.5 ${colors[status]}`}>{attendanceNames[status]} {toPersianDigits(roster.filter(student=>statuses[student.id]===status).length)}</span>)}</div>
+    <div className="flex flex-wrap gap-2"><label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#e0e7d8] bg-white px-3"><Search className="size-4 shrink-0 text-[#9aa98a]" aria-hidden="true"/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="جستجوی نام یا شماره…" aria-label="جستجوی دانش‌آموز" className="min-h-11 w-full min-w-0 bg-transparent text-xs outline-none"/></label><button id="btn-all-present" type="button" disabled={saving||!active||(!historical&&!slot)} onClick={()=>setDrafts(previous=>({...previous,[key]:Object.fromEntries(roster.map(student=>[student.id,'present']))}))} className="teaching-secondary">همه حاضرند</button></div>
+    <p className="text-[10px] leading-6 text-[#91a080]">{historical?'اعضای همین جلسه تاریخی نمایش داده می‌شوند.':'فقط غایب‌ها را تغییر دهید و ثبت کنید. تا قبل از ثبت، وضعیت‌ها پیش‌نویس‌اند.'}</p>
+    <div className="rounded-2xl border border-[#e0e7d8] bg-white">{filtered.map(item=>{const previous=classroom.data?.previous,prior=previous?.records.find(row=>row.studentId===item.id),status=statuses[item.id],disabled=saving||!active||(!historical&&!slot);return <article key={item.id} id={`student-att-card-${item.id}`} className="flex min-h-20 items-center gap-2 border-b border-[#edf0e6] px-3 py-2 last:border-b-0">
+      <div className="min-w-0 flex-1"><button type="button" onPointerEnter={()=>prefetchStudent(context,item.id)} onFocus={()=>prefetchStudent(context,item.id)} onClick={()=>setStudent(item)} className="flex min-h-11 max-w-full items-center gap-1 text-right text-xs font-bold leading-7 text-[#3c5835]">{item.name}<ChevronLeft className="size-3 shrink-0 text-[#9ca78f]" aria-hidden="true"/></button><p className="text-[10px] leading-6 text-[#879775]">{!historical&&prior&&previous?`قبلی: ${attendanceNames[prior.status]} · ${toPersianDigits(previous.date)}`:'حضور قبلی ثبت نشده'}</p></div>
+      <button type="button" aria-label={`${item.name}، ${attendanceNames[status]}؛ با کلیک ${attendanceNames[nextAttendanceStatus[status]]} می‌شود`} disabled={disabled} onClick={()=>setDrafts(previous=>({...previous,[key]:{...previous[key]||{},[item.id]:nextAttendanceStatus[status]}}))} className={`min-h-11 min-w-20 shrink-0 rounded-xl border px-2 text-[11px] font-bold disabled:opacity-60 ${colors[status]}`}>{attendanceNames[status]}</button>
+      <details name="student-attendance-actions" className="relative shrink-0"><summary aria-label={`گزینه‌های ${item.name}`} className="flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center rounded-xl text-[#94a483]"><MoreHorizontal className="size-4" aria-hidden="true"/></summary><div className="absolute end-0 top-full z-40 min-w-40 rounded-2xl border border-[#dce5d2] bg-white p-2 shadow-xl"><button type="button" onPointerEnter={()=>prefetchStudent(context,item.id)} onFocus={()=>prefetchStudent(context,item.id)} onClick={event=>{event.currentTarget.closest('details')?.removeAttribute('open');setStudent(item);}} className="block min-h-11 w-full px-3 text-right text-xs text-[#71865e]">اطلاعات دانش‌آموز</button><button type="button" disabled={saving||!active} onClick={event=>{event.currentTarget.closest('details')?.removeAttribute('open');openEvent(item,'positive');}} className="block min-h-11 w-full px-3 text-right text-xs text-[#65884a]">مثبت کلاسی</button><button type="button" disabled={saving||!active} onClick={event=>{event.currentTarget.closest('details')?.removeAttribute('open');openEvent(item,'negative');}} className="block min-h-11 w-full px-3 text-right text-xs text-[#a28a5a]">تذکر کلاسی</button></div></details>
+     </article>;})}{!filtered.length&&<p role="status" className="p-5 text-center text-xs leading-7 text-[#8f9e7f]">{roster.length?'دانش‌آموزی با این جستجو پیدا نشد.':'دانش‌آموز فعالی در این کلاس ثبت نشده است.'}</p>}</div>
+    {(historical||slot)&&<div className="teacher-attendance-submit space-y-3 rounded-2xl border border-[#dbe5cf] bg-white p-4"><label htmlFor="attendance-notify-parents" className="flex min-h-11 cursor-pointer items-center gap-3 text-xs font-bold text-[#5e7a4b]"><input id="attendance-notify-parents" type="checkbox" checked={notifyParents} disabled={saving||!active} onChange={event=>setNotificationChoices(previous=>({...previous,[key]:event.target.checked}))} className="size-5 shrink-0 accent-[#56794a]"/><span>اطلاع غیبت و تأخیر به اولیا<span className="mt-1 block text-[10px] font-normal leading-6 text-[#8f9e81]">برای تغییرات همین ثبت؛ مسیر بله یا پیامک را سامانه تعیین می‌کند.</span></span></label><div className="flex flex-wrap items-center gap-2"><button id="submit-final-attendance-btn" type="button" disabled={!canSubmit} onClick={()=>void submit()} className="teaching-primary w-full disabled:opacity-50"><Send className="size-4" aria-hidden="true"/>{saving?'در حال ثبت…':historical?'ثبت اصلاحات':'ثبت حضور'}</button></div><p className="text-[10px] leading-6 text-[#8f9c80]">{!active?'سال تحصیلی فقط خواندنی است.':historical&&reason.trim().length<3?'علت اصلاح را بنویسید.':!historical&&!begun?'ثبت پس از شروع زنگ فعال می‌شود.':!dirty?'جلسه ثبت شده؛ تغییری ایجاد نشده است.':'تغییرها پس از ثبت موفق ذخیره می‌شوند.'}</p></div>}
+   </>}
+   <details className="rounded-2xl border border-[#e1e8da] bg-white p-4" open={!!historical||historyOpen} onToggle={event=>setHistoryOpen(event.currentTarget.open)}><summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-xs font-bold text-[#83986c]"><History className="size-4" aria-hidden="true"/>جلسات ثبت‌شده<ChevronDown className="ms-auto size-4" aria-hidden="true"/></summary>{recordsFeedback(sessions)}<div className="space-y-2 pt-3">{sessions.data?.items.map(item=><button key={item.id} type="button" disabled={saving} onClick={()=>{setHistory(item);setReason('');setSearch('');setError('');setMessage('');}} className="flex min-h-14 w-full flex-wrap items-center justify-between gap-2 rounded-xl bg-[#f6f9f0] px-3 text-[11px] text-[#7f936a]"><span>{toPersianDigits(item.date)} · زنگ {toPersianDigits(item.period)}</span><span>{active?'مشاهده و اصلاح':'مشاهده'}</span></button>)}</div>{sessions.data&&!sessions.data.items.length&&<p className="teaching-empty">هنوز جلسه‌ای ثبت نشده است.</p>}<PageControls offset={offset} total={sessions.data?.total||0} onChange={setOffset}/></details>
+  </section>}
+  {tab==='grades'&&<section className="space-y-3"><button type="button" onClick={()=>onOpenGradeEntryModal?.(context)} className="teaching-primary w-full"><Plus className="size-4" aria-hidden="true"/>ارزشیابی تازه برای {context.subject}</button>{recordsFeedback(grades)}{grades.data?.items.length&&classroom.data?<TeacherGradeTable students={classroom.data.students} grades={grades.data.items} onEdit={grade=>onOpenGradeEntryModal?.(context,grade)} onStudent={setStudent}/>:null}{grades.data?.items.map(item=><article key={item.id} className="rounded-2xl border border-[#e2e8da] bg-white p-4"><h2 className="text-xs font-bold leading-7 text-[#6a8157]">{item.title}</h2><p className="mt-2 text-[10px] leading-6 text-[#9ba68e]">{toPersianDigits(item.date)} · {item.categoryTitle} · سقف {toPersianDigits(item.maxScore)}</p><details><summary className="min-h-11 cursor-pointer pt-3 text-[11px] font-bold text-[#8da276]">مشاهده نمرات</summary><div className="space-y-2 py-2">{item.scores.map(score=><p key={score.studentId} className="flex justify-between gap-2 border-b border-[#eef1e7] py-2 text-xs text-[#7c8d69]"><span>{classroom.data?.students.find(student=>student.id===score.studentId)?.name||'دانش‌آموز سابق کلاس'}</span><span>{toPersianDigits(score.score)}</span></p>)}</div></details><button type="button" disabled={!active} onClick={()=>onOpenGradeEntryModal?.(context,item)} className="teaching-secondary mt-2">اصلاح ارزشیابی</button></article>)}{grades.data&&!grades.data.items.length&&<p className="teaching-empty">هنوز ارزشیابی‌ای در این درس ثبت نشده است.</p>}<PageControls offset={gradeOffset} total={grades.data?.total||0} onChange={setGradeOffset}/></section>}
+  {tab==='homework'&&<section className="space-y-3"><button type="button" onClick={()=>onOpenHomeworkExamModal?.(context)} className="teaching-primary w-full"><FileQuestion className="size-4" aria-hidden="true"/>تعریف تکلیف، آزمون و بررسی پاسخ‌ها</button>{recordsFeedback(homework)}{homework.data?.items.map(item=><button key={item.id} type="button" onClick={()=>onOpenHomeworkExamModal?.(context)} className="block w-full rounded-2xl border border-[#e0e7d8] bg-white p-4 text-right"><span className="block text-xs font-bold leading-7 text-[#758c60]">{item.title}</span><span className="mt-2 block text-[10px] leading-6 text-[#a0aa94]">تا {toPersianDigits(item.dueDate)} · تحویل {toPersianDigits(item.submissionsCount)} از {toPersianDigits(item.totalStudents)}</span></button>)}{homework.data&&!homework.data.items.length&&<p className="teaching-empty">تکلیفی در صفحه نخست این کلاس نیست.</p>}</section>}
+  {tab==='activity'&&<section className="space-y-3"><button type="button" disabled={!active} onClick={()=>openEvent(null,'journal')} className="teaching-secondary w-full"><Plus className="size-4" aria-hidden="true"/>ثبت موضوع تدریس و برنامه جلسه بعد</button><p className="text-[10px] leading-7 text-[#99a48e]">مثبت و تذکر در همین درس ثبت می‌شوند؛ نمره و انضباط رسمی را تغییر نمی‌دهند و پیامک خودکار ندارند.</p>{recordsFeedback(events)}{events.data?.items.map(item=><article key={item.id} className={`rounded-2xl border bg-white p-4 ${item.active?'border-[#e1e8d8]':'border-dashed border-slate-200 opacity-60'}`}><p className="text-[10px] text-[#9ca88f]">{item.kind==='journal'?'یادداشت جلسه':item.kind==='positive'?'مثبت کلاسی':'تذکر کلاسی'} · {item.studentId?classroom.data?.students.find(student=>student.id===item.studentId)?.name||'دانش‌آموز سابق کلاس':''} · {toPersianDigits(item.date)}</p><h3 className="mt-2 break-words text-xs font-bold leading-7 text-[#71855e]">{item.title}</h3><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-8 text-[#97a288]">{item.note}</p>{item.active?<button type="button" disabled={!active} onClick={()=>{setCancelEvent({id:item.id,version:item.version});setCancelReason('');}} className="teaching-secondary mt-2">لغو ثبت اشتباه</button>:<p className="mt-2 text-[10px] text-slate-400">لغو شده؛ سابقه حفظ شده است.</p>}</article>)}{events.data&&!events.data.items.length&&<p className="teaching-empty">هنوز یادداشت یا مشارکتی ثبت نشده است.</p>}<PageControls offset={eventOffset} total={events.data?.total||0} onChange={setEventOffset}/></section>}
+  {student&&<TeacherStudentPerformance context={context} student={student} onClose={()=>setStudent(null)} onOpenGrades={()=>{setStudent(null);setTab('grades');}}/>}
+  {eventOpen&&<TeachingDialog id="teacher-class-event-dialog" title={eventKind==='journal'?'یادداشت جلسه':`مشارکت ${eventTarget?.name||''}`} description="ثبت در همین کلاس و درس؛ مستقل از کارنامه رسمی" icon={MessageSquare} onClose={()=>setEventOpen(false)} busy={saving} notice={error?<p role="alert" className="teaching-error">{error}</p>:undefined} footer={<button form="teacher-event-form" type="submit" disabled={saving} className="teaching-primary w-full">{saving?'در حال ثبت…':'ثبت'}</button>}><form id="teacher-event-form" className="space-y-4" onSubmit={async event=>{event.preventDefault();if(saving)return;setSaving(true);setError('');try{await write('/teacher/events',{classId:context.classId,subject:context.subject,...eventTarget?{studentId:eventTarget.id}:{},kind:eventKind,title:eventTitle,note:eventNote});setEventOpen(false);setMessage('رخداد کلاسی ثبت شد.');}catch(error){setError((error as Error).message);}finally{setSaving(false);}}}>{eventKind!=='journal'&&<div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>setEventKind('positive')} className={`teaching-choice ${eventKind==='positive'?'teaching-choice-active':''}`}>مثبت کلاسی</button><button type="button" onClick={()=>setEventKind('negative')} className={`teaching-choice ${eventKind==='negative'?'teaching-choice-active':''}`}>تذکر کلاسی</button></div>}<label className="teaching-label">عنوان<input required disabled={saving} value={eventTitle} onChange={event=>setEventTitle(event.target.value)} placeholder={eventKind==='journal'?'موضوع تدریس امروز':'مثلاً: مشارکت در حل تمرین'}/></label><label className="teaching-label">توضیح<textarea rows={4} disabled={saving} value={eventNote} onChange={event=>setEventNote(event.target.value)} placeholder={eventKind==='journal'?'تا کجا تدریس شد؟ جلسه بعد چه کاری داریم؟':'توضیح اختیاری…'}/></label></form></TeachingDialog>}
+  {cancelEvent&&<TeachingDialog id="teacher-cancel-event-dialog" title="لغو ثبت اشتباه" description="اصل رخداد و علت لغو در سابقه باقی می‌مانند." icon={History} onClose={()=>setCancelEvent(null)} busy={saving} notice={error?<p className="teaching-error" role="alert">{error}</p>:undefined} footer={<button form="teacher-cancel-form" type="submit" disabled={saving} className="teaching-primary w-full">تأیید لغو</button>}><form id="teacher-cancel-form" onSubmit={async event=>{event.preventDefault();if(saving)return;setSaving(true);setError('');try{await write(`/teacher/events/${cancelEvent.id}`,{version:cancelEvent.version,reason:cancelReason},'PATCH',context);setCancelEvent(null);}catch(error){setError((error as Error).message);}finally{setSaving(false);}}}><label className="teaching-label">علت لغو<input required minLength={3} disabled={saving} value={cancelReason} onChange={event=>setCancelReason(event.target.value)}/></label></form></TeachingDialog>}
+ </>;
 }
-const colors: Record<AttendanceStatus, string> = {
-  present: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-  absent: 'bg-rose-50 border-rose-300 text-rose-900',
-  late: 'bg-amber-50 border-amber-300 text-amber-900',
-  excused: 'bg-blue-50 border-blue-200 text-blue-900'
-};
-const nextStatus: Record<AttendanceStatus, AttendanceStatus> = { present: 'absent', absent: 'late', late: 'excused', excused: 'present' };
-
-export const TeacherDashboard: React.FC<Props> = ({ onOpenQuestionBank, onOpenGradeEntryModal, onOpenHomeworkExamModal, onOpenStudentDossier }) => {
-  const { currentSchool, currentUser, schedule, attendanceSessions, submitAttendance, setSelectedStudentForDossier, schoolClock, activeAcademicYear, busy } = useApp();
-  const [activeTab, setActiveTab] = useState<'attendance' | 'schedule'>('attendance');
-  const [selectedSlotId, setSelectedSlotId] = useState('');
-  const [drafts, setDrafts] = useState<Record<string, Record<string, AttendanceStatus>>>({});
-  const [platform, setPlatform] = useState<'bale' | 'sms'>('bale');
-  const [query, setQuery] = useState('');
-  const [showAddQuestion, setShowAddQuestion] = useState(false);
-  const [feedback, setFeedback] = useState<{ error: boolean; text: string } | null>(null);
-  const todaySlots = schedule.filter((slot) => slot.dayOfWeek === schoolClock.dayOfWeek).slice().sort((a, b) => a.period - b.period || a.className.localeCompare(b.className, 'fa'));
-  const currentSlot = todaySlots.find((slot) => slot.id === selectedSlotId) || todaySlots.find((slot) => isSlotLive(slot, schoolClock)) || todaySlots[0];
-  const roster = useClassRoster(currentSlot?.classGroupId);
-  const students = roster.data?.items || [];
-  const key = currentSlot ? attendanceKey({ ...currentSlot, date: schoolClock.date }) || '' : '';
-  const sessionQuery=useAttendanceSession(currentSlot?.id);
-  const existingSession = sessionQuery.data;
-  const classStudents = students.filter((student) => student.classGroupId === currentSlot?.classGroupId && (!student.status || student.status === 'active'));
-  const attendanceMap = Object.fromEntries(classStudents.map((student) => [student.id, drafts[key]?.[student.id] || existingSession?.records.find((row) => row.studentId === student.id)?.status || 'present'])) as Record<string, AttendanceStatus>;
-  const search = toEnglishDigits(query).trim();
-  const filtered = classStudents.filter((student) => student.name.includes(query.trim()) || toEnglishDigits(student.nationalCode).includes(search));
-  const count = (status: AttendanceStatus) => classStudents.filter((student) => attendanceMap[student.id] === status).length;
-  const dirty = !existingSession || classStudents.some((student) => attendanceMap[student.id] !== existingSession.records.find((row) => row.studentId === student.id)?.status);
-  const start = currentSlot ? schoolTimeMinutes(currentSlot.startTime) : undefined;
-  const canSubmit = !busy && !roster.isPending && !roster.error && !sessionQuery.isPending && !sessionQuery.error && !!currentSlot && !!classStudents.length && start !== undefined && schoolClock.minuteOfDay >= start && !!activeAcademicYear?.isCurrent && activeAcademicYear.status === 'active' && dirty;
-  const toggle = (studentId: string) => {
-    setDrafts((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), [studentId]: nextStatus[attendanceMap[studentId]] } }));
-    setFeedback(null);
-  };
-  const submit = async () => {
-    if (!currentSlot || busy || roster.isPending || roster.error || sessionQuery.isPending || sessionQuery.error) return;
-    const result = await submitAttendance(currentSlot.id, classStudents.map((student) => ({ studentId: student.id, status: attendanceMap[student.id], note: existingSession?.records.find((row) => row.studentId === student.id)?.note })), platform);
-    if (!result.ok) { setFeedback({ error: true, text: result.error }); return; }
-    setDrafts((prev) => { const next = { ...prev }; delete next[key]; return next; });
-    setFeedback({ error: false, text: result.changed ? `ثبت شد؛ ${toPersianDigits(result.notificationsSent)} اعلان آزمایشی جدید.` : 'این جلسه قبلاً با همین اطلاعات ثبت شده است.' });
-  };
-
-  return (
-    <div className="space-y-4 sm:space-y-6" id="teacher-dashboard-view">
-      <header className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3">
-        <div className="flex flex-wrap justify-between items-start gap-2">
-          <div className="min-w-0"><h1 className="font-bold text-lg text-slate-900">سلام، {currentUser.name}</h1><p className="text-xs text-slate-500 mt-1">{currentSchool?.name}</p></div>
-          <span className="text-xs text-teal-800 bg-teal-50 rounded-xl px-3 py-2">{toPersianDigits(schoolClock.dateLabel)}</span>
-        </div>
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-          {onOpenGradeEntryModal && <button onClick={onOpenGradeEntryModal} className="min-h-11 px-3 rounded-xl bg-teal-700 text-white text-xs font-bold flex items-center justify-center gap-2"><Award className="size-4 shrink-0" />ثبت نمرات</button>}
-          {onOpenHomeworkExamModal && <button onClick={onOpenHomeworkExamModal} className="min-h-11 px-3 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold flex items-center justify-center gap-2"><FileQuestion className="size-4 shrink-0" />تکالیف و آزمون</button>}
-          <button id="open-question-bank-btn" onClick={onOpenQuestionBank} className="min-h-11 px-3 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold flex items-center justify-center gap-2"><BookOpen className="size-4 shrink-0" />بانک سؤال</button>
-          <button id="quick-add-question-btn" onClick={() => setShowAddQuestion(true)} className="min-h-11 px-3 rounded-xl bg-slate-100 text-slate-800 text-xs font-bold flex items-center justify-center gap-2"><PlusCircle className="size-4 shrink-0" />افزودن سؤال</button>
-        </div>
-      </header>
-      <div role="tablist" aria-label="میز کار دبیر" className="grid grid-cols-2 gap-2 bg-white p-1.5 border border-slate-200 rounded-2xl">
-        {(['attendance', 'schedule'] as const).map((tab) => <button key={tab} id={`teacher-tab-${tab}`} role="tab" aria-selected={activeTab === tab} aria-controls={tab === 'attendance' ? 'attendance-section' : 'schedule-section'} onClick={() => setActiveTab(tab)} className={`min-h-11 rounded-xl text-xs font-bold flex items-center justify-center gap-2 ${activeTab === tab ? 'bg-teal-700 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>{tab === 'attendance' ? <CheckCheck className="size-4" /> : <CalendarDays className="size-4" />}{tab === 'attendance' ? 'حضور و غیاب' : 'برنامه هفتگی'}</button>)}
-      </div>
-      {activeTab === 'attendance' && <section id="attendance-section" role="tabpanel" aria-labelledby="teacher-tab-attendance" className="space-y-3">
-        {!currentSlot ? <div id="teacher-no-schedule" role="status" className="p-5 bg-white rounded-2xl border border-slate-200 space-y-3"><p className="text-sm text-slate-700">برای امروز برنامه‌ای به این حساب دبیر متصل نیست.</p><button onClick={() => setActiveTab('schedule')} className="min-h-11 text-teal-800 text-sm font-bold">مشاهده برنامه هفتگی</button></div> : <>
-          <div className="p-4 bg-white border border-slate-200 rounded-2xl space-y-3">
-            <label htmlFor="attendance-slot-select" className="block text-xs font-bold text-slate-700">کلاس و زنگ امروز</label>
-            <select id="attendance-slot-select" value={currentSlot.id} onChange={(event) => { setSelectedSlotId(event.target.value); setQuery(''); setFeedback(null); }} className="w-full min-h-11 p-2.5 rounded-xl border border-slate-300 bg-white text-sm">
-              {todaySlots.map((slot) => <option key={slot.id} value={slot.id}>{toPersianDigits(`زنگ ${slot.period} • ${slot.className} • ${slot.subject}`)}</option>)}
-            </select>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600"><Users className="size-4" /><span>{toPersianDigits(classStudents.length)} دانش‌آموز</span><span dir="ltr">{toPersianDigits(currentSlot.startTime)} – {toPersianDigits(currentSlot.endTime)}</span><span className="font-bold text-teal-800">{isSlotLive(currentSlot, schoolClock) ? 'زنگ در حال برگزاری' : start !== undefined && schoolClock.minuteOfDay < start ? 'شروع نشده' : 'جلسه امروز'}</span></div>
-            <p id="attendance-session-note" className="text-xs text-slate-500 leading-6">وضعیت پیش‌فرض، حاضر است و با دکمه ثبت نهایی می‌شود. هر لمس وضعیت را تغییر می‌دهد. غیبت، تأخیر و اصلاح آن‌ها اعلان آزمایشی خودکار دارند.</p>
-            {!activeAcademicYear?.isCurrent && <p role="status" className="text-xs text-amber-800">برای ثبت، سال تحصیلی فعال مدرسه را انتخاب کنید.</p>}
-            <div className="flex flex-wrap gap-2 text-xs">
-              {(Object.keys(attendanceLabels) as AttendanceStatus[]).map((status) => <span key={status} className={`px-2 py-1 rounded-lg border ${colors[status]}`}>{attendanceLabels[status]}: {toPersianDigits(count(status))}</span>)}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <label className="flex items-center gap-2 border border-slate-300 rounded-xl px-3 flex-1 min-w-0"><Search className="size-4 shrink-0 text-slate-400" /><input id="attendance-student-search" aria-label="جستجوی دانش‌آموز" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="نام یا کد ملی" className="min-h-11 w-full min-w-0 text-sm outline-none bg-transparent" /></label>
-              <button id="btn-all-present" onClick={() => { setDrafts((prev) => ({ ...prev, [key]: Object.fromEntries(classStudents.map((student) => [student.id, 'present'])) })); setFeedback(null); }} className="min-h-11 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs">همه حاضرند</button>
-            </div>
-          </div>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5" aria-label="وضعیت دانش‌آموزان">
-            {filtered.map((student, index) => <li key={student.id} id={`student-att-card-${student.id}`} className={`flex rounded-2xl border overflow-hidden ${colors[attendanceMap[student.id]]}`}>
-              <button onClick={() => toggle(student.id)} aria-label={`${student.name}، ${attendanceLabels[attendanceMap[student.id]]}؛ تغییر وضعیت`} className="flex-1 min-w-0 min-h-20 p-3 text-right flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-teal-700 focus-visible:-outline-offset-2">
-                <span className="text-xs opacity-60 shrink-0">{toPersianDigits(index + 1)}</span><span className="flex-1 min-w-0"><span className="block font-bold text-sm break-words">{student.name}</span><span className="block text-[11px] opacity-75 mt-1 break-words">ولی: {student.parentName}</span></span><span className="text-[11px] font-bold shrink-0 px-2 py-1 rounded-lg bg-white/70">{attendanceLabels[attendanceMap[student.id]]}</span>
-              </button>
-              <button aria-label={`پرونده ${student.name}`} onClick={() => onOpenStudentDossier ? onOpenStudentDossier(student) : setSelectedStudentForDossier(student)} className="min-w-11 min-h-11 border-s border-current/10 flex items-center justify-center bg-white/40"><Eye className="size-4" /></button>
-            </li>)}
-          </ul>
-          {!filtered.length && <p role="status" className="p-4 text-sm text-slate-500">دانش‌آموزی با این جستجو پیدا نشد.</p>}
-          {existingSession && <p className="text-xs text-slate-600 leading-6">آخرین ثبت: {toPersianDigits(existingSession.updatedAt || existingSession.submittedAt)} • {toPersianDigits(existingSession.sentNotificationsCount)} اعلان آزمایشی در سابقه این جلسه</p>}
-          {(roster.error||sessionQuery.error)&&<p role="alert" className="p-3 rounded-xl text-sm bg-rose-50 text-rose-800">{roster.error?.message||sessionQuery.error?.message}</p>}
-          {feedback && <p role={feedback.error ? 'alert' : 'status'} className={`p-3 rounded-xl text-sm ${feedback.error ? 'bg-rose-50 text-rose-800' : 'bg-emerald-50 text-emerald-900'}`}>{feedback.text}</p>}
-          <div className="sticky bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] md:bottom-4 z-30 p-3 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center gap-2">
-            <label className="flex items-center gap-2 text-xs text-slate-700 sm:flex-1"><MessageSquare className="size-4 text-teal-700 shrink-0" /><span>اعلان خودکار</span><select id="attendance-notification-channel" aria-label="کانال اعلان خودکار" value={platform} onChange={(event) => setPlatform(event.target.value === 'sms' ? 'sms' : 'bale')} className="min-h-11 flex-1 sm:flex-none px-3 rounded-xl border border-slate-200 bg-white"><option value="bale">بله، با جایگزین پیامک</option><option value="sms">پیامک</option></select></label>
-            <button id="submit-final-attendance-btn" onClick={submit} disabled={!canSubmit} aria-describedby="attendance-session-note" className="min-h-12 px-5 bg-teal-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><Send className="size-4" />{existingSession ? dirty ? 'ثبت اصلاحات' : 'ثبت شده' : 'ثبت حضور و غیاب'}</button>
-          </div>
-        </>}
-      </section>}
-      {activeTab === 'schedule' && <section id="schedule-section" role="tabpanel" aria-labelledby="teacher-tab-schedule" className="bg-white border border-slate-200 p-4 rounded-2xl space-y-3"><h2 className="font-bold text-sm">برنامه هفتگی من</h2>{!schedule.length && <p role="status" className="text-sm text-slate-500">برنامه‌ای برای این حساب ثبت نشده است.</p>}<div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{schedule.map((slot) => <div key={slot.id} className={`p-3 rounded-xl border space-y-2 ${isSlotLive(slot, schoolClock) ? 'border-teal-400 bg-teal-50' : 'border-slate-200'}`}><p className="font-bold text-sm">{slot.className}</p><p className="text-xs text-teal-800">{slot.subject}</p><p className="text-xs text-slate-600">{slot.dayOfWeek} • زنگ {toPersianDigits(slot.period)}</p><p dir="ltr" className="text-xs text-right">{toPersianDigits(slot.startTime)} – {toPersianDigits(slot.endTime)}</p>{slot.dayOfWeek === schoolClock.dayOfWeek && <button onClick={() => { setSelectedSlotId(slot.id); setActiveTab('attendance'); setFeedback(null); }} className="min-h-11 text-xs font-bold text-teal-800">حضور و غیاب این جلسه</button>}</div>)}</div></section>}
-      <SponsorBannerCard audienceFilter="teachers" />
-      <AddQuestionModal isOpen={showAddQuestion} onClose={() => setShowAddQuestion(false)} defaultSubject={currentUser.teachingSubjects?.[0] || 'عمومی'} />
-    </div>
-  );
-};
