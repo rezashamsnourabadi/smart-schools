@@ -17,7 +17,6 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
     academicYears,
     activeAcademicYearId,
     activeAcademicYear,
-    activeTerm,
     isViewingNonCurrentYear,
     setActiveAcademicYearId,
     setActiveTermId,
@@ -107,7 +106,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
 
   return (
     <AnimatePresence>
-    {isOpen &&<> <ManagementDialog id="academic-year-manager-modal" title="سال تحصیلی" description="نوبت جاری، آرشیو و فرایند پایان سال" icon={CalendarRange} onClose={onClose}>
+    {isOpen &&<> <ManagementDialog id="academic-year-manager-modal" title="سال تحصیلی" description="سال‌های مدرسه، آرشیو و فرایند پایان سال" icon={CalendarRange} onClose={onClose}>
 
 
         {/* Navigation Tabs */}
@@ -121,7 +120,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
             }`}
           >
             <CalendarCheck className="w-4 h-4" />
-            <span>سال‌ها و نوبت جاری</span>
+            <span>سال‌ها و وضعیت</span>
           </button>
 
           <button
@@ -181,7 +180,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                   </div>
 
                   {/* Active Term Selector Bar */}
-                  <div className="pt-2 border-t border-teal-700/50">
+                  <details className="pt-2 border-t border-teal-700/50"><summary className="min-h-11 cursor-pointer text-xs font-bold">تنظیم اختیاری نوبت جاری مدرسه</summary><p className="my-3 text-[11px] leading-7 text-[#8c9b7d]">برای مشاهده یا ثبت نمره و کارنامه، نوبت را داخل همان بخش انتخاب کنید. این تنظیم فقط عنوان نوبت جاری مدرسه را نگه می‌دارد؛ حضور، تکلیف و مالی به آن وابسته نیستند.</p>
                     <div className="text-xs font-bold text-teal-200 mb-2">
                       انتخاب نوبت تحصیلی جاری (تغییر وضعیت نوبت):
                     </div>
@@ -195,6 +194,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                         return (
                           <button
                             key={term.id}
+                            disabled={isViewingNonCurrentYear}
                             onClick={async () => await setActiveTermId(term.id)}
                             className={`p-2.5 rounded-2xl text-right transition-all border ${
                               isSelected
@@ -213,7 +213,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                         );
                       })}
                     </div>
-                  </div>
+                  </details>
                 </div>
               </div>
 

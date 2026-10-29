@@ -1,3 +1,5 @@
+import {GradeViewPicker} from './GradeViewPicker';
+import type {GradeView} from '../../shared/academic';
 import React, { useEffect, useRef, useState } from 'react';
 import {motion,useReducedMotion} from 'motion/react';
 import {
@@ -47,6 +49,9 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   const { classes, updateParentContact, addDisciplinaryRecord, currentUser, currentRole, canManageSchool, schoolClock } = useApp();
   const [gradeOffset,setGradeOffset]=useState(0),[attendanceOffset,setAttendanceOffset]=useState(0);
   const [cardEditorOpen,setCardEditorOpen]=useState(false);
+  const [gradeView,setGradeView]=useState<GradeView>('all');
+  const [reportTerm,setReportTerm]=useState<'all'|'term1'|'term2'>('all');
+  const reportCards=(student.reportCards||[]).filter(card=>reportTerm==='all'||card.term===reportTerm);
   const reducedMotion=useReducedMotion();
   const closeRef=useRef<HTMLButtonElement>(null),contentRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
@@ -55,7 +60,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
     return()=>{document.body.classList.remove('student-dossier-open');if(previousFocus instanceof HTMLElement&&previousFocus.isConnected)previousFocus.focus();};
   },[]);
 
-  const gradeQuery=useStudentRecords<GradeItem>(student.id,'grades',gradeOffset);
+  const gradeQuery=useStudentRecords<GradeItem>(student.id,'grades',gradeOffset,gradeView);
   const attendanceQuery=useStudentRecords<AttendanceSession>(student.id,'attendanceSessions',attendanceOffset);
   const grades=gradeQuery.data?.items||[],attendanceSessions=attendanceQuery.data?.items||[];
   const canViewFinances = currentRole === 'parent' || currentRole === 'student' || canManageSchool('canManageFinances');
@@ -134,7 +139,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
         </nav>
         {/* Modal Body */}
         <div id="student-dossier-panel" ref={contentRef} role="region" aria-label={activeTitle} className="student-dossier-content min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-[#f8faf5] p-4 sm:p-6">
-          {cardEditorOpen&&<ReportCardEditor student={student} onClose={()=>setCardEditorOpen(false)}/>}
+          {cardEditorOpen&&<ReportCardEditor student={student} initialTerm={reportTerm==='all'?undefined:reportTerm} onClose={()=>setCardEditorOpen(false)}/>}
           {activeTab==='reportCards'&&currentRole==='principal'&&<button id="edit-official-report-card" className="min-h-11 mb-3 px-4 rounded-xl bg-teal-700 text-white font-bold text-sm" onClick={()=>setCardEditorOpen(true)}>ثبت یا انتشار کارنامه مدرسه</button>}
           {['reportCards','attendance'].includes(activeTab)&&(()=>{const query=activeTab==='reportCards'?gradeQuery:attendanceQuery,offset=activeTab==='reportCards'?gradeOffset:attendanceOffset,setOffset=activeTab==='reportCards'?setGradeOffset:setAttendanceOffset;return <div className="flex flex-wrap items-center gap-3 mb-4 text-xs">{query.error?<span role="alert" className="text-rose-800">{query.error.message}</span>:<span role="status">{query.isFetching?'در حال دریافت…':`${toPersianDigits(query.data?.total||0)} مورد`}</span>}<button disabled={query.isFetching||offset===0} onClick={()=>setOffset(Math.max(0,offset-25))} className="min-h-11 px-3 bg-white rounded-xl border border-slate-200">قبلی</button><button disabled={query.isFetching||offset+25>=(query.data?.total||0)} onClick={()=>setOffset(offset+25)} className="min-h-11 px-3 bg-white rounded-xl border border-slate-200">بعدی</button></div>;})()}
           {/* TAB 1: Profile & Contacts */}
@@ -315,6 +320,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                   <h3 id="gradebook-heading" className="font-bold text-slate-900">دفتر نمره</h3>
                   <p className="mt-1 text-xs text-slate-600 leading-6">ارزشیابی‌های ثبت‌شده دبیر در این بخش نمایش داده می‌شوند و به‌تنهایی کارنامه رسمی یا معدل نوبت را تعیین نمی‌کنند.</p>
                 </div>
+                <GradeViewPicker id="student-grade-view" value={gradeView} onChange={value=>{setGradeView(value);setGradeOffset(0);}}/>
                 {studentGradebookItems.length ? <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {studentGradebookItems.map((item) => {
                     const result = item.scores.find((score) => score.studentId === student.id);
@@ -325,13 +331,14 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                       {result.note && <p className="text-xs leading-6 text-slate-700 border-t border-slate-100 pt-2">یادداشت دبیر: {result.note}</p>}
                     </li>;
                   })}
-                </ul> : <p role="status" className="p-4 rounded-2xl border border-dashed border-slate-300 text-sm text-slate-600">هنوز ارزشیابی‌ای در دفتر نمره این دانش‌آموز ثبت نشده است.</p>}
+                </ul> : <p role="status" className="p-4 rounded-2xl border border-dashed border-slate-300 text-sm text-slate-600">ارزشیابی‌ای با این فیلتر در دفتر نمره دانش‌آموز پیدا نشد.</p>}
               </section>
               <div className="border-t border-slate-200" />
               <section aria-labelledby="official-report-cards-heading" className="space-y-3">
               <div><h3 id="official-report-cards-heading" className="font-bold text-slate-900">کارنامه‌های ثبت‌شده</h3><p className="mt-1 text-xs text-slate-600 leading-6">معدل و رتبه فقط از کارنامه ذخیره‌شده خوانده می‌شوند؛ دفتر نمره به‌صورت خودکار به معدل تبدیل نمی‌شود.</p></div>
-              {student.reportCards && student.reportCards.length > 0 ? (
-                student.reportCards.map((rc, idx) => (
+              <label className="teaching-label">کارنامه کدام نوبت؟<select id="student-report-term" className="teacher-text-input" value={reportTerm} onChange={event=>setReportTerm(event.target.value as typeof reportTerm)}><option value="all">هر دو نوبت</option><option value="term1">نوبت اول</option><option value="term2">نوبت دوم</option></select></label>
+              {reportCards.length > 0 ? (
+                reportCards.map((rc, idx) => (
                   <div key={idx} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                     <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 flex flex-wrap items-center justify-between gap-3">
                       <div>
@@ -405,7 +412,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                 ))
               ) : (
                 <div className="bg-white p-8 text-center rounded-2xl border border-slate-200 text-slate-500">
-                  کارنامه رسمی ثبت‌شده‌ای برای این دانش‌آموز یافت نشد. ارزشیابی‌های دفتر نمره در بخش جداگانه بالا دیده می‌شوند.
+                  کارنامه رسمی برای نوبت انتخاب‌شده یافت نشد. ارزشیابی‌های دفتر نمره در بخش جداگانه بالا دیده می‌شوند.
                 </div>
               )}
               </section>

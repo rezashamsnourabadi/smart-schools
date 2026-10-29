@@ -1,12 +1,13 @@
+import type {GradeView} from '../../shared/academic';
 import {useQuery} from '@tanstack/react-query';
 import {useAuth} from '../auth/AuthContext';
 import {useApp} from '../context/AppContext';
 import {request} from './client';
 import type {AttendanceSession} from '../types';
 
-export function useStudentRecords<T>(studentId:string,kind:'grades'|'attendanceSessions',offset:number){
+export function useStudentRecords<T>(studentId:string,kind:'grades'|'attendanceSessions',offset:number,gradeView:GradeView='all'){
   const auth=useAuth(),app=useApp();
-  return useQuery({queryKey:['student-records',auth.member.id,app.activeAcademicYearId,studentId,kind,offset],queryFn:({signal})=>request<{items:T[];total:number}>(`/students/${studentId}/records/${kind}?offset=${offset}`,{signal,scope:{membershipId:auth.member.id,csrf:auth.user.csrf,yearId:app.activeAcademicYearId}}),staleTime:30000});
+  return useQuery({queryKey:['student-records',auth.member.id,app.activeAcademicYearId,studentId,kind,offset,gradeView],queryFn:({signal})=>request<{items:T[];total:number}>(`/students/${studentId}/records/${kind}?offset=${offset}${kind==='grades'?`&gradeView=${gradeView}`:''}`,{signal,scope:{membershipId:auth.member.id,csrf:auth.user.csrf,yearId:app.activeAcademicYearId}}),staleTime:30000});
 }
 export function useAttendanceSession(scheduleSlotId:string|undefined,enabled=true){
   const auth=useAuth(),app=useApp();

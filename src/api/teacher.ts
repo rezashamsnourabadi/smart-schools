@@ -1,3 +1,4 @@
+import type {GradeView} from '../../shared/academic';
 import {useRef} from 'react';
 import {useQuery,useQueryClient} from '@tanstack/react-query';
 import {useAuth} from '../auth/AuthContext';
@@ -12,7 +13,7 @@ export function useTeacherData<T>(path:string,enabled=true,staleTime=15000){
 export function teachingParams(context:TeachingContext|undefined){return new URLSearchParams({classId:context?.classId||'',subject:context?.subject||''}).toString();}
 export const useTeacherClasses=()=>useTeacherData<TeacherClasses>('/teacher/classes');
 export const useClassroom=(context:TeachingContext|undefined,period=0)=>useTeacherData<Classroom>(`/teacher/classroom?${teachingParams(context)}&period=${period}`,!!context);
-export const useTeacherRecords=<K extends keyof TeacherRecordMap>(context:TeachingContext|undefined,kind:K,offset=0,enabled=true)=>useTeacherData<{items:TeacherRecordMap[K][];total:number}>(`/teacher/records?${teachingParams(context)}&kind=${kind}&offset=${offset}`,!!context&&enabled);
+export const useTeacherRecords=<K extends keyof TeacherRecordMap>(context:TeachingContext|undefined,kind:K,offset=0,enabled=true,gradeView:GradeView='all')=>useTeacherData<{items:TeacherRecordMap[K][];total:number}>(`/teacher/records?${teachingParams(context)}&kind=${kind}&offset=${offset}${kind==='grades'?`&gradeView=${gradeView}`:''}`,!!context&&enabled);
 export const performancePath=(context:TeachingContext,studentId:string,section:PerformanceSection='overview')=>`/teacher/student/${studentId}?${teachingParams(context)}&section=${section}`;
 export const useTeacherPerformance=(context:TeachingContext,studentId:string,section:PerformanceSection='overview')=>useTeacherData<TeacherPerformance>(performancePath(context,studentId,section),true,60000);
 export function usePrefetchTeacherPerformance(){

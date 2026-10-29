@@ -1,3 +1,4 @@
+import {gradeViews,gradeCategories} from '../shared/academic';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -165,14 +166,15 @@ export async function resourceRoutes(app:FastifyInstance) {
     },school);
   });
   app.get('/api/v1/students/:id/records/:kind',async request=>{
-    const {member,school,year}=await scope(request);const params=z.object({id:z.uuid(),kind:z.enum(['grades','attendanceSessions'])}).parse(request.params);const page=paging.parse(request.query);
+    const {member,school,year}=await scope(request);const params=z.object({id:z.uuid(),kind:z.enum(['grades','attendanceSessions'])}).parse(request.params);const page=paging.extend({gradeView:z.enum(gradeViews).default('all')}).parse(request.query);
+    requireValue(page.gradeView==='all'||params.kind==='grades','فیلتر ارزشیابی فقط برای دفتر نمره مجاز است.');
     requireValue(member.role!=='teacher','پرونده عمومی برای دبیر در دسترس نیست؛ از عملکرد همان درس استفاده کنید.',403);
     requireValue(school&&year&&member.role!=='platform_admin','رکورد پیدا نشد.',404);
     if(member.role==='vice_principal'&&!allowed(member,'canViewFullDossier'))deny();
     return transaction(async tx=>{
       await assertRead(tx,member,school,year,params.id,'students');
       const field=params.kind==='grades'?'scores':'records';
-      const rows=await tx.query(`SELECT id,school_id,year_id,kind,version,jsonb_set(data,'{${field}}',(SELECT COALESCE(jsonb_agg(entry),'[]'::jsonb) FROM jsonb_array_elements(data->'${field}') entry WHERE entry->>'studentId'=$4)) AS data,count(*) OVER() total FROM records WHERE school_id=$1 AND year_id=$2 AND kind=$3 AND data->'${field}' @> $5::jsonb ORDER BY created_at DESC,id LIMIT $6 OFFSET $7`,[school,year,params.kind,params.id,JSON.stringify([{studentId:params.id}]),page.limit,page.offset]);
+      const rows=await tx.query(`SELECT id,school_id,year_id,kind,version,jsonb_set(data,'{${field}}',(SELECT COALESCE(jsonb_agg(entry),'[]'::jsonb) FROM jsonb_array_elements(data->'${field}') entry WHERE entry->>'studentId'=$4)) AS data,count(*) OVER() total FROM records WHERE school_id=$1 AND year_id=$2 AND kind=$3 AND data->'${field}' @> $5::jsonb AND ($8::text[] IS NULL OR data->>'category'=ANY($8::text[])) ORDER BY created_at DESC,id LIMIT $6 OFFSET $7`,[school,year,params.kind,params.id,JSON.stringify([{studentId:params.id}]),page.limit,page.offset,gradeCategories(page.gradeView)]);
       return {items:rows.rows.map(row=>{const item=entity(row);delete item.previousVersions;return item;}),total:Number(rows.rows[0]?.total||0)};
     },school);
   });

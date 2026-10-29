@@ -1,3 +1,4 @@
+import {gradeViews,gradeCategories} from '../shared/academic';
 import {z} from 'zod';
 import type {FastifyInstance} from 'fastify';
 import {transaction,type Tx} from './db';
@@ -14,7 +15,7 @@ import {validateGradeItem} from '../src/utils/gradeUtils';
 import type {GradeItem} from '../src/types';
 
 const context=z.object({classId:z.uuid(),subject:z.string().trim().min(1).max(200)});
-const listQuery=context.extend({kind:z.enum(['grades','homework','exams','sessions','events','submissions']),offset:z.coerce.number().int().min(0).max(1000000).default(0)});
+const listQuery=context.extend({gradeView:z.enum(gradeViews).default('all'),kind:z.enum(['grades','homework','exams','sessions','events','submissions']),offset:z.coerce.number().int().min(0).max(1000000).default(0)});
 const statuses=z.enum(['present','absent','late','excused']);
 export const correctionSchema=z.object({version:z.number().int().positive(),reason:z.string().trim().min(3).max(500),platform:z.enum(['bale','sms']).default('bale'),notifyParents:z.boolean().default(true),records:z.array(z.object({studentId:z.uuid(),status:statuses,note:z.string().max(2000).optional()}).strict()).min(1).max(200)}).strict();
 export function validateHistoricalRoster(oldIds:string[],newIds:string[]){return oldIds.length===newIds.length&&new Set(newIds).size===oldIds.length&&newIds.every(id=>oldIds.includes(id));}
@@ -55,6 +56,7 @@ export async function teacherRoutes(app:FastifyInstance){
   });
   app.get('/api/v1/teacher/records',async request=>{
     const input=listQuery.parse(request.query),value=await teacherScope(request),{school,year}=value;
+    requireValue(input.gradeView==='all'||input.kind==='grades','فیلتر ارزشیابی فقط برای دفتر نمره مجاز است.');
     return transaction(async tx=>{
       const teacher=await assignment(tx,value,input.classId,input.subject);
       if(input.kind==='events'){
@@ -66,8 +68,8 @@ export async function teacherRoutes(app:FastifyInstance){
         return {items:rows.map(row=>clean(entity(row))),total:rows[0]?.total||0};
       }
       const kind=input.kind==='sessions'?'attendanceSessions':input.kind;
-      const args=[school,year,input.classId,input.subject,teacher.id,input.offset,value.user.id,kind];
-      const rows=(await tx.query("SELECT *,count(*) OVER()::int AS total FROM records WHERE school_id=$1 AND year_id=$2 AND class_id=$3 AND subject=$4 AND kind=$8 AND (teacher_id=$5 OR (teacher_id IS NULL AND data->>'_actor'=$7)) ORDER BY CASE WHEN kind='attendanceSessions' THEN civil_day ELSE created_at::date END DESC,created_at DESC,id LIMIT 25 OFFSET $6",args)).rows;
+      const args:unknown[]=[school,year,input.classId,input.subject,teacher.id,input.offset,value.user.id,kind,gradeCategories(input.gradeView)];
+      const rows=(await tx.query("SELECT *,count(*) OVER()::int AS total FROM records WHERE school_id=$1 AND year_id=$2 AND class_id=$3 AND subject=$4 AND kind=$8 AND (teacher_id=$5 OR (teacher_id IS NULL AND data->>'_actor'=$7)) AND ($9::text[] IS NULL OR data->>'category'=ANY($9::text[])) ORDER BY CASE WHEN kind='attendanceSessions' THEN civil_day ELSE created_at::date END DESC,created_at DESC,id LIMIT 25 OFFSET $6",args)).rows;
       let names:Record<string,string>={};
       if(kind==='attendanceSessions'){const students=(await tx.query("SELECT id,data->>'name' AS name FROM records WHERE school_id=$1 AND year_id=$2 AND kind='students' AND class_id=$3",[school,year,input.classId])).rows;names=Object.fromEntries(students.map(student=>[student.id,student.name]));}
       return {items:rows.map(row=>({...clean(entity(row)),...(kind==='attendanceSessions'?{studentNames:{...names,...row.data.studentNames}}:{})})),total:rows[0]?.total||0};
