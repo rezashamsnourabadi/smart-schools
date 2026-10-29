@@ -1,550 +1,91 @@
-import { ResourcePager } from './ResourcePager';
-import React, { useState } from 'react';
-import { useApp, useResource } from '../context/AppContext';
-import {
-  Building2,
-  Users,
-  GraduationCap,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
-  PhoneCall,
-  Megaphone,
-  BookOpen,
-  UserCheck,
-  Send,
-  Calendar,
-  Shield,
-  Plus,
-  Eye,
-  ArrowRightLeft,
-  UserPlus,
-  FileText,
-  DoorOpen,
-  Layers,
-  ChevronRight,
-  TrendingUp,
-  Activity,
-  MessageSquare
-} from 'lucide-react';
-import { normalizeSchoolDate, toPersianDigits } from '../utils/persianUtils';
-import { dailyAbsences, schoolAttendance } from '../utils/attendance';
-import { Student } from '../types';
-import { CalendarRange, CreditCard } from 'lucide-react';
+import React,{useEffect,useState} from 'react';
+import {request} from '../api/client';
+import {useAuth} from '../auth/AuthContext';
+import {useQueryClient} from '@tanstack/react-query';
+import {Activity,AlertTriangle,BookOpen,Building2,CalendarDays,CalendarRange,CheckCheck,ChevronLeft,ChevronDown,Clock3,CreditCard,Eye,GraduationCap,Megaphone,Phone,Pin,RefreshCw,Shield,Users,type LucideIcon} from 'lucide-react';
+import {useApp,useResource} from '../context/AppContext';
+import {toEnglishDigits,toPersianDigits} from '../utils/persianUtils';
+import type {Student} from '../types';
+import {ResourcePager} from './ResourcePager';
 
 interface Props {
-  onOpenQuestionBank: () => void;
-  onOpenScheduleModal?: () => void;
-  onOpenClassModal?: () => void;
-  onOpenStudentModal?: () => void;
-  onOpenClassStudentModal?: () => void;
-  onOpenPostModal?: () => void;
-  onOpenVpPermsModal?: () => void;
-  onOpenStudentDossier?: (student: Student) => void;
-  onOpenAcademicYearModal?: () => void;
-  onOpenFinanceModal?: () => void;
+ onOpenQuestionBank:()=>void;onOpenScheduleModal?:()=>void;onOpenClassModal?:()=>void;onOpenStudentModal?:()=>void;onOpenClassStudentModal?:()=>void;onOpenPostModal?:()=>void;onOpenVpPermsModal?:()=>void;onOpenStudentDossier?:(student:Student)=>void;onOpenAcademicYearModal?:()=>void;onOpenFinanceModal?:()=>void;
 }
-
-export const PrincipalDashboard: React.FC<Props> = ({
-  onOpenQuestionBank,
-  onOpenScheduleModal,
-  onOpenClassModal,
-  onOpenStudentModal,
-  onOpenClassStudentModal,
-  onOpenPostModal,
-  onOpenVpPermsModal,
-  onOpenStudentDossier,
-  onOpenAcademicYearModal,
-  onOpenFinanceModal
-}) => {
-  useResource('attendanceSessions');
-  const {
-    currentSchool,
-    dashboard,
-    dailyAbsences: absentRecords,
-    classes,
-    students,
-    attendanceSessions,
-    schoolClock,
-    announcements,
-    setSelectedStudentForDossier,
-    activeAcademicYear,
-    activeTerm,
-    isViewingNonCurrentYear,
-    returnToCurrentAcademicYear
-  } = useApp();
-
-  const [activeTab, setActiveTab] = useState<'absents' | 'live_classes' | 'recent_posts'>('absents');
-
-  const schoolClasses = classes.filter((c) => c.schoolId === currentSchool?.id);
-  const schoolStudents = students.filter(
-    (s) => s.schoolId === currentSchool?.id && (s.status === 'active' || !s.status)
-  );
-
-  const todaySessions = attendanceSessions.filter((session) => session.schoolId === currentSchool?.id && normalizeSchoolDate(session.date) === schoolClock.date);
-
-  const handleStudentClick = (student: Student) => {
-    if (onOpenStudentDossier) {
-      onOpenStudentDossier(student);
-    } else {
-      setSelectedStudentForDossier(student);
-    }
-  };
-
-  const handleOpenStudents = () => {
-    if (onOpenStudentModal) onOpenStudentModal();
-    else if (onOpenClassStudentModal) onOpenClassStudentModal();
-  };
-
-  const handleOpenClasses = () => {
-    if (onOpenClassModal) onOpenClassModal();
-    else if (onOpenClassStudentModal) onOpenClassStudentModal();
-  };
-
-  const dailySummary = schoolAttendance(schoolStudents, todaySessions, currentSchool?.id || '', schoolClock.date);
-  const attendanceRate = dashboard.recorded ? dashboard.attendanceRate : undefined;
-
-  return (
-    <div className="space-y-4 sm:space-y-5" id="principal-dashboard-view">
-      <ResourcePager kind="dailyAbsences"/>
-      {/* Modern School Administrative Header & Pulse Bar */}
-      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-black text-slate-900">
-                {currentSchool?.name}
-              </h1>
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-bold">
-                {currentSchool?.type}
-              </span>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono">
-                کد سازمانی: {toPersianDigits(currentSchool?.code || '')}
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <span className="text-xs text-slate-500">
-                مدیر آموزشگاه: <strong>{currentSchool?.principalName}</strong>
-              </span>
-              <span className="text-slate-300">•</span>
-              <button
-                id="btn-header-academic-year"
-                onClick={onOpenAcademicYearModal}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 transition-colors font-bold text-xs shadow-2xs"
-                title="مدیریت سال و نوبت تحصیلی"
-              >
-                <CalendarRange className="w-3.5 h-3.5 text-teal-700" />
-                <span>سال تحصیلی {toPersianDigits(activeAcademicYear?.title || '')}</span>
-                <span className="text-teal-600 font-normal">({activeTerm?.title.split(' ')[0]} {activeTerm?.title.split(' ')[1] || ''})</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs bg-slate-50 p-2 rounded-2xl border border-slate-200 text-slate-600">
-            <Calendar className="w-3.5 h-3.5 text-teal-600" />
-            <span>{toPersianDigits(schoolClock.dateLabel)}</span>
-            <span className="text-slate-300">|</span>
-            <Clock className="w-3.5 h-3.5 text-teal-600" />
-            <span className="font-bold text-slate-800">{toPersianDigits(schoolClock.time)}</span>
-          </div>
-        </div>
-
-        {/* Live School Vital Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-          <div className="p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-800">حضورِ ثبت‌شده امروز</span>
-              <Activity className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-xl font-mono font-black text-emerald-950">
-                {attendanceRate === undefined ? '—' : `${toPersianDigits(attendanceRate)}٪`}
-              </span>
-              <span className="text-[10px] text-emerald-700 font-medium">{toPersianDigits(dashboard.recorded ?? 0)} ثبت روزانه</span>
-            </div>
-          </div>
-
-          <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-rose-800">دارای غیبت امروز</span>
-              <AlertTriangle className="w-4 h-4 text-rose-600" />
-            </div>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-xl font-mono font-black text-rose-950">
-                {toPersianDigits(dashboard.absent ?? 0)}
-              </span>
-              <span className="text-[10px] text-rose-700 font-medium">اطلاع به بله</span>
-            </div>
-          </div>
-
-          <div className="p-3 bg-teal-50/70 border border-teal-200/80 rounded-2xl">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-teal-800">کلاس‌های دایر</span>
-              <DoorOpen className="w-4 h-4 text-teal-600" />
-            </div>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-xl font-mono font-black text-teal-950">
-                {toPersianDigits(dashboard.classes ?? 0)}
-              </span>
-              <span className="text-[10px] text-teal-700 font-medium">کلاس فعال</span>
-            </div>
-          </div>
-
-          <div className="p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-2xl">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-indigo-800">کل دانش‌آموزان</span>
-              <Users className="w-4 h-4 text-indigo-600" />
-            </div>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-xl font-mono font-black text-indigo-950">
-                {toPersianDigits(dashboard.students ?? 0)}
-              </span>
-              <span className="text-[10px] text-indigo-700 font-medium">نفر</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Warning banner when the selected year is not the live year */}
-      {isViewingNonCurrentYear && (
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-            <div>
-              <span className="font-bold">نمای سال تحصیلی: </span>
-              <span>
-                {toPersianDigits(activeAcademicYear?.title || '')} انتخاب شده است. داده‌های این نما مربوط به سال انتخاب‌شده‌اند. سوابق سال غیرجاری فقط خواندنی هستند.
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={returnToCurrentAcademicYear}
-            className="min-h-11 px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs transition-colors shrink-0 self-end sm:self-auto shadow-2xs"
-          >
-            بازگشت به سال تحصیلی جاری
-          </button>
-        </div>
-      )}
-
-      {/* Operational Hub: Thumb-Friendly Action Cards (Separated Class & Student) */}
-      <div className="space-y-2">
-        <h2 className="text-xs font-bold text-slate-500 px-1">
-          بخش‌های اجرایی و مدیریت آموزشگاه
-        </h2>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 sm:gap-3">
-          {/* 1. Academic Year & Calendar Management */}
-          <button
-            id="btn-manage-academic-year"
-            onClick={onOpenAcademicYearModal}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-teal-50/60 border border-teal-200/80 hover:border-teal-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
-          >
-            <div className="w-9 h-9 rounded-xl bg-teal-50 group-hover:bg-teal-700 text-teal-700 group-hover:text-white flex items-center justify-center transition-colors">
-              <CalendarRange className="w-4 h-4" />
-            </div>
-            <div className="mt-3">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-teal-950">
-                سال و تقویم تحصیلی
-              </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                سال‌بندی، نوبت‌ها و ارتقای پایه
-              </div>
-            </div>
-          </button>
-          {/* 1. Student Management (Separated) */}
-          <button
-            id="btn-manage-students"
-            onClick={handleOpenStudents}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-teal-50/60 border border-slate-200 hover:border-teal-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
-          >
-            <div className="w-9 h-9 rounded-xl bg-teal-50 group-hover:bg-teal-700 text-teal-700 group-hover:text-white flex items-center justify-center transition-colors">
-              <Users className="w-4 h-4" />
-            </div>
-            <div className="mt-3">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-teal-950">
-                مدیریت دانش‌آموزان
-              </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                پرونده‌ها، ثبت‌نام و فارغ‌التحصیلان
-              </div>
-            </div>
-          </button>
-
-          {/* 2. Class & Room Management (Separated) */}
-          <button
-            id="btn-manage-classes"
-            onClick={handleOpenClasses}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-cyan-50/60 border border-slate-200 hover:border-cyan-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
-          >
-            <div className="w-9 h-9 rounded-xl bg-cyan-50 group-hover:bg-cyan-700 text-cyan-700 group-hover:text-white flex items-center justify-center transition-colors">
-              <Building2 className="w-4 h-4" />
-            </div>
-            <div className="mt-3">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-cyan-950">
-                کلاس‌بندی و پایه‌ها
-              </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                اتاق‌ها، ظرفیت‌ها و دبیران راهنما
-              </div>
-            </div>
-          </button>
-
-          {/* 3. Schedule Planner */}
-          <button
-            id="btn-manage-schedule"
-            onClick={onOpenScheduleModal}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
-          >
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 group-hover:bg-indigo-700 text-indigo-700 group-hover:text-white flex items-center justify-center transition-colors">
-              <Calendar className="w-4 h-4" />
-            </div>
-            <div className="mt-3">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-indigo-950">
-                برنامه هفتگی دروس
-              </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                چیدمان ساعات و اساتید
-              </div>
-            </div>
-          </button>
-
-          {/* 4. Posts & Announcements with File Upload */}
-          <button
-            id="btn-manage-posts"
-            onClick={onOpenPostModal}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-amber-50/60 border border-slate-200 hover:border-amber-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
-          >
-            <div className="w-9 h-9 rounded-xl bg-amber-50 group-hover:bg-amber-700 text-amber-700 group-hover:text-white flex items-center justify-center transition-colors">
-              <Megaphone className="w-4 h-4" />
-            </div>
-            <div className="mt-3">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-amber-950">
-                اخبار و رویدادها
-              </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                انتشار با آپلود مستقیم پوستر
-              </div>
-            </div>
-          </button>
-
-          {/* 5. Staff Management (Vice Principals & Teachers) */}
-          <button
-            id="btn-manage-staff"
-            onClick={onOpenVpPermsModal}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-teal-50/60 border border-slate-200 hover:border-teal-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
-          >
-            <div className="w-9 h-9 rounded-xl bg-teal-50 group-hover:bg-teal-700 text-teal-700 group-hover:text-white flex items-center justify-center transition-colors">
-              <Shield className="w-4 h-4" />
-            </div>
-            <div className="mt-3">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-teal-950">
-                مدیریت کادر مدرسه
-              </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                معاونین، دبیران، دروس و اختیارات
-              </div>
-            </div>
-          </button>
-
-          {/* 6. Question Bank */}
-          <button
-            id="btn-manage-qbank"
-            onClick={onOpenQuestionBank}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-emerald-50/60 border border-slate-200 hover:border-emerald-400 transition-all text-right shadow-2xs group flex flex-col justify-between"
-          >
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 group-hover:bg-emerald-700 text-emerald-700 group-hover:text-white flex items-center justify-center transition-colors">
-              <BookOpen className="w-4 h-4" />
-            </div>
-            <div className="mt-3">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-950">
-                بانک سوالات منطقه
-              </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                مخزن نمونه‌سوالات امتحانی
-              </div>
-            </div>
-          </button>
-
-          {/* 7. Financial & Tuition Management */}
-          <button
-            id="btn-manage-finances"
-            onClick={onOpenFinanceModal}
-            className="p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-emerald-50/60 border border-emerald-200 hover:border-emerald-500 transition-all text-right shadow-2xs group flex flex-col justify-between"
-          >
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 group-hover:bg-emerald-700 text-emerald-700 group-hover:text-white flex items-center justify-center transition-colors">
-              <CreditCard className="w-4 h-4" />
-            </div>
-            <div className="mt-3">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-emerald-950">
-                امور مالی و شهریه
-              </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                بدهکاران، اقساط و اسناد
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Daily Operations Monitoring Container */}
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
-        {/* Navigation Tabs */}
-        <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setActiveTab('absents')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === 'absents'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-              <span>دارای غیبت امروز ({toPersianDigits(dashboard.absent ?? 0)})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('live_classes')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === 'live_classes'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <DoorOpen className="w-3.5 h-3.5 text-teal-600" />
-              <span>جلسه‌های ثبت‌شده امروز ({toPersianDigits(todaySessions.length)})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('recent_posts')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === 'recent_posts'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Megaphone className="w-3.5 h-3.5 text-amber-600" />
-              <span>اعلانات و اخبار اخیر ({toPersianDigits(announcements.length)})</span>
-            </button>
-          </div>
-
-          <span className="text-[11px] text-slate-400">
-            بروزرسانی لحظه‌ای سیستم هوشمند
-          </span>
-        </div>
-
-        {/* Tab 1: Absents */}
-        {activeTab === 'absents' && (
-          <div className="p-4 sm:p-5 space-y-3">
-            {absentRecords.length === 0 ? (
-              <div className="text-center py-10 text-xs text-slate-400">
-                تا این لحظه غیبتی در جلسات ثبت‌شده امروز دیده نمی‌شود. وضعیت دانش‌آموزان بدون ثبت جلسه مشخص نیست.
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {absentRecords.map((rec, idx) => (
-                  <div
-                    key={idx}
-                    className="py-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 font-bold flex items-center justify-center text-xs shrink-0">
-                        {rec.student.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 text-xs sm:text-sm">
-                            {rec.student.name}
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                            {rec.session.className}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          درس: {rec.session.subject} • زنگ {toPersianDigits(rec.session.period)} • ثبت در {toPersianDigits(rec.session.submittedAt)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-[10px] px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-medium flex items-center gap-1">
-                        <MessageSquare className="w-3 h-3" />
-                        <span>سابقه اعلان آزمایشی ثبت شده</span>
-                      </span>
-
-                      <button
-                        onClick={() => handleStudentClick(rec.student)}
-                        className="px-3 py-1 bg-slate-100 hover:bg-teal-50 text-slate-800 hover:text-teal-800 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>پرونده دانش‌آموز</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 2: Live Classes */}
-        {activeTab === 'live_classes' && (
-          <div className="p-4 sm:p-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {todaySessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-sm">{session.className}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 font-bold">
-                      زنگ {toPersianDigits(session.period)}
-                    </span>
-                  </div>
-                  <div className="text-slate-600">
-                    درس: <strong className="text-slate-800">{session.subject}</strong>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
-                    <span>دبیر: {session.teacherName}</span>
-                    <span className="text-emerald-700 font-bold">حضور و غیاب ثبت‌شده</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {todaySessions.length === 0 && (
-              <div className="text-center py-8 text-xs text-slate-400">
-                هنوز جلسه‌ای برای امروز ثبت نشده است.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3: Recent Posts */}
-        {activeTab === 'recent_posts' && (
-          <div className="p-4 sm:p-5 space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {announcements.slice(0, 4).map((ann) => (
-                <div
-                  key={ann.id}
-                  className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">{toPersianDigits(ann.date)}</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed line-clamp-2">{ann.content}</p>
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60">
-                    <span>صادرکننده: {ann.senderName}</span>
-                    <span>مخاطب: {ann.target === 'all' ? 'عمومی' : ann.target}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+type View='absents'|'sessions'|'posts';
+interface Tool {id:string;title:string;description:string;icon:LucideIcon;tone:string;onClick?:()=>void}
+function ToolButton({tool}:{tool:Tool}){
+ const Icon=tool.icon;
+ return <button id={tool.id} type="button" onClick={tool.onClick} disabled={!tool.onClick} className="group flex min-h-20 min-w-0 items-center gap-3 rounded-2xl border border-[#e3e9db] bg-white p-3 text-right transition-colors hover:border-[#b6c9a3] hover:bg-[#fcfdf9] disabled:opacity-40"><span className={`flex size-10 shrink-0 items-center justify-center rounded-2xl ${tool.tone}`}><Icon className="size-5" strokeWidth={1.6} aria-hidden="true"/></span><span className="min-w-0 flex-1"><span className="block break-words text-xs font-bold leading-6 text-[#506b42]">{tool.title}</span><span className="mt-1 hidden text-[10px] leading-5 text-[#8e9d80] sm:block">{tool.description}</span></span><ChevronLeft className="hidden size-3.5 shrink-0 text-[#a4b294] sm:block" aria-hidden="true"/></button>;
+}
+export const PrincipalDashboard:React.FC<Props>=props=>{
+ const {currentSchool,currentSchoolId,dashboard,dashboardLoading,dashboardError,dailyAbsences:absences,attendanceSessions,announcements,schoolClock,activeAcademicYear,activeAcademicYearId,activeTerm,isViewingNonCurrentYear,returnToCurrentAcademicYear,setSelectedStudentForDossier,page,setPage,activeMobileTab,setActiveMobileTab}=useApp();
+ const auth=useAuth(),client=useQueryClient(),[tab,setTab]=useState<View>('absents'),[toolsOpen,setToolsOpen]=useState(false),[refreshing,setRefreshing]=useState(false),[refreshError,setRefreshError]=useState('');
+ const view=isViewingNonCurrentYear&&tab==='absents'?'sessions':tab;
+ useResource('attendanceSessions',view==='sessions');
+ useEffect(()=>{if(view==='sessions')setPage('attendanceSessions',{offset:0,search:'',date:isViewingNonCurrentYear?undefined:schoolClock.date});},[view,isViewingNonCurrentYear,schoolClock.date,activeAcademicYearId]);
+ useEffect(()=>{if(activeMobileTab==='dashboard')setTab(isViewingNonCurrentYear?'sessions':'absents');},[activeMobileTab]);
+ const refresh=async()=>{
+  if(refreshing)return;setRefreshing(true);setRefreshError('');
+  try{await client.invalidateQueries({predicate:query=>query.queryKey[1]===auth.member.id&&query.queryKey[2]===activeAcademicYearId&&(['dashboard','daily-absences'].includes(String(query.queryKey[0]))||query.queryKey[0]==='resource'&&['attendanceSessions','announcements'].includes(String(query.queryKey[3])))},{throwOnError:true});}
+  catch{setRefreshError('دریافت اطلاعات تازه کامل نشد؛ دوباره تلاش کنید.');}finally{setRefreshing(false);}
+ };
+ const changeView=(next:View)=>{setTab(next);setActiveMobileTab(`principal-${next}`);setRefreshError('');};
+ const prefetchStudent=(student:Student)=>{void client.prefetchQuery({queryKey:['student',auth.member.id,activeAcademicYearId,student.id],queryFn:({signal})=>request<Student>(`/students/${student.id}`,{signal,scope:{membershipId:auth.member.id,yearId:activeAcademicYearId,csrf:auth.user.csrf}}),staleTime:15000}).catch(()=>{});};
+ const openStudent=(student:Student)=>props.onOpenStudentDossier?props.onOpenStudentDossier(student):setSelectedStudentForDossier(student);
+ const showStudents=props.onOpenStudentModal||props.onOpenClassStudentModal,showClasses=props.onOpenClassModal||props.onOpenClassStudentModal;
+ const mainTools:Tool[]=[
+  {id:'btn-manage-students',title:'دانش‌آموزان',description:'ثبت‌نام، پرونده و انتقال',icon:Users,tone:'bg-[#eaf2e2] text-[#7e9a64]',onClick:showStudents},
+  {id:'btn-manage-classes',title:'کلاس‌بندی',description:'پایه، ظرفیت و گروه‌های کلاس',icon:Building2,tone:'bg-[#e7f0f5] text-[#7195a6]',onClick:showClasses},
+  {id:'btn-manage-schedule',title:'برنامه هفتگی',description:'کلاس، درس و زنگ دبیران',icon:CalendarDays,tone:'bg-[#eee8f6] text-[#967eae]',onClick:props.onOpenScheduleModal},
+  {id:'btn-manage-finances',title:'امور مالی',description:'شهریه، رسید و حساب دانش‌آموز',icon:CreditCard,tone:'bg-[#faf0d9] text-[#b0985e]',onClick:props.onOpenFinanceModal},
+ ];
+ const otherTools:Tool[]=[
+  {id:'btn-manage-staff',title:'کادر و دسترسی‌ها',description:'دبیران، معاونان و اختیارات',icon:Shield,tone:'bg-[#eaf0e0] text-[#899e6c]',onClick:props.onOpenVpPermsModal},
+  {id:'btn-manage-posts',title:'اطلاعیه و رویداد',description:'انتشار خبر، پوستر و پیوست',icon:Megaphone,tone:'bg-[#f7e9df] text-[#b29478]',onClick:props.onOpenPostModal},
+  {id:'btn-manage-academic-year',title:'سال تحصیلی',description:'نوبت‌ها، آرشیو و ارتقا',icon:CalendarRange,tone:'bg-[#e6efeb] text-[#7b9d8e]',onClick:props.onOpenAcademicYearModal},
+  {id:'btn-manage-qbank',title:'بانک سؤال',description:'نمونه‌سؤال‌های منطقه',icon:BookOpen,tone:'bg-[#f1eaf2] text-[#a68baa]',onClick:props.onOpenQuestionBank},
+ ];
+ const metrics=isViewingNonCurrentYear?[
+  {label:'دانش‌آموزان این سال',value:dashboard.students,detail:'ثبت‌نام‌های فعال',icon:Users,tone:'bg-[#eaf2e2] text-[#78935f]',onClick:showStudents},
+  {label:'کلاس‌های این سال',value:dashboard.classes,detail:'کلاس‌های ثبت‌شده',icon:Building2,tone:'bg-[#e6f0f5] text-[#7696a3]',onClick:showClasses},
+  {label:'دبیران این سال',value:dashboard.teachers,detail:'در سال انتخابی',icon:GraduationCap,tone:'bg-[#f4eddf] text-[#ad9663]',onClick:props.onOpenVpPermsModal},
+ ]:[
+  {label:'غیبت امروز',value:dashboard.absent,detail:'در جلسه‌های ثبت‌شده',icon:AlertTriangle,tone:'bg-[#f9eae5] text-[#bd8877]',onClick:()=>changeView('absents')},
+  {label:'حضور امروز',value:dashboard.recorded?`${toPersianDigits(dashboard.attendanceRate)}٪`:'—',detail:`${toPersianDigits(dashboard.recorded??0)} دانش‌آموز دارای ثبت`,icon:CheckCheck,tone:'bg-[#e7f0df] text-[#7c9a61]',onClick:()=>changeView('sessions')},
+  {label:'دانش‌آموزان',value:dashboard.students,detail:'ثبت‌نام‌های فعال',icon:Users,tone:'bg-[#e8eff6] text-[#829bb0]',onClick:showStudents},
+  {label:'کلاس‌ها',value:dashboard.classes,detail:'کلاس‌های ثبت‌شده',icon:Building2,tone:'bg-[#f4eddf] text-[#af9768]',onClick:showClasses},
+ ];
+ const kind=view==='absents'?'dailyAbsences':view==='sessions'?'attendanceSessions':'announcements',state=page(kind);
+ const tabs:{id:View;label:string;icon:LucideIcon;disabled?:boolean}[]=[{id:'absents',label:'غیبت‌های امروز',icon:AlertTriangle,disabled:isViewingNonCurrentYear},{id:'sessions',label:'جلسه‌های ثبت‌شده',icon:CheckCheck},{id:'posts',label:'اطلاعیه‌ها',icon:Megaphone}];
+ const posts=announcements.slice().sort((a,b)=>Number(!!b.isPinned)-Number(!!a.isPinned));
+ return <div id="principal-dashboard-view" className="principal-dashboard min-w-0 space-y-4 sm:space-y-5">
+  <section id="principal-school-context" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e0e7d7] bg-linear-to-l from-[#eef4e6] to-[#faf5e9] p-4"><div className="min-w-0"><h1 className="break-words text-base font-bold leading-8 text-[#3f6039]">{currentSchool?.name||'میز کار مدیر مدرسه'}</h1><p className="mt-1 text-[10px] leading-6 text-[#8a9a79]">{currentSchool?.type} · کد {toPersianDigits(currentSchool?.code||'—')}</p></div><button id="btn-header-academic-year" type="button" onClick={props.onOpenAcademicYearModal} disabled={!props.onOpenAcademicYearModal} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white bg-white/80 px-3 text-[11px] font-bold text-[#77905e]"><CalendarRange className="size-4 shrink-0" aria-hidden="true"/><span>{toPersianDigits(activeAcademicYear?.title||'انتخاب سال')}<span className="ms-1 font-normal text-[#97a588]">{activeTerm?.title}</span></span><ChevronLeft className="size-3 shrink-0" aria-hidden="true"/></button></section>
+  {isViewingNonCurrentYear&&<div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#eadfbe] bg-[#fbf5e6] px-4 py-2 text-[11px] leading-7 text-[#a38d5b]"><p>سوابق سال {toPersianDigits(activeAcademicYear?.title)} · فقط خواندنی</p><button id="principal-return-current-year" type="button" onClick={returnToCurrentAcademicYear} className="min-h-11 font-bold">بازگشت به سال جاری</button></div>}
+  <section aria-label="خلاصه وضعیت مدرسه" className={`grid gap-2 sm:gap-3 ${isViewingNonCurrentYear?'grid-cols-3':'grid-cols-2 lg:grid-cols-4'}`}>{metrics.map(({label,value,detail,icon:Icon,tone,onClick})=><button key={label} type="button" disabled={!onClick} onClick={onClick} className="min-w-0 rounded-2xl border border-[#e2e8db] bg-white p-3 text-right transition-colors hover:border-[#c5d5b6] sm:p-4"><span className="flex items-center justify-between gap-2"><span className="text-[10px] font-bold leading-6 text-[#879877]">{label}</span><span className={`flex size-7 shrink-0 items-center justify-center rounded-xl ${tone}`}><Icon className="size-4" strokeWidth={1.6} aria-hidden="true"/></span></span><strong className="mt-1 block text-xl font-bold text-[#48633d] sm:text-2xl">{dashboardLoading||dashboardError?'—':toPersianDigits(value??0)}</strong><span className="mt-1 hidden text-[10px] leading-6 text-[#9ba78e] sm:block">{dashboardLoading?'در حال دریافت…':dashboardError?'دریافت خلاصه ممکن نشد':detail}</span></button>)}</section>
+  {!isViewingNonCurrentYear&&<p className="px-1 text-[10px] leading-6 text-[#94a184] sm:hidden">حضور فقط بر اساس {toPersianDigits(dashboard.recorded??0)} دانش‌آموز دارای ثبت محاسبه می‌شود.</p>}
+  {dashboardError&&<div role="alert" className="rounded-xl bg-rose-50 px-4 py-2 text-xs leading-7 text-rose-800">{dashboardError}<button type="button" onClick={()=>void refresh()} className="min-h-11 px-2 font-bold">تلاش مجدد</button></div>}
+  <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
+   <aside id="principal-management-tools" aria-label="ابزارهای مدیریت مدرسه" className="min-w-0 space-y-3 lg:col-start-2 lg:row-start-1"><button id="principal-tools-toggle" type="button" aria-expanded={toolsOpen} aria-controls="principal-tools-content" onClick={()=>setToolsOpen(!toolsOpen)} className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-[#dfe7d6] bg-white px-4 text-right lg:hidden"><Building2 className="size-5 shrink-0 text-[#8da775]" aria-hidden="true"/><span className="min-w-0 flex-1"><span className="block text-xs font-bold text-[#718b5b]">مدیریت مدرسه</span><span className="mt-1 block text-[10px] text-[#9eaa91]">دانش‌آموز، کلاس، مالی، کادر و ابزارهای دیگر</span></span><ChevronDown className={`size-4 shrink-0 text-[#9bae8a] transition-transform ${toolsOpen?'rotate-180':''}`} aria-hidden="true"/></button><h2 className="hidden px-1 text-xs font-bold text-[#7d9268] lg:block">مدیریت مدرسه</h2><div id="principal-tools-content" className={`grid-cols-2 gap-2 lg:grid lg:grid-cols-1 xl:grid-cols-2 ${toolsOpen?'grid':'hidden'}`}>{[...mainTools,...otherTools].map(tool=><ToolButton key={tool.id} tool={tool}/>)}</div></aside>
+   <section id="principal-daily-operations" className="min-w-0 overflow-hidden rounded-3xl border border-[#e0e7d6] bg-white lg:col-start-1 lg:row-start-1">
+    <header className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4 sm:px-5"><div><h2 className="text-sm font-bold text-[#59764a]">{isViewingNonCurrentYear?'مرور سوابق مدرسه':'پیگیری‌های امروز'}</h2><p className="mt-1 text-[10px] leading-6 text-[#94a184]">{toPersianDigits(schoolClock.dateLabel)} · {toPersianDigits(schoolClock.time)}</p></div><button id="principal-refresh-data" type="button" disabled={refreshing} onClick={()=>void refresh()} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-[11px] font-bold text-[#82996c] hover:bg-[#f3f7ed] disabled:opacity-50"><RefreshCw className={`size-4 ${refreshing?'animate-spin motion-reduce:animate-none':''}`} strokeWidth={1.6} aria-hidden="true"/>{refreshing?'در حال دریافت…':'تازه‌سازی'}</button></header>
+    <nav role="group" aria-label="پیگیری‌های مدیر" className="mx-3 mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-[#f5f8f0] p-1 sm:mx-4">{tabs.map(({id,label,icon:Icon,disabled})=><button id={`principal-tab-${id}`} key={id} type="button" disabled={disabled} aria-pressed={view===id} aria-controls="principal-monitor-content" onClick={()=>changeView(id)} className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold leading-5 transition-colors disabled:opacity-35 sm:min-h-12 sm:flex-row sm:gap-2 ${view===id?'border border-[#e0e8d5] bg-white text-[#6c8756] shadow-xs':'text-[#9ca98f] hover:text-[#7b9169]'}`}><Icon className="size-3.5 shrink-0" strokeWidth={1.6} aria-hidden="true"/><span className="break-words text-center">{label}</span></button>)}</nav>
+    <div id="principal-monitor-content" role="region" aria-labelledby={`principal-tab-${view}`} className="min-w-0 space-y-3 p-4 sm:p-5">
+     {refreshError&&<p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs leading-7 text-rose-700">{refreshError}</p>}
+     {state.error?<div role="alert" className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs leading-7 text-rose-700"><p>{state.error}</p><button type="button" onClick={()=>void refresh()} className="min-h-11 font-bold">تلاش مجدد</button></div>:view==='absents'?<>
+      <p className="text-[10px] leading-7 text-[#9aa58d]">این فهرست بر پایه حضورهای ثبت‌شده امروز است؛ برای دانش‌آموز بدون ثبت، وضعیت فرض نمی‌شود.</p>
+      {state.loading&&!absences.length?<p role="status" className="principal-empty">در حال دریافت غیبت‌های ثبت‌شده…</p>:!absences.length?<div role="status" className="principal-empty"><CheckCheck className="mx-auto mb-3 size-6 text-[#9fb18b]" aria-hidden="true"/>در فهرست فعلی غیبتی دیده نمی‌شود.</div>:<div className="space-y-3">{absences.map(({student,session,note})=>{const phone=toEnglishDigits(student.parentPhone||'').replace(/[^\d+]/g,''),callable=/^\+?\d{7,15}$/.test(phone);return <article id={`principal-absence-${student.id}-${session.id}`} key={`${student.id}:${session.id}`} className="rounded-2xl border border-[#eee4db] bg-[#fdfbf7] p-3.5"><div className="flex items-start gap-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#f6e8e0] text-xs font-bold text-[#bd9984]">{student.name.charAt(0)}</span><div className="min-w-0 flex-1"><button type="button" onPointerEnter={()=>prefetchStudent(student)} onFocus={()=>prefetchStudent(student)} onClick={()=>openStudent(student)} className="min-h-11 break-words text-right text-xs font-bold leading-7 text-[#526943]">{student.name}</button><p className="text-[10px] leading-6 text-[#a19781]">{session.className} · {session.subject} · زنگ {toPersianDigits(session.period)}</p></div><span className="shrink-0 rounded-lg bg-[#faeee7] px-2 py-1 text-[9px] font-bold text-[#b68f79]">غیبت ثبت‌شده</span></div>{note&&<p className="mt-2 break-words rounded-xl bg-white p-3 text-[11px] leading-7 text-[#9a9b85]">{note}</p>}<div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#eee9de] pt-2"><p className="text-[10px] leading-6 text-[#a3ac96]">ثبت جلسه: {toPersianDigits(session.updatedAt||session.submittedAt)}</p><div className="flex flex-wrap items-center gap-2">{callable&&<a id={`principal-call-parent-${student.id}-${session.id}`} href={`tel:${phone}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-[11px] font-bold text-[#9b9272]"><Phone className="size-3.5" aria-hidden="true"/>تماس با ولی</a>}<button type="button" onPointerEnter={()=>prefetchStudent(student)} onFocus={()=>prefetchStudent(student)} onClick={()=>openStudent(student)} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-[#e0e7d4] bg-white px-3 text-[11px] font-bold text-[#839a6d]"><Eye className="size-3.5" aria-hidden="true"/>پرونده</button></div></div></article>;})}</div>}
+      <ResourcePager key={`${activeAcademicYearId}:absences`} kind="dailyAbsences" appearance="sage" searchPlaceholder="جستجوی نام دانش‌آموز…"/>
+     </>:view==='sessions'?<>
+      <p className="text-[10px] leading-7 text-[#9ba68e]">{isViewingNonCurrentYear?'جلسات ثبت‌شده سال انتخابی؛ این فهرست صفحه‌بندی دارد.':'جلسات دارای حضور و غیاب ثبت‌شده امروز؛ نمایش جلسه به معنی دایربودن کلاس در این لحظه نیست.'}</p>
+      {state.loading&&!attendanceSessions.length?<p role="status" className="principal-empty">در حال دریافت جلسات…</p>:!attendanceSessions.length?<p role="status" className="principal-empty">جلسه‌ای برای نمایش در این فهرست ثبت نشده است.</p>:<div className="grid gap-3 xl:grid-cols-2">{attendanceSessions.map(session=><article key={session.id} id={`principal-session-${session.id}`} className="space-y-3 rounded-2xl border border-[#dfe7d8] bg-[#f9fbf5] p-4"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="break-words text-xs font-bold text-[#70875a]">{session.className}</h3><span className="rounded-lg bg-[#edf3e4] px-2 py-1 text-[10px] text-[#8da477]">زنگ {toPersianDigits(session.period)}</span></div><p className="text-xs text-[#82916f]">{session.subject}</p><p className="break-words text-[10px] leading-6 text-[#9aa58d]">دبیر: {session.teacherName}</p><div className="flex flex-wrap justify-between gap-2 border-t border-[#e4eadb] pt-2 text-[10px] leading-6 text-[#9aa88a]"><span>{toPersianDigits(session.date)}</span><span>{toPersianDigits(session.records.length)} دانش‌آموز · ثبت {toPersianDigits(session.updatedAt||session.submittedAt)}</span></div></article>)}</div>}
+      <ResourcePager key={`${activeAcademicYearId}:sessions`} kind="attendanceSessions" appearance="sage" showSearch={false}/>
+     </>:<>
+      <button id="principal-open-post-manager" type="button" disabled={!props.onOpenPostModal} onClick={props.onOpenPostModal} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#f6f1e5] px-3 text-[11px] font-bold text-[#aa9668]"><Megaphone className="size-4" aria-hidden="true"/>مدیریت و انتشار اطلاعیه</button>
+      {state.loading&&!posts.length?<p role="status" className="principal-empty">در حال دریافت اطلاعیه‌ها…</p>:!posts.length?<p role="status" className="principal-empty">اطلاعیه‌ای در فهرست فعلی وجود ندارد.</p>:<div className="space-y-3">{posts.map(post=><article key={post.id} id={`principal-post-${post.id}`} className="rounded-2xl border border-[#e5e8dd] bg-[#fcfcf9] p-4"><div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#a0aa93]"><span className="inline-flex items-center gap-1">{post.isPinned&&<><Pin className="size-3" aria-hidden="true"/>سنجاق‌شده</>}</span><span>{toPersianDigits(post.date)}</span></div><div className="mt-2 flex flex-wrap items-center gap-2"><h3 className="break-words text-xs font-bold leading-7 text-[#657d54]">{post.title}</h3>{post.priority==='urgent'&&<span className="rounded-lg bg-rose-50 px-2 py-1 text-[9px] text-rose-700">فوری</span>}</div><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-8 text-[#8e9c80]">{post.content}</p>{post.eventDate&&<p className="mt-3 text-[10px] leading-7 text-[#a08f71]">رویداد: {toPersianDigits(post.eventDate)}{post.eventLocation&&<> · {post.eventLocation}</>}</p>}<div className="mt-3 flex flex-wrap gap-2">{post.attachments?.map((file,index)=>file.url&&<a key={index} href={file.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-[#e6eadd] bg-white px-3 text-[10px] text-[#8d9e77]"><BookOpen className="size-3 shrink-0" aria-hidden="true"/><span className="min-w-0 break-all">{file.name}</span></a>)}</div><p className="mt-3 border-t border-[#ecefe4] pt-2 text-[10px] leading-6 text-[#a6ae9a]">{post.senderName} · {post.target==='all'?'همه':post.target==='students'?'دانش‌آموزان':post.target==='teachers'?'دبیران':'اولیا'}</p></article>)}</div>}
+      <ResourcePager key={`${activeAcademicYearId}:posts`} kind="announcements" appearance="sage" searchPlaceholder="جستجوی عنوان اطلاعیه…"/>
+     </>}
     </div>
-  );
+   </section>
+  </div>
+ </div>;
 };

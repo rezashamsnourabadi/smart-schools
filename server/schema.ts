@@ -27,4 +27,4 @@ export const resourceSchemas = {
 };
 export type Resource = keyof typeof resourceSchemas | 'attendanceSessions' | 'notifications';
 export const resourceName = z.enum(['attendanceSessions','notifications',...Object.keys(resourceSchemas)]);
-export const paging = z.object({limit:z.coerce.number().int().min(1).max(100).default(25),offset:z.coerce.number().int().nonnegative().max(1000000).default(0),search:z.string().max(100).default(''),classId:id.optional(),includeFinance:z.enum(['true','false']).default('false')});
+export const paging = z.object({limit:z.coerce.number().int().min(1).max(100).default(25),offset:z.coerce.number().int().nonnegative().max(1000000).default(0),search:z.string().max(100).default(''),classId:id.optional(),date:z.string().max(30).optional(),includeFinance:z.enum(['true','false']).default('false')});

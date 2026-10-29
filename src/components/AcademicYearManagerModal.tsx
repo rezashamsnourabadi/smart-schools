@@ -1,25 +1,8 @@
+import { ManagementDialog } from './ManagementDialog';
 import React, { useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
-import {
-  CalendarRange,
-  CalendarCheck,
-  CheckCircle2,
-  Clock,
-  ArrowRightLeft,
-  GraduationCap,
-  History,
-  Archive,
-  Plus,
-  AlertCircle,
-  X,
-  Sparkles,
-  Layers,
-  ChevronLeft,
-  FileCheck,
-  RotateCcw,
-  Check
-} from 'lucide-react';
+import { CalendarRange, CalendarCheck, CheckCircle2, Clock, ArrowRightLeft, History, Archive, Plus, AlertCircle, Sparkles, ChevronLeft, Check } from 'lucide-react';
 import { toPersianDigits, getCurrentAcademicYearTitle } from '../utils/persianUtils';
 import { AcademicTermId, AcademicYear } from '../types';
 import { isFinalYearRecordPublished } from '../utils/academicYear';
@@ -30,7 +13,6 @@ interface Props {
 }
 
 export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const shouldReduceMotion = useReducedMotion();
   const {
     academicYears,
     activeAcademicYearId,
@@ -125,97 +107,56 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
 
   return (
     <AnimatePresence>
-    {isOpen && <motion.div
-      key="academic-year-modal-overlay"
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
-      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto w-full max-w-full"
-    >
-      <motion.div
-        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
-        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
-        id="academic-year-manager-modal"
-        className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full overflow-hidden flex flex-col max-h-[92vh] m-auto"
-      >
-        {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-teal-50/70 via-white to-slate-50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-700 text-white flex items-center justify-center shadow-xs">
-              <CalendarRange className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-slate-900">
-                  مدیریت سال و تقویم تحصیلی
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
-                  سال فعال: {toPersianDigits(activeAcademicYear?.title || '')}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                تعیین نوبت‌های درسی، سال‌بندی، ارتقای پایه‌ها و بایگانی سوابق نمرات
-              </p>
-            </div>
-          </div>
+    {isOpen &&<> <ManagementDialog id="academic-year-manager-modal" title="سال تحصیلی" description="نوبت جاری، آرشیو و فرایند پایان سال" icon={CalendarRange} onClose={onClose}>
 
-          <button
-            onClick={onClose}
-            className="min-h-[44px] min-w-[44px] rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors"
-            title="بستن پنجره"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 bg-slate-50/80 px-5 pt-2 gap-2 text-xs font-bold">
+        <div className="management-tabs management-tabs-three">
           <button
-            onClick={() => setActiveTab('overview')}
+            aria-pressed={activeTab === 'overview'} onClick={() => setActiveTab('overview')}
             className={`pb-3 px-3 transition-all border-b-2 flex items-center gap-1.5 ${
               activeTab === 'overview'
                 ? 'border-teal-700 text-teal-900'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-[#87927e] hover:text-slate-800'
             }`}
           >
             <CalendarCheck className="w-4 h-4" />
-            <span>وضعیت و سال‌های تحصیلی</span>
+            <span>سال‌ها و نوبت جاری</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('rollover')}
+            aria-pressed={activeTab === 'rollover'} onClick={() => setActiveTab('rollover')}
             className={`pb-3 px-3 transition-all border-b-2 flex items-center gap-1.5 ${
               activeTab === 'rollover'
                 ? 'border-teal-700 text-teal-900'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-[#87927e] hover:text-slate-800'
             }`}
           >
             <ArrowRightLeft className="w-4 h-4" />
-            <span>پایان سال و آغاز سال جدید (سال‌بندی)</span>
+            <span>پایان سال</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('create')}
+            aria-pressed={activeTab === 'create'} onClick={() => setActiveTab('create')}
             className={`pb-3 px-3 transition-all border-b-2 flex items-center gap-1.5 ${
               activeTab === 'create'
                 ? 'border-teal-700 text-teal-900'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-[#87927e] hover:text-slate-800'
             }`}
           >
             <Plus className="w-4 h-4" />
-            <span>تعریف سال تحصیلی آینده</span>
+            <span>سال جدید</span>
           </button>
         </div>
 
         {/* Tab Content Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="management-content space-y-5">
           {!activeAcademicYear && <p role="status" className="text-sm text-amber-800">سال تحصیلی برای این مدرسه تعریف نشده است. از بخش تعریف سال تحصیلی آینده شروع کنید.</p>}
           {/* TAB 1: OVERVIEW & TERMS */}
           {activeTab === 'overview' && (
             <div className="space-y-5 animate-in fade-in">
               {/* Active Academic Year Hero Card */}
-              <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-teal-800 to-slate-900 text-white shadow-md relative overflow-hidden">
+              <div className="management-year-current rounded-2xl border border-[#dce5d0] bg-white p-4 sm:p-5 text-[#58724a]">
                 <div className="relative z-10 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -224,14 +165,14 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                         سال تحصیلی جاری و رسمی آموزشگاه:
                       </span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-teal-700/80 border border-teal-500/50 text-[11px] font-mono font-bold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#eff4e6] text-[#72885e] border border-[#dce5d1] text-[11px] font-mono font-bold">
                       شروع: {toPersianDigits(activeAcademicYear?.startDate || '')} تا{' '}
                       {toPersianDigits(activeAcademicYear?.endDate || '')}
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-2xl sm:text-3xl font-black tracking-tight font-mono">
+                    <h3 className="text-xl sm:text-2xl font-black tracking-tight font-mono">
                       سال تحصیلی {toPersianDigits(activeAcademicYear?.title || '')}
                     </h3>
                     <p className="text-xs text-teal-100/80 mt-1">
@@ -257,15 +198,15 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                             onClick={async () => await setActiveTermId(term.id)}
                             className={`p-2.5 rounded-2xl text-right transition-all border ${
                               isSelected
-                                ? 'bg-white text-teal-950 border-white shadow-xs font-bold'
-                                : 'bg-teal-900/50 text-teal-100 border-teal-700/60 hover:bg-teal-900/80'
+                                ? 'bg-[#e7f0dc] text-[#527348] border-[#bed0aa] font-bold'
+                                : 'bg-white text-[#8c9a80] border-[#e0e7d7] hover:bg-[#f3f7ec]'
                             }`}
                           >
                             <div className="flex items-center justify-between text-xs">
                               <span>{term.title}</span>
-                              {isSelected && <Check className="w-3.5 h-3.5 text-teal-700" />}
+                              {isSelected && <Check className="w-3.5 h-3.5 text-[#658152]" />}
                             </div>
-                            <div className={`text-[10px] mt-0.5 ${isSelected ? 'text-teal-700' : 'text-teal-300'}`}>
+                            <div className={`text-[10px] mt-0.5 ${isSelected ? 'text-[#658152]' : 'text-teal-300'}`}>
                               {term.desc}
                             </div>
                           </button>
@@ -299,7 +240,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                         className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                           isViewing
                             ? 'bg-teal-50/50 border-teal-300 shadow-2xs'
-                            : 'bg-white border-slate-200 hover:border-slate-300'
+                            : 'bg-white border-[#e1e7d9] hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -323,7 +264,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
 
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-sm sm:text-base text-slate-900">
+                              <span className="font-mono font-bold text-sm sm:text-base text-[#364d36]">
                                 سال تحصیلی {toPersianDigits(ay.title)}
                               </span>
                               {isCurrent ? (
@@ -340,7 +281,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="text-xs text-[#87927e] mt-0.5">
                               {ay.description || `بازه زمانی: ${toPersianDigits(ay.startDate)} تا ${toPersianDigits(ay.endDate)}`}
                             </p>
                           </div>
@@ -348,14 +289,14 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
 
                         <div className="flex items-center gap-2 self-end sm:self-center">
                           {isViewing ? (
-                            <span className="text-xs font-bold text-teal-800 bg-teal-100/70 px-3 py-1.5 rounded-xl border border-teal-200 flex items-center gap-1">
+                            <span className="text-xs font-bold text-[#58734b] bg-teal-100/70 px-3 py-1.5 rounded-xl border border-teal-200 flex items-center gap-1">
                               <Check className="w-3.5 h-3.5" />
                               در حال نمایش
                             </span>
                           ) : (
                             <button
                               onClick={() => setActiveAcademicYearId(ay.id)}
-                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors flex items-center gap-1"
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 border border-[#e1e7d9] text-slate-700 transition-colors flex items-center gap-1"
                             >
                               <span>مرور اطلاعات این سال</span>
                               <ChevronLeft className="w-3.5 h-3.5" />
@@ -380,7 +321,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                   سال فعال ({toPersianDigits(currentTitle)}) به پایان می‌رسد. ارتقا یا فراغت فقط برای دانش‌آموز دارای کارنامه نوبت دوم منتشرشده، نمره‌های معتبر و نتیجه قبول ثبت می‌شود. نبود کلاس مقصد، دانش‌آموز را در فهرست «نیازمند کلاس‌بندی» می‌گذارد.
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs leading-relaxed">
+              <div className="p-3 rounded-xl bg-slate-100 border border-[#e1e7d9] text-slate-700 text-xs leading-relaxed">
                 فهرست جزئیات سال‌ها در این نسخه تفکیک کامل ندارد؛ اجرای این عملیات به معنی آرشیو کامل کارنامه، حضور و مالی نیست. در نمای سال‌های غیرجاری، عملیات آموزشی و پرونده‌ای فقط‌خواندنی‌اند.
               </div>
               {isViewingNonCurrentYear && (
@@ -399,7 +340,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                   value={newYearTitle}
                   onChange={(e) => setNewYearTitle(e.target.value)}
                   placeholder="مثال: ۱۴۰۵-۱۴۰۶"
-                  className="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-slate-900 bg-white"
+                  className="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-[#e1e7d9] focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-[#364d36] bg-white"
                 />
                 <p className="text-[11px] text-slate-400">
                   سیستم به طور خودکار بازه مهر تا شهریور این سال را به عنوان سال رسمی جدید تنظیم خواهد کرد.
@@ -413,81 +354,81 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                 </div>
 
                 {/* Option 1: Promote Students */}
-                <label className="p-3.5 rounded-2xl border border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-white cursor-pointer flex items-start gap-3 transition-colors">
+                <label className="p-3.5 rounded-2xl border border-[#e1e7d9] hover:border-teal-400 bg-[#f6f8f1]/50 hover:bg-white cursor-pointer flex items-start gap-3 transition-colors">
                   <input
                     type="checkbox"
                     checked={promoteStudents}
                     onChange={(e) => setPromoteStudents(e.target.checked)}
-                    className="w-4 h-4 rounded text-teal-700 focus:ring-teal-600 mt-0.5"
+                    className="w-4 h-4 rounded text-[#658152] focus:ring-teal-600 mt-0.5"
                   />
                   <div className="text-xs space-y-0.5 flex-1">
-                    <div className="font-bold text-slate-900 flex items-center justify-between">
+                    <div className="font-bold text-[#364d36] flex items-center justify-between">
                       <span>ارتقای خودکار پایه دانش‌آموزان در حال تحصیل</span>
-                      <span className="text-[11px] font-mono text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                      <span className="text-[11px] font-mono text-[#58734b] bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
                         {toPersianDigits(tenthGradersCount + eleventhGradersCount)} واجد شرایط
                       </span>
                     </div>
-                    <div className="text-slate-500">
+                    <div className="text-[#87927e]">
                       فقط دانش‌آموزان پایه دهم و یازدهم با کارنامه نهایی منتشرشده و نتیجه قبول ارتقا می‌یابند.
                     </div>
                   </div>
                 </label>
 
                 {/* Option 2: Graduate 12th Graders */}
-                <label className="p-3.5 rounded-2xl border border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-white cursor-pointer flex items-start gap-3 transition-colors">
+                <label className="p-3.5 rounded-2xl border border-[#e1e7d9] hover:border-teal-400 bg-[#f6f8f1]/50 hover:bg-white cursor-pointer flex items-start gap-3 transition-colors">
                   <input
                     type="checkbox"
                     checked={graduateTwelfthGraders}
                     onChange={(e) => setGraduateTwelfthGraders(e.target.checked)}
-                    className="w-4 h-4 rounded text-teal-700 focus:ring-teal-600 mt-0.5"
+                    className="w-4 h-4 rounded text-[#658152] focus:ring-teal-600 mt-0.5"
                   />
                   <div className="text-xs space-y-0.5 flex-1">
-                    <div className="font-bold text-slate-900 flex items-center justify-between">
+                    <div className="font-bold text-[#364d36] flex items-center justify-between">
                       <span>انتقال دانش‌آموزان پایه دوازدهم به فهرست فارغ‌التحصیلان</span>
                       <span className="text-[11px] font-mono text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
                         {toPersianDigits(twelfthGradersCount)} واجد شرایط
                       </span>
                     </div>
-                    <div className="text-slate-500">
+                    <div className="text-[#87927e]">
                       فقط دانش‌آموزان دوازدهم با کارنامه نهایی منتشرشده و نتیجه قبول به فهرست فارغ‌التحصیلان منتقل می‌شوند.
                     </div>
                   </div>
                 </label>
 
                 {/* Option 3: Archive Grades */}
-                <label className="p-3.5 rounded-2xl border border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-white cursor-pointer flex items-start gap-3 transition-colors">
+                <label className="p-3.5 rounded-2xl border border-[#e1e7d9] hover:border-teal-400 bg-[#f6f8f1]/50 hover:bg-white cursor-pointer flex items-start gap-3 transition-colors">
                   <input
                     type="checkbox"
                     checked={archiveCurrentGrades}
                     onChange={(e) => setArchiveCurrentGrades(e.target.checked)}
-                    className="w-4 h-4 rounded text-teal-700 focus:ring-teal-600 mt-0.5"
+                    className="w-4 h-4 rounded text-[#658152] focus:ring-teal-600 mt-0.5"
                   />
                   <div className="text-xs space-y-0.5 flex-1">
-                    <div className="font-bold text-slate-900 flex items-center justify-between">
+                    <div className="font-bold text-[#364d36] flex items-center justify-between">
                       <span>ثبت خلاصه کارنامه موجود در سابقه تحصیلی</span>
                       <span className="text-[11px] font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                         فقط داده موجود
                       </span>
                     </div>
-                    <div className="text-slate-500">
+                    <div className="text-[#87927e]">
                       خلاصه‌ای از کارنامه همان سال ثبت می‌شود؛ برای نبود کارنامه، معدل یا نتیجه ساخته نمی‌شود.
                     </div>
                   </div>
                 </label>
 
                 {/* Option 4: Reset Attendance */}
-                <label className="p-3.5 rounded-2xl border border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-white cursor-pointer flex items-start gap-3 transition-colors">
+                <label className="p-3.5 rounded-2xl border border-[#e1e7d9] hover:border-teal-400 bg-[#f6f8f1]/50 hover:bg-white cursor-pointer flex items-start gap-3 transition-colors">
                   <input
                     type="checkbox"
                     checked={resetAttendanceLogs}
                     onChange={(e) => setResetAttendanceLogs(e.target.checked)}
-                    className="w-4 h-4 rounded text-teal-700 focus:ring-teal-600 mt-0.5"
+                    className="w-4 h-4 rounded text-[#658152] focus:ring-teal-600 mt-0.5"
                   />
                   <div className="text-xs space-y-0.5 flex-1">
-                    <div className="font-bold text-slate-900">
+                    <div className="font-bold text-[#364d36]">
                       آغاز دوره حضور و غیاب جدید (ریست شمارنده‌های روزانه)
                     </div>
-                    <div className="text-slate-500">
+                    <div className="text-[#87927e]">
                       شمارنده پرونده صفر می‌شود؛ جلسه‌های ثبت‌شده در داده خام حذف نمی‌شوند و با سال تحصیلی مرتبط باقی می‌مانند.
                     </div>
                   </div>
@@ -495,12 +436,12 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
               </div>
 
               {/* Final Confirmation and Action */}
-              <div className="pt-3 border-t border-slate-200">
+              <div className="pt-3 border-t border-[#e1e7d9]">
                 {!isConfirmingRollover ? (
                   <button
                     onClick={() => setIsConfirmingRollover(true)}
                     disabled={isViewingNonCurrentYear}
-                    className="min-h-11 w-full py-3 rounded-2xl bg-teal-700 hover:bg-teal-800 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                    className="min-h-11 w-full py-3 rounded-2xl bg-[#527348] hover:bg-[#426039] disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>آغاز سال تحصیلی جدید ({toPersianDigits(newYearTitle)})</span>
@@ -519,7 +460,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                       </button>
                       <button
                         onClick={() => setIsConfirmingRollover(false)}
-                        className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 transition-colors"
+                        className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-[#e1e7d9] transition-colors"
                       >
                         انصراف
                       </button>
@@ -533,7 +474,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
           {/* TAB 3: CREATE PLANNED YEAR */}
           {activeTab === 'create' && (
             <form onSubmit={handleCreatePlannedYear} className="space-y-4 animate-in fade-in">
-              <div className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+              <div className="text-xs text-slate-600 leading-relaxed bg-[#f6f8f1] p-3.5 rounded-2xl border border-[#e1e7d9]">
                 در صورتی که قصد دارید سال تحصیلی آینده را برای برنامه‌ریزی زودهنگام، پیش‌ثبت‌نام یا چیدمان تقویم تعریف کنید، می‌توانید مشخصات آن را در این بخش ثبت فرمایید.
               </div>
 
@@ -545,7 +486,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                   placeholder="مثال: ۱۴۰۶-۱۴۰۷"
                   value={createYearTitle}
                   onChange={(e) => setCreateYearTitle(e.target.value)}
-                  className="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-slate-900 bg-white"
+                  className="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-[#e1e7d9] focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-[#364d36] bg-white"
                 />
               </div>
 
@@ -556,7 +497,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                     type="text"
                     value={createStartDate}
                     onChange={(e) => setCreateStartDate(e.target.value)}
-                    className="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-slate-900 bg-white"
+                    className="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-[#e1e7d9] focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-[#364d36] bg-white"
                   />
                 </div>
 
@@ -566,7 +507,7 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                     type="text"
                     value={createEndDate}
                     onChange={(e) => setCreateEndDate(e.target.value)}
-                    className="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-slate-900 bg-white"
+                    className="w-full text-sm font-mono px-3.5 py-2.5 rounded-xl border border-[#e1e7d9] focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-[#364d36] bg-white"
                   />
                 </div>
               </div>
@@ -578,14 +519,14 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
                   placeholder="توضیحات مربوط به ظرفیت‌های سال آینده، برنامه‌ریزی المپیاد یا هدایت تحصیلی..."
                   value={createDesc}
                   onChange={(e) => setCreateDesc(e.target.value)}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-slate-900 bg-white"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-[#e1e7d9] focus:border-teal-600 focus:ring-1 focus:ring-teal-600 outline-none text-[#364d36] bg-white"
                 />
               </div>
 
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 rounded-xl bg-[#527348] hover:bg-[#426039] text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
                   <span>ثبت سال تحصیلی در تقویم آموزشگاه</span>
@@ -594,8 +535,9 @@ export const AcademicYearManagerModal: React.FC<Props> = ({ isOpen, onClose }) =
             </form>
           )}
         </div>
-      </motion.div>
-    </motion.div>}
+      </ManagementDialog>
+      
+    </>}
     </AnimatePresence>
   );
 };

@@ -180,3 +180,50 @@ body.question-bank-open, body.dana-profile-open { overflow: hidden; }
 
 .teacher-text-input { width: 100%; min-height: 46px; margin-top: 8px; border: 1px solid #dfe6d4; border-radius: 12px; background: #fcfdf9; padding: 10px 12px; color: #58684b; font-size: 12px; font-weight: 400; }
 .teacher-dashboard summary::-webkit-details-marker { display: none; }
+
+.principal-dashboard :where(button, a, input, select, summary):focus-visible { outline: 2px solid #8fa777; outline-offset: 3px; }
+.principal-dashboard summary::-webkit-details-marker { display: none; }
+.principal-empty { border: 1px dashed #dfe7d5; border-radius: 16px; background: #fafcf7; padding: 28px 14px; color: #95a287; text-align: center; font-size: 11px; line-height: 2; }
+/* Management sheets share the student/teacher visual language and one scroll region. */
+.management-dialog-overlay { z-index: 70; }
+.management-dialog { max-width: 64rem; }
+.management-dialog > div:has(> .management-content),
+.management-dialog > div:has(> .management-navigation) { display: flex; flex-direction: column; gap: 16px; }
+.management-dialog .management-content { min-height: 0; overflow: visible; flex: none; }
+.management-dialog :where(button, summary) { min-height: 44px; min-width: 44px; }
+.management-dialog :where(button, p, h3, h4, span) { overflow-wrap: anywhere; }
+.management-dialog :where(input[type="checkbox"], input[type="radio"]) { width: 20px; min-height: 20px; height: 20px; padding: 0; flex-shrink: 0; accent-color: #658653; }
+.management-dialog :where(label:has(> input[type="checkbox"]), label:has(> input[type="radio"])) { min-height: 44px; }
+.management-dialog .management-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.management-dialog :where(.management-tabs, .school-management-tabs) { display: grid; width: 100%; gap: 6px; padding: 5px; border: 1px solid #e1e7d8; border-radius: 16px; background: #f1f5e9; overflow: visible; }
+.management-tabs-two, .school-management-tabs-posts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.management-tabs-three, .school-management-tabs-students { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.management-dialog :where(.management-tabs, .school-management-tabs) > button { justify-content: center; flex-wrap: wrap; white-space: normal; min-width: 0; gap: 5px; border-radius: 12px; font-size: 11px; padding: 10px 6px; }
+.management-dialog .management-form { border: 1px solid #e1e7d9; border-radius: 18px; padding: 16px; background: white; }
+.management-form fieldset { min-width: 0; border: 1px solid #e4e9dd; border-radius: 16px; padding: 16px; }
+.management-form legend { padding-inline: 8px; color: #688056; font-weight: 700; font-size: 12px; }
+.management-form .management-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding-top: 16px; border-top: 1px solid #e4e9dd; }
+.management-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.management-metrics > div { border: 1px solid #e1e8d6; background: #fff; border-radius: 16px; padding: 14px; min-width: 0; }
+.management-metrics span { display: block; font-size: 11px; color: #8d9a80; }
+.management-metrics strong { display: block; margin-top: 8px; font-size: 13px; color: #5a7549; overflow-wrap: anywhere; }
+.management-dialog summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; font-size: 12px; font-weight: 700; color: #6a8057; }
+.management-dialog summary::-webkit-details-marker { display: none; }
+.management-dialog details[open] > summary { margin-bottom: 16px; }
+@media (min-width: 640px) {
+  .management-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .management-dialog .school-management-tabs-posts { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+.management-year-current :where(.text-teal-100, .text-teal-200, .text-teal-300) { color: #7d916d; }
+.management-year-current .text-teal-100\/80 { color: #8c9e7d; }
+.management-year-current .bg-teal-900\/50 { background: #f3f6ed; border-color: #dce5d1; color: #7e906d; }
+.management-year-current .bg-teal-700\/80 { background: #eff4e6; color: #72885e; border-color: #dce5d1; }
+.management-dialog .management-year-current .border-teal-700\/50 { border-color: #e1e8d6; }
+.management-dialog-compact { max-width: 40rem; }
+.management-dialog :where(.management-tabs, .school-management-tabs) > button[aria-pressed="true"] { background: #527348; color: #fff; border-color: #527348; box-shadow: 0 2px 6px #425f3414; }
+.management-dialog :where(.management-tabs, .school-management-tabs) > button[aria-pressed="true"] > svg { color: #e8f2dc; }
+.management-dialog button[role="checkbox"] { width: 100%; min-height: 52px; }
+.management-dialog .management-form :where(input, select, textarea) { font-size: 13px; }
+
+@media (min-width: 768px) { .management-dialog .management-mobile-days { display: none; } }

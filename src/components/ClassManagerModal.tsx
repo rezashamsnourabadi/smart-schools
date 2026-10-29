@@ -1,18 +1,7 @@
+import { ManagementDialog } from './ManagementDialog';
 import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
-import {
-  X,
-  Building2,
-  Users,
-  Plus,
-  Trash2,
-  CheckCircle2,
-  BookOpen,
-  DoorOpen,
-  Sparkles,
-  School,
-  GraduationCap
-} from 'lucide-react';
+import { Building2, Users, Plus, Trash2, CheckCircle2, DoorOpen } from 'lucide-react';
 import { useApp, useResource } from '../context/AppContext';
 import { ClassGroup } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -52,48 +41,22 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
     setShowAddForm(false);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto w-full max-w-full">
-      <div
-        className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl m-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <ResourcePager kind="classes"/>
-        {/* Header */}
-        <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-teal-500/20 text-teal-300">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base sm:text-lg">
-                مدیریت کلاس‌ها و گروه‌های درسی
-              </h3>
-              <p className="text-xs text-slate-400">
-                {currentSchool?.name} • تفکیک پایه‌ها و اتاق‌های کلاس
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return (<> <ManagementDialog id="class-manager-modal" title="کلاس‌ها" description={`${currentSchool?.name || 'مدرسه'} • کلاس‌ها و فهرست دانش‌آموزان`} icon={Building2} onClose={onClose}>
+        <ResourcePager appearance="sage" kind="classes"/>
+
 
         {/* Toolbar */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">
+        <div className="p-4 bg-[#f6f8f1] border-b border-[#e1e7d9] flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-700">تعداد کلاس‌های فعال:</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 font-mono font-bold">
+            <span className="text-xs font-bold text-slate-700">کلاس‌های این صفحه:</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-100 text-[#58734b] font-mono font-bold">
               {toPersianDigits(schoolClasses.length)} کلاس
             </span>
           </div>
 
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+            className="px-3.5 py-2 bg-[#527348] hover:bg-[#426039] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>تعریف کلاس جدید</span>
@@ -102,12 +65,7 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
 
         {/* Add Class Form */}
         {showAddForm && (
-          <form
-            onSubmit={handleCreateClass}
-            className="p-4 sm:p-5 bg-teal-50/70 border-b border-teal-200 space-y-3 shrink-0 animate-in fade-in"
-          >
-            <div className="font-bold text-teal-950 text-xs sm:text-sm">مشخصات کلاس جدید</div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <ManagementDialog id="classmanager-editor" title="کلاس جدید" description="پس از تکمیل اطلاعات، دکمه ثبت را بزنید." icon={Building2} onClose={() => setShowAddForm(false)}><form id="form-handleCreateClass" onSubmit={handleCreateClass} className="management-form space-y-5 text-xs"><fieldset className="space-y-4"><legend>مشخصات کلاس</legend><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">نام کلاس:</label>
                 <input
@@ -162,9 +120,8 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
                   className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-1">
+            </div></fieldset>
+<div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
@@ -174,17 +131,16 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-xs bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-xs"
+                className="px-5 py-2 text-xs bg-[#527348] hover:bg-[#426039] text-white rounded-xl font-bold flex items-center gap-1.5 shadow-xs"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>ثبت کلاس</span>
               </button>
-            </div>
-          </form>
+            </div></form></ManagementDialog>
         )}
 
         {/* Classes Grid */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50 space-y-4">
+        <div className="management-content bg-[#f6f8f1] space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {schoolClasses.map((cls) => {
               const classStudents = students.filter(
@@ -194,14 +150,14 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
               return (
                 <div
                   key={cls.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:border-teal-300 transition-all space-y-3"
+                  className="bg-white rounded-2xl border border-[#e1e7d9] p-4 shadow-xs hover:border-teal-300 transition-all space-y-3"
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-[#658152] border border-teal-200">
                         {cls.grade} • {cls.major || 'عمومی'}
                       </span>
-                      <h4 className="font-bold text-slate-900 text-base mt-1">{cls.name}</h4>
+                      <h4 className="font-bold text-[#364d36] text-base mt-1">{cls.name}</h4>
                     </div>
 
                     <button
@@ -213,20 +169,20 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
                     </button>
                   </div>
 
-                  <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                  <div className="space-y-1.5 text-xs text-slate-600 bg-[#f6f8f1] p-2.5 rounded-xl border border-slate-100">
                     <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-slate-500">
+                      <span className="flex items-center gap-1 text-[#87927e]">
                         <DoorOpen className="w-3.5 h-3.5" />
                         اتاق / کلاس:
                       </span>
                       <span className="font-semibold text-slate-800">{cls.room}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-slate-500">
+                      <span className="flex items-center gap-1 text-[#87927e]">
                         <Users className="w-3.5 h-3.5" />
                         تعداد دانش‌آموزان:
                       </span>
-                      <span className="font-mono font-bold text-teal-800 text-sm">
+                      <span className="font-mono font-bold text-[#58734b] text-sm">
                         {toPersianDigits(cls.studentCount || classStudents.length)} نفر
                       </span>
                     </div>
@@ -234,7 +190,7 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
 
                   <button
                     onClick={() => setSelectedClassForRoster(cls)}
-                    className="w-full py-2 bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                    className="w-full py-2 bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-[#58734b] rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <Users className="w-3.5 h-3.5" />
                     <span>مشاهده لیست دانش‌آموزان کلاس ({toPersianDigits(classStudents.length)})</span>
@@ -245,32 +201,16 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
           </div>
 
           {schoolClasses.length === 0 && (
-            <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-500 text-xs">
+            <div className="bg-white p-12 text-center rounded-2xl border border-[#e1e7d9] text-[#87927e] text-xs">
               هنوز کلاسی در این آموزشگاه تعریف نشده است.
             </div>
           )}
         </div>
 
         {/* Selected Class Roster Sub-Drawer / Modal */}
-        {selectedClassForRoster && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/50 p-4 w-full max-w-full overflow-y-auto">
-            <div className="bg-white w-full max-w-md rounded-2xl p-5 space-y-4 shadow-2xl border border-slate-200 m-auto">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-teal-600" />
-                  <h4 className="font-bold text-sm text-slate-900">
-                    دانش‌آموزان {selectedClassForRoster.name}
-                  </h4>
-                </div>
-                <button
-                  onClick={() => setSelectedClassForRoster(null)}
-                  className="p-1 text-slate-400 hover:text-slate-700"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {selectedClassForRoster && (<> <ManagementDialog id="class-manager-1" title={<>دانش‌آموزان {selectedClassForRoster.name}</>} description="اطلاعات را بررسی کنید و سپس تغییرات را ثبت کنید." icon={Building2} onClose={() => setSelectedClassForRoster(null)}>
 
-              <div className="max-h-64 overflow-y-auto space-y-1.5 divide-y divide-slate-50 text-xs">
+              <div className=" space-y-1.5 divide-y divide-slate-50 text-xs">
                 {students
                   .filter(
                     (s) =>
@@ -285,7 +225,7 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
                         </span>
                         <span className="font-bold text-slate-800">{s.name}</span>
                       </div>
-                      <span className="font-mono text-slate-500 text-[11px]">
+                      <span className="font-mono text-[#87927e] text-[11px]">
                         کد ملی: {toPersianDigits(s.nationalCode)}
                       </span>
                     </div>
@@ -295,25 +235,19 @@ export const ClassManagerModal: React.FC<ClassManagerModalProps> = ({ onClose })
               <div className="pt-2 border-t border-slate-100 flex justify-end">
                 <button
                   onClick={() => setSelectedClassForRoster(null)}
-                  className="px-4 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold"
+                  className="px-4 py-1.5 bg-[#527348] text-white rounded-xl text-xs font-bold"
                 >
                   بستن
                 </button>
               </div>
-            </div>
-          </div>
+            </ManagementDialog>
+            
+          </>
         )}
 
-        {/* Footer */}
-        <div className="p-4 bg-white border-t border-slate-200 flex justify-end shrink-0">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
-          >
-            بستن
-          </button>
-        </div>
-      </div>
-    </div>
+        
+      </ManagementDialog>
+      
+    </>
   );
 };

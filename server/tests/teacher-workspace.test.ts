@@ -57,6 +57,8 @@ test('teacher workspace: scope, historical roster and reversible classroom event
   const performance=await call(0,`/teacher/student/${student.id}?${params}`);assert.equal(performance.statusCode,200,performance.body);assert.equal(performance.json().grades.length,1);assert.ok(!performance.body.includes('SECRET'));
   const overview=await call(0,`/teacher/student/${student.id}?${params}&section=overview`);assert.equal(overview.statusCode,200,overview.body);assert.equal(overview.json().summary.absent,1);assert.equal(overview.json().grades.length,0);assert.equal(overview.json().sessions.length,0);assert.ok(!overview.body.includes('SECRET'));
   const gradeSection=await call(0,`/teacher/student/${student.id}?${params}&section=grades`);assert.equal(gradeSection.statusCode,200,gradeSection.body);assert.equal(gradeSection.json().grades.length,1);assert.equal(gradeSection.json().sessions.length,0);
+  const dated=await call(0,`/resources/attendanceSessions?classId=${group.id}&date=${encodeURIComponent(String(session.date))}`);assert.equal(dated.statusCode,200,dated.body);assert.equal(dated.json().items.length,1);assert.equal(dated.json().items[0].id,session.id);
+  const todayOnly=await call(0,`/resources/attendanceSessions?classId=${group.id}&date=${getSchoolDate()}`);assert.equal(todayOnly.statusCode,200,todayOnly.body);assert.equal(todayOnly.json().items.length,0);
   const old=await call(0,`/students/${student.id}`);assert.equal(old.statusCode,403);
   const oldRecords=await call(0,`/students/${student.id}/records/grades`);assert.equal(oldRecords.statusCode,403);
  });

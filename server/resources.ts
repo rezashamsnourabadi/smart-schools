@@ -10,7 +10,7 @@ import { toEnglishDigits, getSchoolDate } from '../src/utils/persianUtils';
 import { validateGradeItem } from '../src/utils/gradeUtils';
 import { schoolTimeMinutes } from '../src/utils/attendance';
 import type { Student, AttendanceSession, VicePrincipalPermissions, GradeItem } from '../src/types';
-import {validateCivilDates} from './calendar';
+import {validateCivilDates,civilDate} from './calendar';
 
 export function allowed(member:Membership, permission:keyof VicePrincipalPermissions) {
   return member.role==='principal' || (member.role==='vice_principal' && member.permissions[permission]===true);
@@ -212,8 +212,9 @@ export async function resourceRoutes(app:FastifyInstance) {
         const rows=await tx.query(`WITH items AS (SELECT id,school_id::text AS school_id,year_id,kind,data,version FROM records WHERE school_id=$1 AND year_id=$2 AND kind=$3 AND (${filter}) AND NOT EXISTS(SELECT 1 FROM regional_content rc WHERE rc.id=records.id AND rc.kind=$3) UNION ALL SELECT id,COALESCE(data->>'schoolId','all'),NULL::uuid,kind,data,version FROM regional_content WHERE kind=$3 AND ($3='questionBank' OR ${managerParam}::boolean OR data->>'target' IN ('all',${audienceParam}))) SELECT *,count(*) OVER() total FROM items WHERE COALESCE(data->>'title','') ILIKE $6 ORDER BY COALESCE(data->>'createdAt',data->>'date','') DESC,id DESC LIMIT $4 OFFSET $5`,args);
         return {items:rows.rows.map(entity),total:Number(rows.rows[0]?.total||0),...page};
       }
-      if(page.classId)args.push(page.classId);
-      const rows=await tx.query(`SELECT *,count(*) OVER() total FROM records WHERE school_id=$1 AND year_id=$2 AND kind=$3 AND (${filter}) AND (COALESCE(data->>'name',data->>'title','') ILIKE $6) ${page.classId?`AND class_id=$${args.length}`:''} ORDER BY created_at DESC,id LIMIT $4 OFFSET $5`,args);
+      const classFilter=page.classId?(args.push(page.classId),`AND class_id=$${args.length}`):'';
+      let dateFilter='';if(page.date){requireValue(kind==='attendanceSessions','فیلتر روز فقط برای جلسات حضور مجاز است.');args.push(civilDate(page.date));dateFilter=`AND civil_day=$${args.length}::date`;}
+      const rows=await tx.query(`SELECT *,count(*) OVER() total FROM records WHERE school_id=$1 AND year_id=$2 AND kind=$3 AND (${filter}) AND (COALESCE(data->>'name',data->>'title','') ILIKE $6) ${classFilter} ${dateFilter} ORDER BY created_at DESC,id LIMIT $4 OFFSET $5`,args);
       const child=await linkedRecord(tx,member,school,year);
       const items=rows.rows.map(r=>{
         const row=sanitize(entity(r),member,child?.id);

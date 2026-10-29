@@ -1,25 +1,7 @@
+import { ManagementDialog } from './ManagementDialog';
 import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
-import {
-  X,
-  Users,
-  Plus,
-  Trash2,
-  ArrowRightLeft,
-  Eye,
-  Search,
-  CheckCircle2,
-  UserPlus,
-  GraduationCap,
-  LogOut,
-  Sparkles,
-  Phone,
-  Building,
-  RotateCcw,
-  BookOpen,
-  Calendar,
-  AlertCircle
-} from 'lucide-react';
+import { Users, Eye, Search, UserPlus, GraduationCap, LogOut, Sparkles, RotateCcw } from 'lucide-react';
 import { useApp, useResource } from '../context/AppContext';
 import { Student, ClassGroup } from '../types';
 import { toPersianDigits, toEnglishDigits, getSchoolDate, getCurrentAcademicYearTitle } from '../utils/persianUtils';
@@ -198,46 +180,18 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
     setTransferReason('تغییر محل سکونت خانواده');
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto w-full max-w-full">
-      <div
-        className="bg-white w-full max-w-5xl rounded-2xl sm:rounded-3xl shadow-2xl m-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="bg-slate-900 text-white p-3.5 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 sm:p-2.5 rounded-2xl bg-teal-500/20 text-teal-300">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-sm sm:text-lg">
-                مدیریت جامع دانش‌آموزان و پرونده‌های تحصیلی
-              </h3>
-              <p className="text-[11px] sm:text-xs text-slate-400">
-                دانش‌آموزان فعال، فارغ‌التحصیلان و سوابق انتقالی
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
-            title="بستن"
-            aria-label="بستن پنجره"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return (<> <ManagementDialog id="student-manager-modal" title="دانش‌آموزان" description="ثبت‌نام، پرونده‌ها و سوابق انتقال و فارغ‌التحصیلی" icon={Users} onClose={onClose}>
+
 
         {/* Tab Selector */}
-        <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-2xl max-w-full overflow-x-auto no-scrollbar">
+        <div className="p-3 bg-[#f6f8f1] border-b border-[#e1e7d9] flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div className="school-management-tabs school-management-tabs-students flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-2xl max-w-full overflow-x-auto no-scrollbar">
             <button
-              onClick={() => setActiveTab('active')}
+              aria-pressed={activeTab === 'active'} onClick={() => setActiveTab('active')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 activeTab === 'active'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-[#364d36] shadow-xs'
+                  : 'text-slate-600 hover:text-[#364d36]'
               }`}
             >
               <Users className="w-3.5 h-3.5 text-teal-600" />
@@ -248,11 +202,11 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveTab('graduated')}
+              aria-pressed={activeTab === 'graduated'} onClick={() => setActiveTab('graduated')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 activeTab === 'graduated'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-[#364d36] shadow-xs'
+                  : 'text-slate-600 hover:text-[#364d36]'
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
@@ -263,11 +217,11 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveTab('transferred')}
+              aria-pressed={activeTab === 'transferred'} onClick={() => setActiveTab('transferred')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 activeTab === 'transferred'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-[#364d36] shadow-xs'
+                  : 'text-slate-600 hover:text-[#364d36]'
               }`}
             >
               <LogOut className="w-3.5 h-3.5 text-amber-600" />
@@ -281,7 +235,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
           {activeTab === 'active' && (
             <button
               onClick={() => setShowAddStudentModal(true)}
-              className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
+              className="px-3.5 py-2 bg-[#527348] hover:bg-[#426039] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
             >
               <UserPlus className="w-4 h-4" />
               <span>ثبت‌نام دانش‌آموز جدید</span>
@@ -289,8 +243,8 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
           )}
         </div>
 
-        <ResourcePager kind="students"/>
-        {/* Filter & Search Bar */}
+        <ResourcePager appearance="sage" searchPlaceholder="جستجو در همه پرونده‌ها…" kind="students"/>
+<details className="rounded-2xl border border-[#e1e7d9] bg-white p-3"><summary>پالایش نتیجه‌های این صفحه <span className="text-[10px] font-normal">جستجوی تکمیلی و کلاس</span></summary>        {/* Filter & Search Bar */}
         <div className="p-3 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="relative flex-1 min-w-[200px]">
             <input
@@ -298,18 +252,18 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
               placeholder="جستجو بر اساس نام، کد ملی، دانشگاه، رشته یا مدرسه مقصد..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-xs p-2.5 pe-8 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full text-xs p-2.5 pe-8 bg-[#f6f8f1] border border-[#e1e7d9] rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-3" />
           </div>
 
           {activeTab === 'active' && (
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500">کلاس:</span>
+              <span className="text-xs text-[#87927e]">کلاس:</span>
               <select
                 value={selectedClassId}
                 onChange={(e) => setSelectedClassId(e.target.value)}
-                className="text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+                className="text-xs p-2 bg-[#f6f8f1] border border-[#e1e7d9] rounded-xl outline-none"
               >
                 <option value="all">همه کلاس‌ها</option>
                 {classes
@@ -324,8 +278,9 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
           )}
         </div>
 
+</details>
         {/* Students List / Table */}
-        <div className="p-3 sm:p-6 overflow-y-auto flex-1 bg-slate-50">
+        <div className="p-3 sm:p-6 management-content bg-[#f6f8f1]">
           {/* Mobile View: Clean responsive cards with zero horizontal overflow */}
           <div className="block md:hidden space-y-2.5">
             {filteredStudents.map((std) => {
@@ -334,23 +289,23 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
               return (
                 <div
                   key={std.id}
-                  className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2.5 text-right"
+                  className="p-3.5 bg-white rounded-2xl border border-[#e1e7d9] shadow-xs space-y-2.5 text-right"
                 >
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => onOpenDossier(std)}
-                      className="flex items-center gap-2 hover:text-teal-700 transition-colors text-right group"
+                      className="flex items-center gap-2 hover:text-[#658152] transition-colors text-right group"
                       title="مشاهده پرونده کامل"
                     >
-                      <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-xs group-hover:bg-teal-100">
+                      <div className="w-8 h-8 rounded-xl bg-teal-50 text-[#658152] font-bold flex items-center justify-center text-xs group-hover:bg-teal-100">
                         {std.name.charAt(0)}
                       </div>
                       <div>
-                        <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:underline">
+                        <div className="font-bold text-xs sm:text-sm text-[#364d36] group-hover:underline">
                           {std.name}
                         </div>
-                        <div className="text-[10px] text-slate-500 font-mono">
+                        <div className="text-[10px] text-[#87927e] font-mono">
                           کد ملی: {toPersianDigits(std.nationalCode)}
                         </div>
                       </div>
@@ -384,7 +339,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                       </div>
                       <div className="text-amber-700 flex items-center justify-between text-[10px]">
                         <span>علت: {std.transferDetails?.reason || 'جابجایی'}</span>
-                        <span className="font-mono">{toPersianDigits(std.transferDetails?.date || '۱۴۰۵/۰۶/۲۳')}</span>
+                        <span className="font-mono">{toPersianDigits(std.transferDetails?.date || '—')}</span>
                       </div>
                     </div>
                   )}
@@ -393,7 +348,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                   <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                     <button
                       onClick={() => onOpenDossier(std)}
-                      className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl font-bold text-xs flex items-center gap-1 transition-colors"
+                      className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-[#58734b] rounded-xl font-bold text-xs flex items-center gap-1 transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>مشاهده پرونده</span>
@@ -404,14 +359,14 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                         <>
                           <button
                             onClick={() => setGraduatingStudent(std)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                            className="p-1.5 text-[#87927e] hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
                             title="ثبت فارغ‌التحصیلی و قبولی کنکور"
                           >
                             <GraduationCap className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setTransferringSchoolStudent(std)}
-                            className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
+                            className="p-1.5 text-[#87927e] hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
                             title="انتقال به مدرسه دیگر"
                           >
                             <LogOut className="w-4 h-4" />
@@ -436,9 +391,9 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
           </div>
 
           {/* Desktop/Tablet Table View (No parent phone, clickable name) */}
-          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+          <div className="hidden md:block bg-white rounded-2xl border border-[#e1e7d9] overflow-hidden shadow-xs">
             <table className="w-full text-right text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+              <thead className="bg-[#f6f8f1] text-slate-600 font-bold border-b border-[#e1e7d9]">
                 <tr>
                   <th className="p-3">نام و نام خانوادگی</th>
                   <th className="p-3">کد ملی</th>
@@ -463,15 +418,15 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                   const stdClass = classes.find((c) => c.id === std.classGroupId);
 
                   return (
-                    <tr key={std.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={std.id} className="hover:bg-[#f6f8f1]/80 transition-colors">
                       <td className="p-3 font-bold text-slate-800">
                         <button
                           type="button"
                           onClick={() => onOpenDossier(std)}
-                          className="flex items-center gap-2 text-right hover:text-teal-700 transition-colors group"
+                          className="flex items-center gap-2 text-right hover:text-[#658152] transition-colors group"
                           title="کلیک جهت مشاهده پرونده کامل"
                         >
-                          <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 font-bold flex items-center justify-center text-xs group-hover:bg-teal-100">
+                          <div className="w-7 h-7 rounded-lg bg-teal-50 text-[#658152] font-bold flex items-center justify-center text-xs group-hover:bg-teal-100">
                             {std.name.charAt(0)}
                           </div>
                           <span className="group-hover:underline underline-offset-2">{std.name}</span>
@@ -505,7 +460,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                           <td className="p-3 text-amber-700 font-semibold">
                             {std.transferDetails?.destinationSchoolName || 'دبیرستان مقصد'}
                           </td>
-                          <td className="p-3 text-slate-500 text-[11px]">
+                          <td className="p-3 text-[#87927e] text-[11px]">
                             {toPersianDigits(std.transferDetails?.date || '۱۴۰۵/۰۶/۲۳')}
                           </td>
                         </>
@@ -515,7 +470,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => onOpenDossier(std)}
-                            className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-lg font-bold text-xs flex items-center gap-1 transition-colors"
+                            className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-[#58734b] rounded-lg font-bold text-xs flex items-center gap-1 transition-colors"
                             title="مشاهده پرونده کامل"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -568,25 +523,43 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
         </div>
 
         {/* Add Student Submodal with Smart Matching */}
-        {showAddStudentModal && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/50 p-4 w-full max-w-full overflow-y-auto">
-            <div className="bg-white w-full max-w-lg rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-200 animate-in zoom-in-95 m-auto">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-teal-600" />
-                  <h4 className="font-bold text-sm text-slate-900">ثبت‌نام دانش‌آموز جدید</h4>
-                </div>
-                <button
-                  onClick={() => setShowAddStudentModal(false)}
-                  className="p-1 text-slate-400 hover:text-slate-700"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {showAddStudentModal && (<> <ManagementDialog id="student-manager-1" title={<>ثبت‌نام دانش‌آموز جدید</>} description="اطلاعات را بررسی کنید و سپس تغییرات را ثبت کنید." icon={Users} onClose={() => setShowAddStudentModal(false)}>
 
-              <form onSubmit={handleCreateOrLinkStudent} className="space-y-3 text-xs">
-                {enrollmentError && <p role="alert" className="text-rose-700">{enrollmentError}</p>}
-                {([
+              <form id="form-handleCreateOrLinkStudent" onSubmit={handleCreateOrLinkStudent} className="management-form space-y-5 text-xs">{enrollmentError && <p role="alert" className="text-rose-700">{enrollmentError}</p>}
+<fieldset className="space-y-4"><legend>مشخصات دانش‌آموز</legend><div>
+                  <label className="block text-slate-700 font-bold mb-1">کد ملی دانش‌آموز:</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="۱۰ رقم کد ملی"
+                    value={stdNationalCode}
+                    onChange={(e) => setStdNationalCode(e.target.value)}
+                    className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl font-mono text-left outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+{existingMatchedStudent && (
+                  <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      <span>انطباق هوشمند منطقه‌ای یافت شد!</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      پرونده این دانش‌آموز با نام <strong>{existingMatchedStudent.name}</strong> قبلاً در <strong>{existingMatchedSchool?.name || 'مدرسه دیگر شهرستان'}</strong> ثبت شده است. ثبت‌نام در این مدرسه، دسترسی به سوابق محرمانه مدرسه قبلی ایجاد نمی‌کند.
+                    </p>
+                  </div>
+                )}
+<div>
+                  <label className="block text-slate-700 font-bold mb-1">نام و نام خانوادگی:</label>
+                  <input
+                    type="text"
+                    required
+                    value={stdName}
+                    onChange={(e) => setStdName(e.target.value)}
+                    placeholder="مثال: علیرضا حسینی"
+                    className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div></fieldset>
+<fieldset className="space-y-4"><legend>اطلاعات تکمیلی و ارتباط با ولی</legend>{([
                   ['birthDate', 'تاریخ تولد شمسی'],
                   ['parentName', 'نام و نام خانوادگی ولی'],
                   ['studentNumber', 'شماره دانش‌آموزی'],
@@ -599,54 +572,18 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                       value={stdDetails[field]}
                       required={field !== 'parentBaleAccount' && !existingMatchedStudent}
                       onChange={(event) => setStdDetails((prev) => ({ ...prev, [field]: event.target.value }))}
-                      className="w-full min-h-11 p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                      className="w-full min-h-11 p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl"
                     />
                   </label>
                 ))}
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">کد ملی دانش‌آموز:</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="۱۰ رقم کد ملی"
-                    value={stdNationalCode}
-                    onChange={(e) => setStdNationalCode(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-left outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-
-                {existingMatchedStudent && (
-                  <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-1">
-                    <div className="flex items-center gap-1.5 font-bold">
-                      <Sparkles className="w-4 h-4 text-amber-600" />
-                      <span>انطباق هوشمند منطقه‌ای یافت شد!</span>
-                    </div>
-                    <p className="text-[11px] leading-relaxed">
-                      پرونده این دانش‌آموز با نام <strong>{existingMatchedStudent.name}</strong> قبلاً در <strong>{existingMatchedSchool?.name || 'مدرسه دیگر شهرستان'}</strong> ثبت شده است. با ثبت‌نام در این آموزشگاه، سوابق تحصیلی و کارنامه‌های قبلی به صورت خودکار منتقل می‌شوند.
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">نام و نام خانوادگی:</label>
-                  <input
-                    type="text"
-                    required
-                    value={stdName}
-                    onChange={(e) => setStdName(e.target.value)}
-                    placeholder="مثال: علیرضا حسینی"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+<div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-slate-700 font-bold mb-1">نام پدر:</label>
                     <input
                       type="text"
                       value={stdFatherName}
                       onChange={(e) => setStdFatherName(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"
+                      className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none"
                     />
                   </div>
                   <div>
@@ -655,17 +592,16 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                       type="tel"
                       value={stdParentPhone}
                       onChange={(e) => setStdParentPhone(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-left outline-none"
+                      className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl font-mono text-left outline-none"
                     />
                   </div>
-                </div>
-
-                <div>
+                </div></fieldset>
+<fieldset className="space-y-4"><legend>ثبت‌نام در کلاس</legend><div>
                   <label className="block text-slate-700 font-bold mb-1">کلاس انتصابی:</label>
                   <select
                     value={stdClassId}
                     onChange={(e) => setStdClassId(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"
+                    className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none"
                   >
                     {classes
                       .filter((c) => c.schoolId === currentSchoolId)
@@ -675,9 +611,8 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                         </option>
                       ))}
                   </select>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                </div></fieldset>
+<div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setShowAddStudentModal(false)}
@@ -687,36 +622,20 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl shadow-xs"
+                    className="px-5 py-2 bg-[#527348] hover:bg-[#426039] text-white font-bold rounded-xl shadow-xs"
                   >
                     تایید ثبت‌نام
                   </button>
-                </div>
-              </form>
-            </div>
-          </div>
+                </div></form>
+            </ManagementDialog>
+            
+          </>
         )}
 
         {/* Graduation Modal */}
-        {graduatingStudent && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/50 p-4 w-full max-w-full overflow-y-auto">
-            <div className="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-200 m-auto">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5 text-indigo-600" />
-                  <h4 className="font-bold text-sm text-slate-900">
-                    ثبت فارغ‌التحصیلی: {graduatingStudent.name}
-                  </h4>
-                </div>
-                <button
-                  onClick={() => setGraduatingStudent(null)}
-                  className="p-1 text-slate-400 hover:text-slate-700"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {graduatingStudent && (<> <ManagementDialog id="student-manager-2" title={<>ثبت فارغ‌التحصیلی: {graduatingStudent.name}</>} description="اطلاعات را بررسی کنید و سپس تغییرات را ثبت کنید." icon={Users} onClose={() => setGraduatingStudent(null)}>
 
-              <form onSubmit={handleConfirmGraduation} className="space-y-3 text-xs">
+              <form onSubmit={handleConfirmGraduation} className="management-form space-y-4 text-xs">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">دانشگاه پذیرفته‌شده (اختیاری):</label>
                   <input
@@ -724,7 +643,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                     placeholder="مثال: دانشگاه صنعتی شریف / دانشگاه تهران یا نامشخص"
                     value={gradUni}
                     onChange={(e) => setGradUni(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"
+                    className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none"
                   />
                 </div>
 
@@ -736,7 +655,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                       placeholder="مثال: مهندسی یا تجربی"
                       value={gradMajor}
                       onChange={(e) => setGradMajor(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"
+                      className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none"
                     />
                   </div>
                   <div>
@@ -746,7 +665,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                       placeholder="مثال: ۴۲"
                       value={gradRank}
                       onChange={(e) => setGradRank(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-left outline-none"
+                      className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl font-mono text-left outline-none"
                     />
                   </div>
                 </div>
@@ -767,30 +686,15 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
+            </ManagementDialog>
+            
+          </>
         )}
 
         {/* Transfer Modal */}
-        {transferringSchoolStudent && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/50 p-4 w-full max-w-full overflow-y-auto">
-            <div className="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-200 m-auto">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <LogOut className="w-5 h-5 text-amber-600" />
-                  <h4 className="font-bold text-sm text-slate-900">
-                    ثبت انتقال دانش‌آموز: {transferringSchoolStudent.name}
-                  </h4>
-                </div>
-                <button
-                  onClick={() => setTransferringSchoolStudent(null)}
-                  className="p-1 text-slate-400 hover:text-slate-700"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {transferringSchoolStudent && (<> <ManagementDialog id="student-manager-3" title={<>ثبت انتقال دانش‌آموز: {transferringSchoolStudent.name}</>} description="اطلاعات را بررسی کنید و سپس تغییرات را ثبت کنید." icon={Users} onClose={() => setTransferringSchoolStudent(null)}>
 
-              <form onSubmit={handleConfirmTransferSchool} className="space-y-3 text-xs">
+              <form onSubmit={handleConfirmTransferSchool} className="management-form space-y-4 text-xs">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">آموزشگاه مقصد (اختیاری):</label>
                   <input
@@ -798,7 +702,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                     placeholder="نام دبیرستان یا هنرستان مقصد (اختیاری)"
                     value={destSchool}
                     onChange={(e) => setDestSchool(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"
+                    className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none"
                   />
                 </div>
 
@@ -809,7 +713,7 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                     placeholder="مثال: تغییر محل سکونت یا جابجایی تحصیلی"
                     value={transferReason}
                     onChange={(e) => setTransferReason(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none"
+                    className="w-full p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none"
                   />
                 </div>
 
@@ -829,20 +733,14 @@ export const StudentManagerModal: React.FC<StudentManagerModalProps> = ({
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
+            </ManagementDialog>
+            
+          </>
         )}
 
-        {/* Footer */}
-        <div className="p-4 bg-white border-t border-slate-200 flex justify-end shrink-0">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold"
-          >
-            بستن
-          </button>
-        </div>
-      </div>
-    </div>
+        
+      </ManagementDialog>
+      
+    </>
   );
 };

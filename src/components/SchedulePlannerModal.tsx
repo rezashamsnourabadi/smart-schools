@@ -1,17 +1,7 @@
+import { ManagementDialog } from './ManagementDialog';
 import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
-import {
-  X,
-  Calendar,
-  Clock,
-  Plus,
-  Trash2,
-  BookOpen,
-  User,
-  CheckCircle2,
-  AlertCircle
-} from 'lucide-react';
+import { Calendar, Plus, Trash2, User } from 'lucide-react';
 import { useApp, useResource } from '../context/AppContext';
 import { ScheduleSlot } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -43,10 +33,10 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
   useResource('schedule');
   useResource('teachers');
   useResource('classes');
-  const shouldReduceMotion = useReducedMotion();
   const { schedule, classes, teachers, currentSchoolId, addScheduleSlot, deleteScheduleSlot } = useApp();
   const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || '');
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [viewDay, setViewDay] = useState<(typeof DAYS_OF_WEEK)[number]>('شنبه');
 
   // Form states
   const [dayOfWeek, setDayOfWeek] = useState<'شنبه' | 'یکشنبه' | 'دوشنبه' | 'سه‌شنبه' | 'چهارشنبه'>('شنبه');
@@ -56,7 +46,7 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
 
   const currentClass = classes.find((c) => c.id === selectedClassId) || classes[0];
-  const classSchedule = schedule.filter((s) => s.classGroupId === selectedClassId);
+  const classSchedule = schedule.filter((s) => s.classGroupId === currentClass?.id);
   const availableTeachers = teachers.filter((teacher) => teacher.schoolId === currentSchoolId && !!currentClass && teacher.assignedClassIds.includes(currentClass.id));
   const selectedTeacher = availableTeachers.find((teacher) => teacher.id === selectedTeacherId);
 
@@ -68,7 +58,7 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
 
     const result = await addScheduleSlot({
       schoolId: currentSchoolId,
-      classGroupId: selectedClassId,
+      classGroupId: currentClass!.id,
       className: currentClass?.name || 'کلاس درس',
       teacherId: selectedTeacher.id,
       teacherName: selectedTeacher.name,
@@ -87,65 +77,23 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
     setShowAddForm(false);
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-1.5 sm:p-4 overflow-y-auto w-full max-w-full"
-    >
-      <motion.div
-        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
-        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
-        className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl m-auto max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <ResourcePager kind="schedule"/>
-        {/* Header */}
-        <div className="bg-slate-900 text-white p-3.5 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 sm:p-2 rounded-xl bg-teal-500/20 text-teal-300">
-              <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-sm sm:text-lg">مدیریت و چیدمان برنامه هفتگی</h3>
-              <p className="text-[11px] sm:text-xs text-slate-400">تنظیم ساعات تدریس، نام دبیران و دروس به تفکیک پایه‌ها</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
-            title="بستن"
-            aria-label="بستن پنجره"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return (<> <ManagementDialog id="schedule-planner-modal" title="برنامه هفتگی" description="ابتدا کلاس را انتخاب کنید؛ سپس برنامه و زنگ‌های آن را مدیریت کنید." icon={Calendar} onClose={onClose}>
+        <ResourcePager appearance="sage" kind="schedule"/>
+
 
         {/* Subheader: Class Selector & Add Button */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
-            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">انتخاب کلاس:</span>
-            {classes.map((cls) => (
-              <button
-                key={cls.id}
-                onClick={() => setSelectedClassId(cls.id)}
-                className={`min-h-11 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-                  selectedClassId === cls.id
-                    ? 'bg-teal-700 text-white shadow-xs font-bold'
-                    : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'
-                }`}
-              >
-                {cls.name} ({toPersianDigits(cls.studentCount)} نفر)
-              </button>
-            ))}
-          </div>
+        <div className="p-4 bg-[#f6f8f1] border-b border-[#e1e7d9] flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <label className="teaching-label min-w-0 flex-1">کلاس
+            <select id="schedule-class-select" value={currentClass?.id || ''} onChange={event => { setSelectedClassId(event.target.value); setSelectedTeacherId(''); setFormError(null); }}>
+              {!classes.length && <option value="">ابتدا یک کلاس تعریف کنید</option>}
+              {classes.map(cls => <option key={cls.id} value={cls.id}>{cls.name}</option>)}
+            </select>
+          </label>
 
           {canEdit && (
             <button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors"
+              id="schedule-add-slot" disabled={!currentClass} onClick={() => setShowAddForm(true)}
+              className="px-3 py-1.5 bg-teal-600 hover:bg-[#527348] text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors"
             >
               <Plus className="w-4 h-4" />
               افزودن زنگ جدید
@@ -155,9 +103,9 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
 
         {/* Add Slot Form */}
         {showAddForm && canEdit && (
-          <form onSubmit={handleAddSlot} className="bg-teal-50/70 p-4 border-b border-teal-200 space-y-3">
+          <ManagementDialog id="scheduleplanner-editor" title="افزودن زنگ درسی" description="پس از تکمیل اطلاعات، دکمه ثبت را بزنید." icon={Calendar} onClose={() => setShowAddForm(false)}><form onSubmit={handleAddSlot} className="bg-teal-50/70 p-4 border-b border-teal-200 space-y-3">
             <div className="font-bold text-xs sm:text-sm text-teal-900">اختصاص زنگ درسی به کلاس {currentClass?.name}</div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-slate-700 mb-1 font-medium">روز هفته:</label>
                 <select
@@ -226,16 +174,19 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
               <button
                 type="submit"
                   disabled={!availableTeachers.length}
-                  className="min-h-11 px-4 py-1.5 text-xs bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 text-white rounded-lg font-medium shadow-2xs"
+                  className="min-h-11 px-4 py-1.5 text-xs bg-teal-600 hover:bg-[#527348] disabled:bg-slate-400 text-white rounded-lg font-medium shadow-2xs"
               >
                 ذخیره در برنامه
               </button>
             </div>
-          </form>
+          </form></ManagementDialog>
         )}
 
         {/* Schedule Matrix */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
+        <div className="management-content space-y-4">
+          <div className="management-tabs management-tabs-three management-mobile-days" aria-label="روز برنامه هفتگی">
+            {DAYS_OF_WEEK.map(day => <button key={day} type="button" aria-pressed={viewDay === day} onClick={() => { setViewDay(day); setDayOfWeek(day); }}>{day}</button>)}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {DAYS_OF_WEEK.map((day) => {
               const daySlots = classSchedule
@@ -243,8 +194,8 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
                 .sort((a, b) => a.period - b.period);
 
               return (
-                <div key={day} className="bg-slate-50 rounded-xl border border-slate-200 p-3 flex flex-col">
-                  <div className="font-bold text-slate-800 text-sm pb-2 border-b border-slate-200 text-center flex items-center justify-center gap-1">
+                <div key={day} className={`${viewDay === day ? 'flex' : 'hidden md:flex'} bg-[#f6f8f1] rounded-xl border border-[#e1e7d9] p-3 flex-col`}>
+                  <div className="font-bold text-slate-800 text-sm pb-2 border-b border-[#e1e7d9] text-center flex items-center justify-center gap-1">
                     <Calendar className="w-3.5 h-3.5 text-teal-600" />
                     {day}
                   </div>
@@ -260,10 +211,10 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
                           className={`p-2.5 rounded-lg border text-xs relative group transition-all ${
                             slot
                               ? 'bg-white border-teal-200 shadow-2xs'
-                              : 'bg-slate-100/50 border-dashed border-slate-200 text-slate-400'
+                              : 'bg-slate-100/50 border-dashed border-[#e1e7d9] text-slate-400'
                           }`}
                         >
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                          <div className="flex items-center justify-between text-[11px] text-[#87927e] mb-1">
                             <span className="font-medium">زنگ {toPersianDigits(pNum)}</span>
                             <span className="font-mono text-[10px]">{timeInfo?.startTime} - {timeInfo?.endTime}</span>
                           </div>
@@ -271,7 +222,7 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
                           {slot ? (
                             <div>
                               <div className="font-bold text-slate-800 text-xs mb-0.5">{slot.subject}</div>
-                              <div className="text-teal-700 text-[11px] flex items-center gap-1">
+                              <div className="text-[#658152] text-[11px] flex items-center gap-1">
                                 <User className="w-3 h-3 text-slate-400" />
                                 {slot.teacherName}
                               </div>
@@ -279,7 +230,7 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
                               {canEdit && (
                                 <button
                                   onClick={async () => await deleteScheduleSlot(slot.id)}
-                                  className="absolute top-1 left-1 p-1 text-slate-300 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="mt-2 flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-rose-50 p-1 text-slate-300 hover:text-rose-600 opacity-100 transition-opacity"
                                   title="حذف این زنگ"
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -301,17 +252,9 @@ export const SchedulePlannerModal: React.FC<SchedulePlannerModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-3.5 bg-white border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
-          <span>کلاس جاری: <strong>{currentClass?.name}</strong> • اتاق: {currentClass?.room}</span>
-          <button
-            onClick={onClose}
-            className="min-h-[44px] px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-medium"
-          >
-            بستن
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
+        
+      </ManagementDialog>
+      
+    </>
   );
 };

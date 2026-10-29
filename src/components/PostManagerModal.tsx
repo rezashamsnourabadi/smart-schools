@@ -1,29 +1,7 @@
+import { ManagementDialog } from './ManagementDialog';
 import { ResourcePager } from './ResourcePager';
 import React, { useState, useRef } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
-import {
-  X,
-  Bell,
-  Newspaper,
-  Calendar,
-  FileCheck,
-  Plus,
-  Trash2,
-  Send,
-  Users,
-  Clock,
-  Sparkles,
-  Image as ImageIcon,
-  Video,
-  Paperclip,
-  FileText,
-  UploadCloud,
-  CheckCircle2,
-  FileSpreadsheet,
-  Pin,
-  PinOff,
-  Edit3
-} from 'lucide-react';
+import { Bell, Plus, Trash2, Send, Paperclip, FileText, UploadCloud, CheckCircle2, Pin, PinOff, Edit3 } from 'lucide-react';
 import { useApp, useResource } from '../context/AppContext';
 import { Announcement, PostType, PostAttachment } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -39,7 +17,6 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
   canPublish = true
 }) => {
   useResource('announcements');
-  const shouldReduceMotion = useReducedMotion();
   const {
     announcements,
     currentSchoolId,
@@ -179,89 +156,59 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
     handleCancelForm();
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto w-full max-w-full"
-    >
-      <motion.div
-        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
-        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
-        className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 m-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <ResourcePager kind="announcements"/>
-        {/* Header */}
-        <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-2xl bg-teal-500/20 text-teal-300">
-              <Bell className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base sm:text-lg">سامانه اطلاع‌رسانی، اخبار و گزارش رویدادها</h3>
-              <p className="text-xs text-slate-400">انتشار با امکان آپلود مستقیم فایل و پوستر رویداد</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return (<> <ManagementDialog id="post-manager-modal" title="اطلاع‌رسانی مدرسه" description="اطلاعیه، خبر، رویداد و گزارش برای مخاطبان مدرسه" icon={Bell} onClose={onClose}>
+        <ResourcePager appearance="sage" kind="announcements"/>
+
 
         {/* Filter Bar & Add Action */}
-        <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 sm:gap-3 shrink-0">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+        <div className="p-3 sm:p-4 bg-[#f6f8f1] border-b border-[#e1e7d9] flex flex-wrap items-center justify-between gap-2 sm:gap-3 shrink-0">
+          <div className="school-management-tabs school-management-tabs-posts flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
             <button
-              onClick={() => setActiveFilter('all')}
+              aria-pressed={activeFilter === 'all'} onClick={() => setActiveFilter('all')}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                 activeFilter === 'all'
-                  ? 'bg-teal-800 text-white font-bold'
-                  : 'bg-white text-slate-700 border border-slate-200'
+                  ? 'bg-[#426039] text-white font-bold'
+                  : 'bg-white text-slate-700 border border-[#e1e7d9]'
               }`}
             >
               همه ({toPersianDigits(announcements.length)})
             </button>
             <button
-              onClick={() => setActiveFilter('announcement')}
+              aria-pressed={activeFilter === 'announcement'} onClick={() => setActiveFilter('announcement')}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                 activeFilter === 'announcement'
-                  ? 'bg-teal-800 text-white font-bold'
-                  : 'bg-white text-slate-700 border border-slate-200'
+                  ? 'bg-[#426039] text-white font-bold'
+                  : 'bg-white text-slate-700 border border-[#e1e7d9]'
               }`}
             >
               اطلاعیه‌ها
             </button>
             <button
-              onClick={() => setActiveFilter('news')}
+              aria-pressed={activeFilter === 'news'} onClick={() => setActiveFilter('news')}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                 activeFilter === 'news'
-                  ? 'bg-teal-800 text-white font-bold'
-                  : 'bg-white text-slate-700 border border-slate-200'
+                  ? 'bg-[#426039] text-white font-bold'
+                  : 'bg-white text-slate-700 border border-[#e1e7d9]'
               }`}
             >
               اخبار
             </button>
             <button
-              onClick={() => setActiveFilter('event')}
+              aria-pressed={activeFilter === 'event'} onClick={() => setActiveFilter('event')}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                 activeFilter === 'event'
-                  ? 'bg-teal-800 text-white font-bold'
-                  : 'bg-white text-slate-700 border border-slate-200'
+                  ? 'bg-[#426039] text-white font-bold'
+                  : 'bg-white text-slate-700 border border-[#e1e7d9]'
               }`}
             >
               رویدادها
             </button>
             <button
-              onClick={() => setActiveFilter('event_report')}
+              aria-pressed={activeFilter === 'event_report'} onClick={() => setActiveFilter('event_report')}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                 activeFilter === 'event_report'
-                  ? 'bg-teal-800 text-white font-bold'
-                  : 'bg-white text-slate-700 border border-slate-200'
+                  ? 'bg-[#426039] text-white font-bold'
+                  : 'bg-white text-slate-700 border border-[#e1e7d9]'
               }`}
             >
               گزارش‌ها
@@ -278,7 +225,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   setShowAddForm(true);
                 }
               }}
-              className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+              className="px-3.5 py-2 bg-[#527348] hover:bg-[#426039] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>مطلب جدید</span>
@@ -287,43 +234,38 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
         </div>
 
         {/* Scrollable Container (Smooth scrolling on mobile and desktop) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-50">
+        <div className="management-content space-y-5 bg-[#f6f8f1]">
           {/* Add / Edit Post Form */}
           {showAddForm && canPublish && (
-            <form
-              onSubmit={handleSubmit}
-              className="bg-white p-4 sm:p-5 rounded-2xl border-2 border-teal-500/40 shadow-md space-y-3.5 animate-in fade-in"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <span className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                  {editingPost ? (
-                    <>
-                      <Edit3 className="w-4 h-4 text-teal-600" />
-                      <span>ویرایش اطلاعیه یا خبر</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4 text-teal-600" />
-                      <span>انتشار مطلب یا رویداد جدید</span>
-                    </>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCancelForm}
-                  className="text-slate-400 hover:text-slate-700 text-xs"
-                >
-                  انصراف
-                </button>
+            <ManagementDialog id="postmanager-editor" title="مطلب مدرسه" description="پس از تکمیل اطلاعات، دکمه ثبت را بزنید." icon={Bell} onClose={handleCancelForm}><form id="form-handleSubmit" onSubmit={handleSubmit} className="management-form space-y-5 text-xs"><fieldset className="space-y-4"><legend>متن مطلب</legend><div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">عنوان مطلب:</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="مثال: برگزاری جشن تقدیر از برگزیدگان مسابقات علمی"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+<div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">متن کامل اطلاعیه / شرح رویداد:</label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="متن پیام، زمان دقیق، اهداف و دستاوردهای رویداد..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div></fieldset>
+<fieldset className="space-y-4"><legend>مخاطب و نحوه نمایش</legend><div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-700 mb-1">دسته‌بندی مطلب:</label>
                   <select
                     value={postType}
                     onChange={(e) => setPostType(e.target.value as PostType)}
-                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-xs p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="announcement">اطلاعیه رسمی</option>
                     <option value="news">خبر مدرسه</option>
@@ -336,7 +278,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   <select
                     value={target}
                     onChange={(e) => setTarget(e.target.value as typeof target)}
-                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-xs p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="all">همه (عمومی)</option>
                     <option value="parents">فقط اولیا و خانواده‌ها</option>
@@ -349,41 +291,15 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as Announcement['priority'])}
-                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-xs p-2.5 bg-[#f6f8f1] border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="normal">عادی</option>
                     <option value="important">بااهمیت</option>
                     <option value="urgent">فوری / بااهمیت</option>
                   </select>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">عنوان مطلب:</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="مثال: برگزاری جشن تقدیر از برگزیدگان مسابقات علمی"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">متن کامل اطلاعیه / شرح رویداد:</label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="متن پیام، زمان دقیق، اهداف و دستاوردهای رویداد..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-teal-500"
-                />
-              </div>
-
-              {/* REAL FILE & IMAGE UPLOAD ZONE */}
-              <div>
+              </div></fieldset>
+<fieldset className="space-y-4"><legend>پیوست و تصویر</legend><div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
                   <UploadCloud className="w-4 h-4 text-teal-600" />
                   <span>آپلود مستقیم تصویر، پوستر یا فایل ضمیمه (PDF / عکس):</span>
@@ -401,15 +317,15 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                 {!uploadedFile ? (
                   <label
                     htmlFor="post-file-upload"
-                    className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 hover:border-teal-500 bg-slate-50 hover:bg-teal-50/40 rounded-2xl cursor-pointer transition-colors text-center group"
+                    className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 hover:border-teal-500 bg-[#f6f8f1] hover:bg-teal-50/40 rounded-2xl cursor-pointer transition-colors text-center group"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-slate-200 group-hover:bg-teal-100 text-slate-600 group-hover:text-teal-700 flex items-center justify-center mb-1 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-slate-200 group-hover:bg-teal-100 text-slate-600 group-hover:text-[#658152] flex items-center justify-center mb-1 transition-colors">
                       <UploadCloud className="w-5 h-5" />
                     </div>
                     <span className="text-xs font-bold text-slate-800">
                       کلیک کنید یا فایل را اینجا رها کنید
                     </span>
-                    <span className="text-[11px] text-slate-500 mt-0.5">
+                    <span className="text-[11px] text-[#87927e] mt-0.5">
                       ذخیره محلی مرورگر • حداکثر {MAX_LOCAL_ATTACHMENT_LABEL} برای هر فایل
                     </span>
                   </label>
@@ -423,15 +339,15 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                           className="w-12 h-12 rounded-xl object-cover border border-teal-300 shrink-0"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0">
+                        <div className="w-12 h-12 rounded-xl bg-[#527348] text-white flex items-center justify-center shrink-0">
                           <FileText className="w-6 h-6" />
                         </div>
                       )}
                       <div className="text-right truncate text-xs">
-                        <span className="font-bold text-slate-900 block truncate">
+                        <span className="font-bold text-[#364d36] block truncate">
                           {uploadedFile.name}
                         </span>
-                        <span className="text-[11px] text-slate-500 font-mono">
+                        <span className="text-[11px] text-[#87927e] font-mono">
                           {uploadedFile.size} • آماده انتشار
                         </span>
                       </div>
@@ -448,9 +364,8 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                   </div>
                 )}
                 {attachmentError && <p role="alert" className="mt-2 text-xs font-medium text-rose-700">{attachmentError}</p>}
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              </div></fieldset>
+<div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={handleCancelForm}
@@ -460,7 +375,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+                  className="px-5 py-2 text-xs bg-[#527348] hover:bg-[#426039] text-white rounded-xl font-bold flex items-center gap-1.5 shadow-xs transition-colors"
                 >
                   {editingPost ? (
                     <>
@@ -474,8 +389,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                     </>
                   )}
                 </button>
-              </div>
-            </form>
+              </div></form></ManagementDialog>
           )}
 
           {/* Posts Feed */}
@@ -486,7 +400,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                 className={`bg-white rounded-2xl border p-4 sm:p-5 shadow-xs transition-all space-y-3 ${
                   post.isPinned
                     ? 'border-amber-400 ring-2 ring-amber-400/20 bg-amber-50/20'
-                    : 'border-slate-200 hover:border-teal-300'
+                    : 'border-[#e1e7d9] hover:border-teal-300'
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -500,7 +414,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                         post.type === 'announcement'
-                          ? 'bg-teal-50 text-teal-800 border border-teal-200'
+                          ? 'bg-teal-50 text-[#58734b] border border-teal-200'
                           : post.type === 'news'
                           ? 'bg-blue-50 text-blue-800 border border-blue-200'
                           : post.type === 'event'
@@ -542,7 +456,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
 
                       <button
                         onClick={() => handleStartEdit(post)}
-                        className="p-1.5 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-[#658152] hover:bg-teal-50 rounded-lg transition-colors"
                         title="ویرایش متن اطلاعیه"
                       >
                         <Edit3 className="w-4 h-4" />
@@ -560,7 +474,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                 </div>
 
                 <div>
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base leading-snug">
+                  <h4 className="font-bold text-[#364d36] text-sm sm:text-base leading-snug">
                     {post.title}
                   </h4>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-1.5 whitespace-pre-line">
@@ -570,7 +484,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
 
                 {/* Uploaded Cover Image / Poster */}
                 {post.coverImage && (
-                  <div className="rounded-xl overflow-hidden border border-slate-200 max-h-64 bg-slate-100">
+                  <div className="rounded-xl overflow-hidden border border-[#e1e7d9] max-h-64 bg-slate-100">
                     <img
                       src={post.coverImage}
                       alt={post.title}
@@ -585,7 +499,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                     {post.attachments.map((att, idx) => (
                       <div
                         key={idx}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#f6f8f1] border border-[#e1e7d9] text-xs text-slate-700"
                       >
                         <Paperclip className="w-3.5 h-3.5 text-teal-600" />
                         <span className="font-medium">{att.name}</span>
@@ -609,23 +523,16 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
             ))}
 
             {filteredPosts.length === 0 && (
-              <div className="bg-white p-10 text-center rounded-2xl border border-slate-200 text-slate-400 text-xs">
+              <div className="bg-white p-10 text-center rounded-2xl border border-[#e1e7d9] text-slate-400 text-xs">
                 مطلبی در این دسته‌بندی وجود ندارد.
               </div>
             )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 bg-white border-t border-slate-200 flex justify-end shrink-0">
-          <button
-            onClick={onClose}
-            className="min-h-[44px] px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors"
-          >
-            بستن
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
+        
+      </ManagementDialog>
+      
+    </>
   );
 };

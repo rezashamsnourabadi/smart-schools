@@ -1,25 +1,7 @@
+import { ManagementDialog } from './ManagementDialog';
 import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
-import {
-  X,
-  Shield,
-  Check,
-  Lock,
-  Unlock,
-  Plus,
-  Trash2,
-  Edit2,
-  Briefcase,
-  GraduationCap,
-  Users,
-  BookOpen,
-  ArrowLeftRight,
-  Phone,
-  Sparkles,
-  School as SchoolIcon,
-  CheckCircle2,
-  AlertCircle
-} from 'lucide-react';
+import { X, Shield, Check, Lock, Plus, Trash2, Edit2, Briefcase, GraduationCap, BookOpen, ArrowLeftRight, Phone, School as SchoolIcon } from 'lucide-react';
 import { useApp, useResource } from '../context/AppContext';
 import { VicePrincipalPermissions, VicePrincipalProfile, TeacherProfile } from '../types';
 import { toPersianDigits } from '../utils/persianUtils';
@@ -298,59 +280,33 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
     setConvertingVP(null);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto w-full max-w-full">
-      <div
-        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[92vh] m-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="p-2.5 rounded-2xl bg-teal-500/20 text-teal-300">
-              <Briefcase className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base sm:text-lg">
-                مدیریت جامع کادر مدرسه و دبیران
-              </h3>
-              <p className="text-xs text-slate-400">
-                مدیریت و تفویض اختیارات معاونین، تخصیص چندگانه دروس و کلاس‌های معلمان
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return (<> <ManagementDialog id="staff-manager-modal" title="کادر مدرسه" description="دبیران، کلاس‌های تدریس و اختیارات معاونان" icon={Briefcase} onClose={onClose}>
+
 
         {/* Tab Selector */}
-        <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-2xl">
+        <div className="management-navigation">
+          <div className="management-tabs management-tabs-two">
             <button
-              onClick={() => setActiveTab('vice_principals')}
+              aria-pressed={activeTab === 'vice_principals'} onClick={() => setActiveTab('vice_principals')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeTab === 'vice_principals'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-[#364d36] shadow-xs'
+                  : 'text-slate-600 hover:text-[#364d36]'
               }`}
             >
               <Shield className="w-3.5 h-3.5 text-teal-600" />
               <span>معاونین آموزشگاه</span>
-              <span className="font-mono text-[11px] px-1.5 py-0.2 rounded-full bg-teal-50 text-teal-800">
+              <span className="font-mono text-[11px] px-1.5 py-0.2 rounded-full bg-teal-50 text-[#58734b]">
                 {toPersianDigits(schoolVPs.length)}
               </span>
             </button>
 
             <button
-              onClick={() => setActiveTab('teachers')}
+              aria-pressed={activeTab === 'teachers'} onClick={() => setActiveTab('teachers')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeTab === 'teachers'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-[#364d36] shadow-xs'
+                  : 'text-slate-600 hover:text-[#364d36]'
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
@@ -365,7 +321,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
             {activeTab === 'vice_principals' ? (
               <button
                 onClick={openAddVP}
-                className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors active:scale-95"
+                className="px-3.5 py-2 bg-[#527348] hover:bg-[#426039] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors active:scale-95"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>افزودن معاون جدید</span>
@@ -382,9 +338,9 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
           </div>
         </div>
 
-        <ResourcePager kind={activeTab === 'teachers' ? 'teachers' : 'vicePrincipals'}/>
+        <ResourcePager appearance="sage" kind={activeTab === 'teachers' ? 'teachers' : 'vicePrincipals'}/>
         {/* Content Area */}
-        <div className="p-3 sm:p-5 overflow-y-auto space-y-4 flex-1 bg-slate-50">
+        <div className="management-content space-y-4 bg-[#f6f8f1]">
           {/* TAB 1: VICE PRINCIPALS */}
           {activeTab === 'vice_principals' && (
             <div className="space-y-3">
@@ -405,7 +361,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                   return (
                     <div
                       key={vp.id}
-                      className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs hover:border-teal-300 transition-all text-right"
+                      className="bg-white rounded-2xl border border-[#e1e7d9] p-4 shadow-2xs hover:border-teal-300 transition-all text-right"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                         <div className="flex items-center gap-3">
@@ -416,16 +372,16 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-sm text-slate-900">{vp.name}</h4>
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                              <h4 className="font-bold text-sm text-[#364d36]">{vp.name}</h4>
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-[#58734b] border border-teal-200">
                                 {vp.roleTitle}
                               </span>
                             </div>
-                            <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5 font-mono">
+                            <div className="text-xs text-[#87927e] flex items-center gap-2 mt-0.5 font-mono">
                               <Phone className="w-3 h-3 text-slate-400" />
                               <span>{toPersianDigits(vp.phone)}</span>
                               <span className="text-slate-300">•</span>
-                              <span className="font-sans text-[11px] text-teal-700">
+                              <span className="font-sans text-[11px] text-[#658152]">
                                 {toPersianDigits(grantedCount)} دسترسی از {toPersianDigits(5)} دسترسی فعال
                               </span>
                             </div>
@@ -441,8 +397,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                             }}
                             className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
                               isExpanded
-                                ? 'bg-teal-700 text-white'
-                                : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200'
+                                ? 'bg-[#527348] text-white'
+                                : 'bg-teal-50 hover:bg-teal-100 text-[#58734b] border border-teal-200'
                             }`}
                           >
                             <Shield className="w-3.5 h-3.5" />
@@ -495,13 +451,13 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                             {permissionItems.map((perm) => {
                               const isGranted = vp.permissions[perm.key];
                               return (
-                                <div
+                                <button type="button" role="checkbox" aria-checked={isGranted}
                                   key={perm.key}
                                   onClick={() => handleToggleVPPermission(vp.id, perm.key)}
                                   className={`p-2.5 rounded-xl border text-right transition-all cursor-pointer select-none flex items-start justify-between gap-2.5 ${
                                     isGranted
                                       ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
-                                      : 'bg-slate-50 border-slate-200 text-slate-500 opacity-80'
+                                      : 'bg-[#f6f8f1] border-[#e1e7d9] text-[#87927e] opacity-80'
                                   }`}
                                 >
                                   <div>
@@ -524,7 +480,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                                   >
                                     <Check className="w-3 h-3" />
                                   </div>
-                                </div>
+                                </button>
                               );
                             })}
                           </div>
@@ -558,7 +514,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                   return (
                     <div
                       key={teacher.id}
-                      className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs hover:border-indigo-300 transition-all text-right"
+                      className="bg-white rounded-2xl border border-[#e1e7d9] p-4 shadow-2xs hover:border-indigo-300 transition-all text-right"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                         <div className="flex items-start gap-3">
@@ -570,12 +526,12 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                           <div className="space-y-2">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="font-bold text-sm text-slate-900">{teacher.name}</h4>
+                                <h4 className="font-bold text-sm text-[#364d36]">{teacher.name}</h4>
                                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200">
                                   {teacher.roleTitle || 'دبیر رسمی'}
                                 </span>
                               </div>
-                              <div className="text-xs text-slate-500 font-mono flex items-center gap-1.5 mt-0.5">
+                              <div className="text-xs text-[#87927e] font-mono flex items-center gap-1.5 mt-0.5">
                                 <Phone className="w-3 h-3 text-slate-400" />
                                 <span>{toPersianDigits(teacher.phone)}</span>
                               </div>
@@ -583,7 +539,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
 
                             {/* Teaching Subjects (Multiple) */}
                             <div>
-                              <span className="text-[11px] font-semibold text-slate-500 block mb-1">
+                              <span className="text-[11px] font-semibold text-[#87927e] block mb-1">
                                 دروس تحت تدریس:
                               </span>
                               <div className="flex items-center gap-1.5 flex-wrap">
@@ -591,7 +547,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                                   teacher.teachingSubjects.map((subj, idx) => (
                                     <span
                                       key={idx}
-                                      className="text-xs font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200 flex items-center gap-1"
+                                      className="text-xs font-bold px-2 py-0.5 rounded-md bg-teal-50 text-[#58734b] border border-teal-200 flex items-center gap-1"
                                     >
                                       <BookOpen className="w-3 h-3 text-teal-600" />
                                       {subj}
@@ -605,7 +561,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
 
                             {/* Assigned Classes (Multiple) */}
                             <div>
-                              <span className="text-[11px] font-semibold text-slate-500 block mb-1">
+                              <span className="text-[11px] font-semibold text-[#87927e] block mb-1">
                                 کلاس‌های کلاسی دبیر:
                               </span>
                               <div className="flex items-center gap-1.5 flex-wrap">
@@ -613,9 +569,9 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                                   assignedClasses.map((cls) => (
                                     <span
                                       key={cls.id}
-                                      className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200 flex items-center gap-1"
+                                      className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-[#e1e7d9] flex items-center gap-1"
                                     >
-                                      <SchoolIcon className="w-3 h-3 text-slate-500" />
+                                      <SchoolIcon className="w-3 h-3 text-[#87927e]" />
                                       {cls.name} ({cls.grade})
                                     </span>
                                   ))
@@ -670,36 +626,13 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-3 sm:p-4 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>کادر فعال آموزشگاه: {toPersianDigits(schoolVPs.length)} معاون • {toPersianDigits(schoolTeachers.length)} دبیر</span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors"
-          >
-            بستن پنجره
-          </button>
-        </div>
-      </div>
+        
+      </ManagementDialog>
 
       {/* SUB-MODAL: Add / Edit Vice Principal */}
-      {showAddVPModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto w-full max-w-full">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 text-right m-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h4 className="font-bold text-sm text-slate-900">
-                {editingVP ? 'ویرایش مشخصات معاون' : 'افزودن معاون جدید به آموزشگاه'}
-              </h4>
-              <button
-                onClick={() => setShowAddVPModal(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {showAddVPModal && (<> <ManagementDialog id="staff-manager-1" title={<>{editingVP ? 'ویرایش مشخصات معاون' : 'افزودن معاون جدید به آموزشگاه'}</>} description="اطلاعات را بررسی کنید و سپس تغییرات را ثبت کنید." icon={Briefcase} onClose={() => setShowAddVPModal(false)}>
 
-            <form onSubmit={handleSaveVP} className="space-y-3 text-xs">
-              <div>
+            <form id="form-handleSaveVP" onSubmit={handleSaveVP} className="management-form space-y-5 text-xs"><fieldset className="space-y-4"><legend>مشخصات معاون</legend><div>
                 <label className="block font-semibold text-slate-700 mb-1">نام و نام خانوادگی</label>
                 <input
                   type="text"
@@ -707,11 +640,10 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                   placeholder="مثال: آقای حمید مرادی"
                   value={vpName}
                   onChange={(e) => setVpName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                  className="w-full px-3 py-2 border border-[#e1e7d9] rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
                 />
               </div>
-
-              <div>
+<div>
                 <label className="block font-semibold text-slate-700 mb-1">شماره تماس (جهت ورود و پیامک)</label>
                 <input
                   type="text"
@@ -719,19 +651,18 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                   placeholder="۰۹۱۲-۳۴۵-۶۷۸۹"
                   value={vpPhone}
                   onChange={(e) => setVpPhone(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none font-mono"
+                  className="w-full px-3 py-2 border border-[#e1e7d9] rounded-xl focus:ring-2 focus:ring-teal-500 outline-none font-mono"
                   dir="ltr"
                 />
               </div>
-
-              <div>
+<div>
                 <label className="block font-semibold text-slate-700 mb-1">عنوان سازمانی معاونت</label>
                 <input
                   type="text"
                   required
                   value={vpRoleTitle}
                   onChange={(e) => setVpRoleTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none mb-1.5"
+                  className="w-full px-3 py-2 border border-[#e1e7d9] rounded-xl focus:ring-2 focus:ring-teal-500 outline-none mb-1.5"
                 />
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {VP_ROLE_SUGGESTIONS.map((role) => (
@@ -745,9 +676,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                     </button>
                   ))}
                 </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+              </div></fieldset>
+<div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddVPModal(false)}
@@ -757,35 +687,21 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-teal-700 text-white font-bold hover:bg-teal-800 flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-[#527348] text-white font-bold hover:bg-[#426039] flex items-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
                   <span>{editingVP ? 'ذخیره تغییرات' : 'افزودن معاون'}</span>
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
+              </div></form>
+          </ManagementDialog>
+          
+        </>
       )}
 
       {/* SUB-MODAL: Add / Edit Teacher (Multiple Subjects & Multiple Classes) */}
-      {showAddTeacherModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto w-full max-w-full">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4 text-right max-h-[90vh] overflow-y-auto m-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h4 className="font-bold text-sm text-slate-900">
-                {editingTeacher ? 'ویرایش مشخصات و دروس دبیر' : 'افزودن دبیر جدید به آموزشگاه'}
-              </h4>
-              <button
-                onClick={() => setShowAddTeacherModal(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {showAddTeacherModal && (<> <ManagementDialog id="staff-manager-2" title={<>{editingTeacher ? 'ویرایش مشخصات و دروس دبیر' : 'افزودن دبیر جدید به آموزشگاه'}</>} description="اطلاعات را بررسی کنید و سپس تغییرات را ثبت کنید." icon={Briefcase} onClose={() => setShowAddTeacherModal(false)}>
 
-            <form onSubmit={handleSaveTeacher} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form id="form-handleSaveTeacher" onSubmit={handleSaveTeacher} className="management-form space-y-5 text-xs"><fieldset className="space-y-4"><legend>مشخصات و نوع همکاری</legend><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">نام و نام خانوادگی دبیر</label>
                   <input
@@ -794,7 +710,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                     placeholder="مثال: استاد علیرضا احمدی"
                     value={tName}
                     onChange={(e) => setTName(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 border border-[#e1e7d9] rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
 
@@ -806,39 +722,36 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                     placeholder="۰۹۱۲-۰۰۰-۰۰۰۰"
                     value={tPhone}
                     onChange={(e) => setTPhone(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
+                    className="w-full px-3 py-2 border border-[#e1e7d9] rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
                     dir="ltr"
                   />
                 </div>
               </div>
-
-              <div>
+<div>
                 <label className="block font-semibold text-slate-700 mb-1">نوع همکاری</label>
                 <select
                   value={tRoleTitle}
                   onChange={(e) => setTRoleTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  className="w-full px-3 py-2 border border-[#e1e7d9] rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 >
                   <option value="دبیر رسمی">دبیر رسمی آموزش و پرورش</option>
                   <option value="دبیر تخصصی">دبیر تخصصی کنکور و المپیاد</option>
                   <option value="دبیر حق‌التدریس">دبیر حق‌التدریس / مدعو</option>
                   <option value="سرگروه آموزشی">سرگروه آموزشی منطقه</option>
                 </select>
-              </div>
-
-              {/* Multiple Subjects Selection */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
+              </div></fieldset>
+<fieldset className="space-y-4"><legend>دروس تدریس</legend><div className="space-y-2 pt-2 border-t border-slate-100">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-slate-800">
                     انتخاب دروس تدریسی دبیر (چند درس):
                   </label>
-                  <span className="text-[11px] text-teal-700 font-bold">
+                  <span className="text-[11px] text-[#658152] font-bold">
                     {toPersianDigits(tSubjects.length)} درس انتخاب شده
                   </span>
                 </div>
 
                 {/* Common subjects chips */}
-                <div className="flex items-center gap-1.5 flex-wrap max-h-32 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-1.5 flex-wrap  p-2 bg-[#f6f8f1] rounded-xl border border-[#e1e7d9]">
                   {COMMON_SUBJECTS.map((subj) => {
                     const isSelected = tSubjects.includes(subj);
                     return (
@@ -848,8 +761,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                         onClick={() => handleToggleSubject(subj)}
                         className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
                           isSelected
-                            ? 'bg-teal-700 text-white shadow-2xs'
-                            : 'bg-white text-slate-700 border border-slate-200 hover:border-teal-300'
+                            ? 'bg-[#527348] text-white shadow-2xs'
+                            : 'bg-white text-slate-700 border border-[#e1e7d9] hover:border-teal-300'
                         }`}
                       >
                         {isSelected && <Check className="w-3 h-3" />}
@@ -872,7 +785,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                         handleAddCustomSubject(e);
                       }
                     }}
-                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                    className="flex-1 px-3 py-1.5 border border-[#e1e7d9] rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
                   />
                   <button
                     type="button"
@@ -882,10 +795,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                     افزودن
                   </button>
                 </div>
-              </div>
-
-              {/* Multiple Classes Selection */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
+              </div></fieldset>
+<fieldset className="space-y-4"><legend>کلاس‌های تدریس</legend><div className="space-y-2 pt-2 border-t border-slate-100">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-slate-800">
                     کلاس‌های منتسب به دبیر (چند کلاس):
@@ -895,23 +806,23 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2  p-2 bg-[#f6f8f1] rounded-xl border border-[#e1e7d9]">
                   {schoolClasses.map((cls) => {
                     const isSelected = tAssignedClassIds.includes(cls.id);
                     return (
-                      <div
+                      <button type="button" role="checkbox" aria-checked={isSelected}
                         key={cls.id}
                         onClick={() => handleToggleClass(cls.id)}
                         className={`p-2 rounded-xl border text-right transition-all cursor-pointer select-none flex items-center justify-between ${
                           isSelected
                             ? 'bg-indigo-50 border-indigo-300 text-indigo-950 font-bold'
-                            : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-200'
+                            : 'bg-white border-[#e1e7d9] text-slate-600 hover:border-indigo-200'
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           <SchoolIcon className={`w-3.5 h-3.5 ${isSelected ? 'text-indigo-600' : 'text-slate-400'}`} />
                           <span>{cls.name}</span>
-                          <span className="text-[10px] font-normal text-slate-500">({cls.grade})</span>
+                          <span className="text-[10px] font-normal text-[#87927e]">({cls.grade})</span>
                         </div>
                         <div
                           className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${
@@ -920,13 +831,12 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                         >
                           <Check className="w-3 h-3" />
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              </div></fieldset>
+<div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddTeacherModal(false)}
@@ -941,31 +851,27 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                   <Check className="w-4 h-4" />
                   <span>{editingTeacher ? 'ذخیره مشخصات' : 'افزودن دبیر'}</span>
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
+              </div></form>
+          </ManagementDialog>
+          
+        </>
       )}
 
       {/* SUB-MODAL: Promote Teacher to Vice Principal */}
       {convertingTeacher && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto w-full max-w-full">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 text-right m-auto">
-            <div className="flex items-center gap-2 text-amber-600">
-              <ArrowLeftRight className="w-5 h-5" />
-              <h4 className="font-bold text-sm text-slate-900">ارتقای نقش به معاونت مدرسه</h4>
-            </div>
+        <ManagementDialog id="staff-convert-vp" title={<>ارتقای نقش به معاونت مدرسه</>} description="پس از بررسی انتساب‌ها، تغییر نقش را تأیید کنید." icon={Briefcase} onClose={() => setConvertingTeacher(null)}>
+            
             <p className="text-xs text-slate-600">
               شما در حال انتصاب <strong>{convertingTeacher.name}</strong> از کادر دبیران به کادر معاونت آموزشگاه هستید.
             </p>
 
-            <form onSubmit={handleConfirmConvertToVP} className="space-y-3 text-xs">
+            <form onSubmit={handleConfirmConvertToVP} className="management-form space-y-4 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">عنوان سازمانی معاونت</label>
                 <select
                   value={targetVPRole}
                   onChange={(e) => setTargetVPRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-teal-500 outline-none"
+                  className="w-full px-3 py-2 border border-[#e1e7d9] rounded-xl bg-white focus:ring-2 focus:ring-teal-500 outline-none"
                 >
                   {VP_ROLE_SUGGESTIONS.map((role) => (
                     <option key={role} value={role}>{role}</option>
@@ -983,32 +889,27 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-teal-700 text-white font-bold hover:bg-teal-800"
+                  className="px-4 py-2 rounded-xl bg-[#527348] text-white font-bold hover:bg-[#426039]"
                 >
                   تایید انتصاب به عنوان معاون
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </ManagementDialog>
       )}
 
       {/* SUB-MODAL: Convert Vice Principal to Teacher */}
       {convertingVP && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 overflow-y-auto w-full max-w-full">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 text-right m-auto">
-            <div className="flex items-center gap-2 text-indigo-600">
-              <ArrowLeftRight className="w-5 h-5" />
-              <h4 className="font-bold text-sm text-slate-900">انتقال معاون به کادر تدریس</h4>
-            </div>
+        <ManagementDialog id="staff-convert-teacher" title={<>انتقال معاون به کادر تدریس</>} description="پس از بررسی انتساب‌ها، تغییر نقش را تأیید کنید." icon={Briefcase} onClose={() => setConvertingVP(null)}>
+            
             <p className="text-xs text-slate-600">
               شما در حال تغییر نقش <strong>{convertingVP.name}</strong> ({convertingVP.roleTitle}) به دبیر آموزشگاه هستید.
             </p>
 
-            <form onSubmit={handleConfirmConvertToTeacher} className="space-y-3 text-xs">
+            <form onSubmit={handleConfirmConvertToTeacher} className="management-form space-y-4 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">درس یا دروس تدریسی</label>
-                <div className="flex items-center gap-1.5 flex-wrap p-2 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-1.5 flex-wrap p-2 bg-[#f6f8f1] rounded-xl border border-[#e1e7d9]">
                   {['دینی', 'عربی', 'ادبیات', 'ریاضی', 'فیزیک'].map((s) => {
                     const isSelected = targetTSubjects.includes(s);
                     return (
@@ -1025,7 +926,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                           }
                         }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                          isSelected ? 'bg-indigo-700 text-white' : 'bg-white text-slate-700 border border-slate-200'
+                          isSelected ? 'bg-indigo-700 text-white' : 'bg-white text-slate-700 border border-[#e1e7d9]'
                         }`}
                       >
                         {s}
@@ -1037,23 +938,23 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">کلاس‌های تدریسی</label>
-                <div className="space-y-1 max-h-28 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="space-y-1  p-2 bg-[#f6f8f1] rounded-xl border border-[#e1e7d9]">
                   {schoolClasses.map((cls) => {
                     const isSelected = targetTClasses.includes(cls.id);
                     return (
-                      <div
+                      <button type="button" role="checkbox" aria-checked={isSelected}
                         key={cls.id}
                         onClick={() => {
                           if (isSelected) setTargetTClasses(targetTClasses.filter((id) => id !== cls.id));
                           else setTargetTClasses([...targetTClasses, cls.id]);
                         }}
                         className={`p-1.5 rounded-lg border text-xs cursor-pointer flex items-center justify-between ${
-                          isSelected ? 'bg-indigo-50 border-indigo-300 font-bold text-indigo-900' : 'bg-white border-slate-200 text-slate-700'
+                          isSelected ? 'bg-indigo-50 border-indigo-300 font-bold text-indigo-900' : 'bg-white border-[#e1e7d9] text-slate-700'
                         }`}
                       >
                         <span>{cls.name}</span>
                         {isSelected && <Check className="w-3 h-3 text-indigo-600" />}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -1075,9 +976,8 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </ManagementDialog>
       )}
-    </div>
+    </>
   );
 };

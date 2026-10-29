@@ -1,36 +1,8 @@
+import { ManagementDialog } from './ManagementDialog';
 import { ResourcePager } from './ResourcePager';
 import React, { useState, useMemo } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import {
-  X,
-  CreditCard,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Send,
-  Plus,
-  Search,
-  Filter,
-  Receipt,
-  Building2,
-  ArrowDownLeft,
-  Percent,
-  Calendar,
-  UserCheck,
-  FileSpreadsheet,
-  Printer,
-  ChevronDown,
-  ChevronUp,
-  Check,
-  Ban,
-  Download,
-  AlertTriangle,
-  FileText,
-  User,
-  ShieldCheck,
-  DollarSign
-} from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
+import { X, CreditCard, TrendingUp, CheckCircle2, Clock, Send, Plus, Search, Receipt, Building2, UserCheck, Printer, Check, Ban, AlertTriangle, FileText } from 'lucide-react';
 import { useApp, useResource } from '../context/AppContext';
 import {
   Student,
@@ -55,7 +27,6 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 }) => {
   useResource('feeItems');
   useResource('students');
-  const shouldReduceMotion = useReducedMotion();
   const {
     currentSchool,
     currentSchoolId,
@@ -277,120 +248,30 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
 
   return (
     <AnimatePresence>
-    {isOpen && <motion.div
-      key="finance-modal-overlay"
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
-      className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-3 overflow-y-auto w-full max-w-full"
-      dir="rtl"
-    >
-      <motion.div
-        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 10, scale: shouldReduceMotion ? 1 : 0.99 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 6, scale: shouldReduceMotion ? 1 : 0.99 }}
-        transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
-        className="bg-slate-50 w-full max-w-5xl rounded-none sm:rounded-3xl shadow-2xl m-auto h-full sm:h-auto sm:max-h-[96vh] max-h-screen flex flex-col overflow-hidden border border-slate-200"
-        id="finance-manager-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
+    {isOpen && <>
+      <ManagementDialog id="finance-manager-modal" title="امور مالی" description={`${currentSchool?.name || 'مدرسه'} • سال تحصیلی ${toPersianDigits(activeAcademicYear?.title || '—')}`} icon={CreditCard} onClose={onClose}>
+        <button id="btn-header-record-pay" type="button" onClick={() => handleOpenPaymentModal()} className="teaching-primary w-full"><Plus className="size-4"/>ثبت واریزی جدید</button>
+        <details className="rounded-2xl border border-[#e1e7d9] bg-[#f3f7ec] p-4">
+          <summary>خلاصه مالی سال <span>{toPersianDigits(stats.collectionRate)}٪ وصول</span></summary>
+          <div className="management-metrics">
+            {[{label:'مصوب سالانه',value:stats.totalBilled},{label:'وصول‌شده',value:stats.totalPaid},{label:'مانده مطالبات',value:stats.totalRemainingDebt},{label:'تخفیف‌ها',value:stats.totalDiscount}].map(item => <div key={item.label}><span>{item.label}</span><strong>{formatPersianCurrency(item.value)}</strong></div>)}
+          </div>
+        </details>
         {activeToast?.type === 'warning' && <p role="alert" className="p-3 shrink-0 bg-rose-50 text-rose-800 text-sm">{activeToast.message}</p>}
         {studentListWithSummary.some((item) => item.error) && <p role="alert" className="p-3 shrink-0 bg-amber-50 text-amber-900 text-sm">برخی پرونده‌ها ناسازگاری مالی دارند و در جمع آمار منظور نشده‌اند؛ اسناد آن‌ها برای بررسی محفوظ است.</p>}
-        {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 text-white p-3.5 sm:p-5 shrink-0 relative">
-          <button
-            onClick={onClose}
-            className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
-            title="بستن پنجره"
-            aria-label="بستن"
-          >
-            <X className="w-5 h-5" />
-          </button>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pe-10 sm:pe-12">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-white shadow-inner shrink-0">
-                <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-base sm:text-xl font-bold text-white truncate">
-                  سامانه امور مالی و شهریه آموزشگاه
-                </h2>
-                <p className="text-[11px] sm:text-sm text-teal-100 mt-0.5 truncate">
-                  {currentSchool?.name || 'مدرسه هوشمند'} • سال تحصیلی {toPersianDigits(activeAcademicYear?.title || '—')}
-                </p>
-              </div>
-            </div>
-
-            {/* Quick Action in Header */}
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                type="button"
-                id="btn-header-record-pay"
-                onClick={() => handleOpenPaymentModal()}
-                className="min-h-[40px] px-3.5 py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                ثبت واریزی جدید
-              </button>
-            </div>
-          </div>
-
-          {/* Top KPI Cards Row: Swipeable on mobile, 5 cols on desktop */}
-          <div className="flex overflow-x-auto gap-2 sm:grid sm:grid-cols-5 sm:gap-2.5 mt-4 sm:mt-5 pb-1 sm:pb-0 no-scrollbar snap-x">
-            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/10">
-              <span className="text-[10px] sm:text-[11px] text-teal-100 block">کل مصوب سالانه</span>
-              <span className="text-xs sm:text-base font-bold text-white block mt-0.5 whitespace-nowrap">
-                {formatPersianCurrency(stats.totalBilled)}
-              </span>
-            </div>
-
-            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/10">
-              <span className="text-[10px] sm:text-[11px] text-emerald-200 block">کل وجوه وصول‌شده</span>
-              <span className="text-xs sm:text-base font-bold text-emerald-300 block mt-0.5 whitespace-nowrap">
-                {formatPersianCurrency(stats.totalPaid)}
-              </span>
-            </div>
-
-            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/10">
-              <span className="text-[10px] sm:text-[11px] text-rose-200 block">مانده مطالبات معوق</span>
-              <span className="text-xs sm:text-base font-bold text-rose-300 block mt-0.5 whitespace-nowrap">
-                {formatPersianCurrency(stats.totalRemainingDebt)}
-              </span>
-            </div>
-
-            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/10 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/10">
-              <span className="text-[10px] sm:text-[11px] text-purple-200 block">تخفیف و بورسیه‌ها</span>
-              <span className="text-xs sm:text-base font-bold text-purple-200 block mt-0.5 whitespace-nowrap">
-                {formatPersianCurrency(stats.totalDiscount)}
-              </span>
-            </div>
-
-            <div className="snap-start shrink-0 min-w-[135px] sm:min-w-0 flex-1 bg-white/15 backdrop-blur-xs rounded-2xl p-2.5 sm:p-3 border border-white/15">
-              <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-teal-100">
-                <span>درصد وصولی</span>
-                <span className="font-bold text-white font-mono">{toPersianDigits(stats.collectionRate)}%</span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2 mt-2 overflow-hidden">
-                <div
-                  className="bg-emerald-400 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${stats.collectionRate}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-start sm:justify-between gap-1 sm:gap-2 overflow-x-auto no-scrollbar shrink-0">
-          <div className="flex items-center gap-1 sm:gap-2">
+        <div className="management-navigation">
+          <div className="management-tabs management-tabs-two">
             <button
               type="button"
               id="tab-btn-debtors"
-              onClick={() => setActiveTab('debtors')}
+              aria-pressed={activeTab === 'debtors'} onClick={() => setActiveTab('debtors')}
               className={`min-h-[44px] py-2.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'debtors'
                   ? 'border-emerald-600 text-emerald-700'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-[#87927e] hover:text-slate-800'
               }`}
             >
               <UserCheck className="w-4 h-4 shrink-0" />
@@ -405,11 +286,11 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
             <button
               type="button"
               id="tab-btn-fees"
-              onClick={() => setActiveTab('fees')}
+              aria-pressed={activeTab === 'fees'} onClick={() => setActiveTab('fees')}
               className={`min-h-[44px] py-2.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'fees'
                   ? 'border-emerald-600 text-emerald-700'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-[#87927e] hover:text-slate-800'
               }`}
             >
               <Building2 className="w-4 h-4 shrink-0" />
@@ -422,11 +303,11 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
             <button
               type="button"
               id="tab-btn-transactions"
-              onClick={() => setActiveTab('transactions')}
+              aria-pressed={activeTab === 'transactions'} onClick={() => setActiveTab('transactions')}
               className={`min-h-[44px] py-2.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'transactions'
                   ? 'border-emerald-600 text-emerald-700'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-[#87927e] hover:text-slate-800'
               }`}
             >
               <Receipt className="w-4 h-4 shrink-0" />
@@ -439,11 +320,11 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
             <button
               type="button"
               id="tab-btn-reports"
-              onClick={() => setActiveTab('reports')}
+              aria-pressed={activeTab === 'reports'} onClick={() => setActiveTab('reports')}
               className={`min-h-[44px] py-2.5 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'reports'
                   ? 'border-emerald-600 text-emerald-700'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-[#87927e] hover:text-slate-800'
               }`}
             >
               <TrendingUp className="w-4 h-4 shrink-0" />
@@ -452,14 +333,14 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
           </div>
         </div>
 
-        <ResourcePager kind={activeTab === 'fees' ? 'feeItems' : 'students'}/>
+        <ResourcePager appearance="sage" kind={activeTab === 'fees' ? 'feeItems' : 'students'}/>
         {/* Tab Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+        <div className="management-content space-y-5">
           {/* TAB 1: DEBTORS & BALANCES */}
           {activeTab === 'debtors' && (
             <div className="space-y-4">
-              {/* Filters Bar */}
-              <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<details className="rounded-2xl border border-[#e1e7d9] bg-white p-3"><summary>پالایش و یادآوری <span className="text-[10px] font-normal">جستجو، کلاس و وضعیت حساب</span></summary>              {/* Filters Bar */}
+              <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-[#e1e7d9] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 w-full">
                   {/* Search */}
                   <div className="relative flex-1 w-full">
@@ -469,7 +350,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="جستجوی دانش‌آموز، کد ملی یا شماره پرونده..."
-                      className="w-full pr-9 pl-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50/50"
+                      className="w-full pr-9 pl-3 py-2 border border-[#e1e7d9] rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-[#f6f8f1]/50"
                     />
                   </div>
 
@@ -478,7 +359,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     <select
                       value={selectedClassFilter}
                       onChange={(e) => setSelectedClassFilter(e.target.value)}
-                      className="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50/50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                      className="w-full sm:w-auto px-3 py-2 border border-[#e1e7d9] rounded-xl text-xs bg-[#f6f8f1]/50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                     >
                       <option value="all">همه کلاس‌ها</option>
                       {classes.map((cls) => (
@@ -492,7 +373,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-                      className="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50/50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                      className="w-full sm:w-auto px-3 py-2 border border-[#e1e7d9] rounded-xl text-xs bg-[#f6f8f1]/50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                     >
                       <option value="all">همه وضعیت‌ها</option>
                       <option value="overdue">معوقه فوری</option>
@@ -517,10 +398,11 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 )}
               </div>
 
+</details>
               {/* Mobile Card View (md:hidden) */}
               <div className="space-y-3 md:hidden">
                 {filteredStudents.length === 0 ? (
-                  <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs">
+                  <div className="bg-white rounded-2xl border border-[#e1e7d9] p-8 text-center text-slate-400 text-xs">
                     دانش‌آموزی با این مشخصات یافت نشد.
                   </div>
                 ) : (
@@ -532,13 +414,13 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     return (
                       <div
                         key={student.id}
-                        className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-3"
+                        className="bg-white rounded-2xl border border-[#e1e7d9] p-3.5 shadow-2xs space-y-3"
                       >
                         {/* Header: Name, Class, Status Badge */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <div className="font-bold text-slate-900 text-sm truncate">{student.name}</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <div className="font-bold text-[#364d36] text-sm truncate">{student.name}</div>
+                            <div className="text-[11px] text-[#87927e] mt-0.5 flex flex-wrap items-center gap-1.5">
                               <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 font-medium">
                                 {cls?.name || student.grade}
                               </span>
@@ -569,7 +451,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                         </div>
 
                         {/* 4-cell Financial Grid */}
-                        <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                        <div className="grid grid-cols-2 gap-2 bg-[#f6f8f1] p-2.5 rounded-xl border border-slate-100 text-xs">
                           <div>
                             <span className="text-[10px] text-slate-400 block">کل صورتحساب</span>
                             <span className="font-mono font-bold text-slate-700 block mt-0.5 truncate">
@@ -622,7 +504,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                           <button
                             type="button"
                             onClick={() => setSelectedStudentForDossier(student)}
-                            className="min-h-[40px] px-2 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer border border-slate-200"
+                            className="min-h-[40px] px-2 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer border border-[#e1e7d9]"
                           >
                             <FileText className="w-3.5 h-3.5" />
                             <span>پرونده</span>
@@ -635,10 +517,10 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
               </div>
 
               {/* Desktop Table View (hidden md:block) */}
-              <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+              <div className="hidden md:block bg-white rounded-2xl border border-[#e1e7d9] overflow-hidden shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-right text-xs">
-                    <thead className="bg-slate-100/70 text-slate-600 border-b border-slate-200 font-semibold">
+                    <thead className="bg-slate-100/70 text-slate-600 border-b border-[#e1e7d9] font-semibold">
                       <tr>
                         <th className="py-3 px-4">دانش‌آموز</th>
                         <th className="py-3 px-4">کلاس</th>
@@ -664,7 +546,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                           const isOverdue = summary.status === 'overdue';
 
                           return (
-                            <tr key={student.id} className="hover:bg-slate-50/70 transition-colors">
+                            <tr key={student.id} className="hover:bg-[#f6f8f1]/70 transition-colors">
                               <td className="py-3 px-4">
                                 <div className="font-bold text-slate-800">{student.name}</div>
                                 <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
@@ -757,7 +639,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="font-bold text-slate-800 text-sm">سرفصل‌های مصوب شهریه و خدمات مدرسه</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-[#87927e] mt-0.5">
                     تعریف و ویرایش مبالغ پایه شهریه، حق‌الثبت، فوق‌برنامه، سرویس و خدمات رفاهی
                   </p>
                 </div>
@@ -783,7 +665,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 {feeItems.map((fee) => (
                   <div
                     key={fee.id}
-                    className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-teal-300 transition-colors"
+                    className="bg-white p-4 rounded-2xl border border-[#e1e7d9] shadow-xs flex flex-col justify-between hover:border-teal-300 transition-colors"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -806,22 +688,22 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="text-base font-bold text-slate-900 font-mono my-2">
+                      <div className="text-base font-bold text-[#364d36] font-mono my-2">
                         {formatPersianCurrency(fee.amount)}
                       </div>
 
                       {fee.description && (
-                        <p className="text-xs text-slate-500 line-clamp-2 mb-3">{fee.description}</p>
+                        <p className="text-xs text-[#87927e] line-clamp-2 mb-3">{fee.description}</p>
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                    <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-[#87927e]">
                       <span>مهلت پرداخت: {fee.dueDate ? toPersianDigits(fee.dueDate) : 'ثبت‌نام'}</span>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={async () => await assignFeeItemToStudents(fee.id, fee.targetScope, fee.targetScope === 'selective' ? feeTargetClassId || undefined : undefined)}
-                          className="min-h-[36px] px-3 py-1.5 bg-teal-50 text-teal-800 hover:bg-teal-100 active:bg-teal-200 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-teal-200/60"
+                          className="min-h-[36px] px-3 py-1.5 bg-teal-50 text-[#58734b] hover:bg-teal-100 active:bg-teal-200 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-teal-200/60"
                         >
                           تخصیص به دانش‌آموزان
                         </button>
@@ -847,7 +729,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="font-bold text-slate-800 text-sm">دفتر کل اسناد مالی و فیش‌های بانکی</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-[#87927e] mt-0.5">
                     فهرست اسناد ثبت‌شده کارتخوان، کارت‌به‌کارت و چک
                   </p>
                 </div>
@@ -864,19 +746,19 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
               {/* Mobile Card View (md:hidden) */}
               <div className="space-y-3 md:hidden">
                 {allTransactions.length === 0 ? (
-                  <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs">
+                  <div className="bg-white rounded-2xl border border-[#e1e7d9] p-8 text-center text-slate-400 text-xs">
                     هنوز تراکنشی ثبت نشده است.
                   </div>
                 ) : (
                   allTransactions.map(({ transaction: txn, student }) => (
                     <div
                       key={txn.id}
-                      className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-2.5"
+                      className="bg-white rounded-2xl border border-[#e1e7d9] p-3.5 shadow-2xs space-y-2.5"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="font-bold text-slate-900 text-sm">{student.name}</div>
-                          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
+                          <div className="font-bold text-[#364d36] text-sm">{student.name}</div>
+                          <div className="text-[11px] text-[#87927e] mt-0.5 flex items-center gap-1.5">
                             <span>تاریخ: {toPersianDigits(txn.date)}</span>
                             <span>•</span>
                             <span className="font-mono text-[10px] text-slate-400">{txn.id}</span>
@@ -907,7 +789,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                      <div className="grid grid-cols-2 gap-2 bg-[#f6f8f1] p-2.5 rounded-xl border border-slate-100 text-xs">
                         <div>
                           <span className="text-[10px] text-slate-400 block">روش پرداخت</span>
                           <span className="font-medium text-slate-700 block mt-0.5">
@@ -963,10 +845,10 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
               </div>
 
               {/* Desktop Table View (hidden md:block) */}
-              <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+              <div className="hidden md:block bg-white rounded-2xl border border-[#e1e7d9] overflow-hidden shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-right text-xs">
-                    <thead className="bg-slate-100/70 text-slate-600 border-b border-slate-200 font-semibold">
+                    <thead className="bg-slate-100/70 text-slate-600 border-b border-[#e1e7d9] font-semibold">
                       <tr>
                         <th className="py-3 px-4">شناسه / تاریخ</th>
                         <th className="py-3 px-4">دانش‌آموز</th>
@@ -987,8 +869,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                         </tr>
                       ) : (
                         allTransactions.map(({ transaction: txn, student }) => (
-                          <tr key={txn.id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="py-3 px-4 font-mono text-slate-500">
+                          <tr key={txn.id} className="hover:bg-[#f6f8f1]/70 transition-colors">
+                            <td className="py-3 px-4 font-mono text-[#87927e]">
                               <div>{toPersianDigits(txn.date)}</div>
                               <div className="text-[10px] text-slate-400">{txn.id}</div>
                             </td>
@@ -1067,7 +949,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
           {/* TAB 4: REPORTS & EXPORT */}
           {activeTab === 'reports' && (
             <div className="space-y-5">
-              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#e1e7d9] shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                   <h3 className="font-bold text-slate-800 text-sm">تراز مالی و تحلیل سرفصل‌های درآمدی آموزشگاه</h3>
                   <button
@@ -1081,8 +963,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  <div className="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
-                    <span className="text-xs text-slate-500">تعداد کل دانش‌آموزان ثبت‌نامی:</span>
+                  <div className="bg-[#f6f8f1] p-3.5 sm:p-4 rounded-xl border border-[#e1e7d9]">
+                    <span className="text-xs text-[#87927e]">تعداد کل دانش‌آموزان ثبت‌نامی:</span>
                     <span className="text-base sm:text-lg font-bold text-slate-800 block mt-1">
                       {toPersianDigits(students.length)} نفر
                     </span>
@@ -1103,7 +985,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-6 pt-5 border-t border-slate-200 space-y-3">
+                <div className="mt-6 pt-5 border-t border-[#e1e7d9] space-y-3">
                   <h4 className="font-bold text-xs text-slate-700">تفکیک وضعیت وصولی به صورتحساب:</h4>
                   <div className="w-full bg-slate-200 rounded-full h-4 overflow-hidden flex">
                     <div
@@ -1126,30 +1008,14 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
             </div>
           )}
         </div>
-        </motion.div>
+        </ManagementDialog>
 
       {/* Modal: New Fee Item */}
-      {isNewFeeModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto w-full max-w-full">
-          <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 m-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base">تعریف سرفصل و تعرفه مالی جدید</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsNewFeeModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
+      {isNewFeeModalOpen && (<> <ManagementDialog id="finance-manager-1" title={<>تعریف سرفصل و تعرفه مالی جدید</>} description="اطلاعات را بررسی کنید و سپس تغییرات را ثبت کنید." icon={CreditCard} onClose={() => setIsNewFeeModalOpen(false)}>
 
-            <form onSubmit={handleCreateFeeItem} className="space-y-4">
-              {actionError && <p role="alert" className="text-sm text-rose-800">{actionError}</p>}
-              {!activeAcademicYear && <p role="status" className="text-sm text-amber-800">ابتدا سال تحصیلی این مدرسه را در مدیریت سال تحصیلی تعریف کنید.</p>}
-              <div>
+            <form id="form-handleCreateFeeItem" onSubmit={handleCreateFeeItem} className="management-form space-y-5 text-xs">{actionError && <p role="alert" className="text-sm text-rose-800">{actionError}</p>}
+{!activeAcademicYear && <p role="status" className="text-sm text-amber-800">ابتدا سال تحصیلی این مدرسه را در مدیریت سال تحصیلی تعریف کنید.</p>}
+<fieldset className="space-y-4"><legend>عنوان و مبلغ تعرفه</legend><div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   عنوان سرفصل مالی
                 </label>
@@ -1162,8 +1028,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   required
                 />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     دسته‌بندی مالی
@@ -1199,12 +1064,10 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   />
                 </div>
               </div>
-
-              <p className="text-[11px] text-emerald-700 font-medium">
+<p className="text-[11px] text-emerald-700 font-medium">
                 معادل فارسی: {formatPersianCurrency(newFeeAmount)}
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              </p></fieldset>
+<fieldset className="space-y-4"><legend>دامنه و شرایط</legend><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     دامنه تخصیص
@@ -1234,8 +1097,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   />
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 pt-1">
+<div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
                   id="chk-fee-mandatory"
@@ -1246,9 +1108,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 <label htmlFor="chk-fee-mandatory" className="text-xs text-slate-700 cursor-pointer">
                   تعهد مالی اجباری برای تمام دانش‌آموزان هدف
                 </label>
-              </div>
-
-              <div>
+              </div></fieldset>
+<fieldset className="space-y-4"><legend>توضیحات</legend><div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   توضیحات و مصوبات شورا (اختیاری)
                 </label>
@@ -1259,9 +1120,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   placeholder="مصوبه شورای مالی آموزشگاه..."
                 />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              </div></fieldset>
+<div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e1e7d9]">
                 <button
                   type="button"
                   onClick={() => setIsNewFeeModalOpen(false)}
@@ -1276,33 +1136,17 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 >
                   افزودن و تخصیص سرفصل
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
+              </div></form>
+          </ManagementDialog>
+          
+        </>
       )}
 
       {/* Modal: Record Payment for Any Student */}
-      {isRecordPaymentModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto w-full max-w-full">
-          <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 m-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
-              <div className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base">ثبت واریزی و سند دریافت وجه</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRecordPaymentModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
+      {isRecordPaymentModalOpen && (<> <ManagementDialog id="finance-manager-2" title={<>ثبت واریزی و سند دریافت وجه</>} description="اطلاعات را بررسی کنید و سپس تغییرات را ثبت کنید." icon={CreditCard} onClose={() => setIsRecordPaymentModalOpen(false)}>
 
-            <form onSubmit={handleSubmitPayment} className="space-y-4">
-              {actionError && <p role="alert" className="text-sm text-rose-800">{actionError}</p>}
-              <div>
+            <form id="form-handleSubmitPayment" onSubmit={handleSubmitPayment} className="management-form space-y-5 text-xs">{actionError && <p role="alert" className="text-sm text-rose-800">{actionError}</p>}
+<fieldset className="space-y-4"><legend>صاحب حساب</legend><div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   انتخاب دانش‌آموز
                 </label>
@@ -1325,9 +1169,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div>
+              </div></fieldset>
+<fieldset className="space-y-4"><legend>مشخصات واریزی</legend><div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   مبلغ واریزی (تومان)
                 </label>
@@ -1344,8 +1187,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   معادل فارسی: {formatPersianCurrency(payAmount)}
                 </p>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     روش دریافت
@@ -1376,8 +1218,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   />
                 </div>
               </div>
-
-              <div>
+<div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   بابت سرفصل
                 </label>
@@ -1387,9 +1228,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   onChange={(e) => setPayFeeTitle(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                 />
-              </div>
-
-              <div>
+              </div></fieldset>
+<fieldset className="space-y-4"><legend>یادداشت</legend><div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   توضیحات واریزکننده (اختیاری)
                 </label>
@@ -1400,9 +1240,8 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   placeholder="اطلاعات کارت یا نام واریزکننده..."
                 />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              </div></fieldset>
+<div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e1e7d9]">
                 <button
                   type="button"
                   onClick={() => setIsRecordPaymentModalOpen(false)}
@@ -1416,29 +1255,14 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 >
                   ثبت پرداخت
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
+              </div></form>
+          </ManagementDialog>
+          
+        </>
       )}
 
       {/* Modal: Batch Reminders to all overdue */}
-      {isBatchReminderModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto w-full max-w-full">
-          <div className="bg-white w-full max-w-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 m-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 mb-4">
-              <div className="flex items-center gap-2 text-rose-600">
-                <Send className="w-5 h-5" />
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base">ثبت درخواست یادآوری گروهی</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsBatchReminderModalOpen(false)}
-                className="min-h-[44px] min-w-[44px] text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
+      {isBatchReminderModalOpen && (<> <ManagementDialog id="finance-manager-3" title={<>ثبت درخواست یادآوری گروهی</>} description="اطلاعات را بررسی کنید و سپس تغییرات را ثبت کنید." icon={CreditCard} onClose={() => setIsBatchReminderModalOpen(false)}>
 
             <div className="space-y-4">
               <p className="text-xs text-slate-600 leading-relaxed">
@@ -1449,7 +1273,7 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 درخواست در صف اعلان ثبت می‌شود؛ وضعیت ارسال از سابقه اعلان‌ها قابل پیگیری است.
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e1e7d9]">
                 <button
                   type="button"
                   onClick={() => setIsBatchReminderModalOpen(false)}
@@ -1467,10 +1291,11 @@ export const FinanceManagerModal: React.FC<FinanceManagerModalProps> = ({
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </ManagementDialog>
+          
+        </>
       )}
-    </motion.div>}
+    </>}
     </AnimatePresence>
   );
 };
