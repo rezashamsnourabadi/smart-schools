@@ -12,6 +12,7 @@ import { validateGradeItem } from '../src/utils/gradeUtils';
 import { schoolTimeMinutes } from '../src/utils/attendance';
 import type { Student, AttendanceSession, VicePrincipalPermissions, GradeItem } from '../src/types';
 import {validateCivilDates,civilDate} from './calendar';
+import {createEmptyFinancialSummary} from '../src/utils/financialLedger';
 
 export function allowed(member:Membership, permission:keyof VicePrincipalPermissions) {
   return member.role==='principal' || (member.role==='vice_principal' && member.permissions[permission]===true);
@@ -234,6 +235,11 @@ export async function resourceRoutes(app:FastifyInstance) {
     if(member.role==='vice_principal'&&!allowed(member,'canViewFullDossier'))deny();
     return transaction(async tx=>{
       let row=await assertRead(tx,member,school,year,id,'students');
+      // Older and demo dossiers can predate their first fee assignment. This is
+      // an empty ledger, not a failed fetch; never replace an existing ledger.
+      if(row.financialSummary===undefined&&(member.role==='parent'||member.role==='student'||allowed(member,'canManageFinances'))){
+        row={...row,financialSummary:createEmptyFinancialSummary()};
+      }
       const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Tehran'});
       const stats=(await tx.query(`WITH days AS (SELECT civil_day,max(CASE entry->>'status' WHEN 'absent' THEN 3 WHEN 'late' THEN 2 WHEN 'excused' THEN 1 ELSE 0 END) severity FROM records CROSS JOIN LATERAL jsonb_array_elements(data->'records') entry WHERE school_id=$1 AND year_id=$2 AND kind='attendanceSessions' AND data->'records' @> $3::jsonb AND entry->>'studentId'=$4 AND civil_day<=$5::date GROUP BY civil_day) SELECT count(*)::int AS "totalDays",count(*) FILTER(WHERE severity=0)::int AS "presentDays",count(*) FILTER(WHERE severity=1)::int AS "excusedDays",count(*) FILTER(WHERE severity=2)::int AS "lateDays",count(*) FILTER(WHERE severity=3)::int AS "absentDays",max(severity) FILTER(WHERE civil_day=$5::date) AS today FROM days`,[school,year,JSON.stringify([{studentId:id}]),id,today])).rows[0];
       const {today:status,...attendanceStats}=stats;row={...row,attendanceStats,attendanceStatsSource:'sessions',todayStatus:status===null?undefined:['present','excused','late','absent'][status]};

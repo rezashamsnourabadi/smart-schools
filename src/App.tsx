@@ -108,6 +108,7 @@ const AppContent: React.FC = () => {
       case 'parent':
         return (
           <ParentDashboard
+            onOpenProfileModal={() => setIsProfileModalOpen(true)}
             onOpenStudentDossier={handleOpenStudentDossier}
           />
         );
@@ -123,7 +124,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className={`${currentRole==='principal'?'principal-workspace':''} min-h-screen w-full max-w-full overflow-x-clip flex flex-col text-slate-800 antialiased selection:bg-teal-200 ${(currentRole==='student'||currentRole==='teacher'||currentRole==='principal'||currentRole==='vice_principal')?'bg-[#f7f8f4]':'bg-slate-100/70'}`} dir="rtl">
+    <div className={`${currentRole==='principal'?'principal-workspace':''} min-h-screen w-full max-w-full overflow-x-clip flex flex-col text-slate-800 antialiased selection:bg-teal-200 ${(currentRole==='student'||currentRole==='teacher'||currentRole==='principal'||currentRole==='vice_principal'||currentRole==='parent')?'bg-[#f7f8f4]':'bg-slate-100/70'}`} dir="rtl">
       {/* Top Header with Profile Modal trigger and Brand Switcher */}
       <Header
         onOpenProfileModal={() => setIsProfileModalOpen(true)}

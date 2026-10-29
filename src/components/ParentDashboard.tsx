@@ -1,408 +1,69 @@
-import { notificationStatusLabel } from '../utils/notifications';
-import React, { useState } from 'react';
-import { useApp, useResource } from '../context/AppContext';
-import {
-  CheckCircle2,
-  AlertCircle,
-  MessageSquare,
-  Award,
-  PhoneCall,
-  Calendar,
-  Building2,
-  FileText,
-  Smartphone,
-  Megaphone,
-  Settings,
-  ChevronLeft,
-  GraduationCap,
-  Pin,
-  CreditCard,
-  Clock,
-  Send,
-  Lock
-} from 'lucide-react';
-import { SponsorBannerCard } from './SponsorBannerCard';
-import { toPersianDigits, formatPersianCurrency } from '../utils/persianUtils';
-import { readFinancialSummary } from '../utils/financialLedger';
-import { Student } from '../types';
-import { ParentPaymentModal } from './ParentPaymentModal';
-import { attendanceLabel } from '../utils/attendance';
+import React, {useState} from 'react';
+import {useQueryClient} from '@tanstack/react-query';
+import {Award,BookOpen,CalendarDays,CheckCheck,ChevronLeft,Clock3,CreditCard,FileText,GraduationCap,MessageSquare,Paperclip,Phone,Pin,RefreshCw,Settings2,ShieldCheck,Users,type LucideIcon} from 'lucide-react';
+import {useApp,useResource} from '../context/AppContext';
+import {useAuth} from '../auth/AuthContext';
+import {attendanceLabel} from '../utils/attendance';
+import {formatPersianCurrency,formatPersianScore,toEnglishDigits,toPersianDigits} from '../utils/persianUtils';
+import {readFinancialSummary,createEmptyFinancialSummary} from '../utils/financialLedger';
+import {notificationStatusLabel} from '../utils/notifications';
+import type {Student} from '../types';
+import {SponsorBannerCard} from './SponsorBannerCard';
+import {ResourcePager} from './ResourcePager';
+import {ParentPaymentModal} from './ParentPaymentModal';
 
-interface Props {
-  onOpenStudentDossier?: (student: Student) => void;
-  onOpenProfileModal?: () => void;
+type View='overview'|'learning'|'messages'|'finances';
+type DossierTab='profile'|'reportCards'|'attendance'|'discipline'|'pastYears'|'finances';
+interface Props {onOpenStudentDossier?:(student:Student)=>void;onOpenProfileModal?:()=>void}
+function Section({id,title,icon:Icon,children,action}:{id:string;title:string;icon:LucideIcon;children:React.ReactNode;action?:React.ReactNode}){
+ return <section id={id} className="min-w-0 space-y-4 rounded-3xl border border-[#e1e8d8] bg-white p-4 sm:p-5"><header className="flex flex-wrap items-center justify-between gap-2"><h2 className="flex min-w-0 items-center gap-2.5 text-xs font-bold leading-7 text-[#607b50]"><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#edf3e5] text-[#91a878]"><Icon className="size-[18px]" strokeWidth={1.6} aria-hidden="true"/></span>{title}</h2>{action}</header>{children}</section>;
 }
+function Empty({children}:{children:React.ReactNode}){return <p role="status" className="rounded-2xl border border-dashed border-[#e1e8d6] bg-[#fafcf6] p-5 text-center text-[11px] leading-7 text-[#95a386]">{children}</p>;}
+function Files({files}:{files?:{name:string;url?:string}[]}){return <div className="flex flex-wrap gap-2">{files?.map((file,index)=>file.url&&<a key={index} href={file.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-[#e2e8d9] bg-white px-3 text-[11px] text-[#839b6c]"><Paperclip className="size-3.5 shrink-0" aria-hidden="true"/><span className="min-w-0 break-all">{file.name}</span></a>)}</div>;}
 
-export const ParentDashboard: React.FC<Props> = ({
-  onOpenStudentDossier,
-  onOpenProfileModal
-}) => {
-  useResource('grades');
-  const {
-    currentSchool,
-    currentUser,
-    grades,
-    activeAcademicYear,
-    notifications,
-    currentStudent: child,
-    announcements,
-    setSelectedStudentForDossier,
-    openStudentDossier
-  } = useApp();
+export function ParentDashboard({onOpenStudentDossier,onOpenProfileModal}:Props){
+ const app=useApp(),auth=useAuth(),client=useQueryClient();
+ const {currentStudent:child,currentSchool,activeAcademicYear,activeAcademicYearId,schoolClock,classes,grades,homework,homeworkSubmissions,exams,schedule,notifications,announcements,page,activeMobileTab,setActiveMobileTab,isViewingNonCurrentYear}=app;
+ const view:View=activeMobileTab==='parent-learning'?'learning':activeMobileTab==='parent-messages'?'messages':activeMobileTab==='parent-finances'?'finances':'overview';
+ const [messageView,setMessageView]=useState<'announcements'|'notifications'>('announcements'),[paymentOpen,setPaymentOpen]=useState(false),[day,setDay]=useState(schoolClock.dayOfWeek),[refreshing,setRefreshing]=useState(false),[refreshError,setRefreshError]=useState('');
+ useResource('grades',view==='overview'||view==='learning');
+ useResource('homeworkSubmissions',view==='learning');
+ const choose=(next:View)=>{setActiveMobileTab(next==='overview'?'dashboard':`parent-${next}`);setRefreshError('');};
+ const refresh=async()=>{if(refreshing)return;setRefreshing(true);setRefreshError('');try{await client.invalidateQueries({predicate:query=>query.queryKey[1]===auth.member.id&&query.queryKey[2]===activeAcademicYearId&&['student','resource','student-records'].includes(String(query.queryKey[0]))},{throwOnError:true});}catch{setRefreshError('اطلاعات تازه کامل دریافت نشد؛ دوباره تلاش کنید.');}finally{setRefreshing(false);}};
+ const feedback=(kind:string)=>{const state=page(kind);return state.error?<div role="alert" className="teaching-error">{state.error}<button type="button" onClick={()=>void refresh()} className="min-h-11 px-2 font-bold">تلاش مجدد</button></div>:state.loading?<p role="status" className="text-[11px] leading-7 text-[#9cab8d]">در حال دریافت اطلاعات…</p>:null;};
+ const children=auth.memberships.filter(member=>member.role==='parent');
+ const childSelector=children.length>1&&<label className="teaching-label mt-4">انتخاب فرزند و مدرسه<select id="parent-child-select" className="teacher-text-input" value={auth.member.id} onChange={event=>auth.select(event.target.value)}>{children.map((member,index)=><option key={member.id} value={member.id}>{member.label||`فرزند ${toPersianDigits(index+1)}`} · {member.school_name||'مدرسه'}</option>)}</select></label>;
+ if(!child)return <div id="parent-no-linked-student" className="space-y-4">{childSelector}<Empty>پرونده‌ای برای فرزند این حساب در مدرسه و سال انتخاب‌شده یافت نشد. عضویت یا سال انتخابی را بررسی کنید.</Empty></div>;
+ const openDossier=(tab:DossierTab='profile')=>{if(app.openStudentDossier)app.openStudentDossier(child,tab);else if(onOpenStudentDossier)onOpenStudentDossier(child);else app.setSelectedStudentForDossier(child);};
+ const className=classes.find(group=>group.id===child.classGroupId)?.name||child.grade;
 
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-
-  // Child info
-  if (!child) return <p id="parent-no-linked-student" role="status" className="p-6 bg-white rounded-2xl">پرونده‌ای برای فرزند این حساب در مدرسه انتخاب‌شده یافت نشد.</p>;
-  const latestCard=child.reportCards.filter(card=>card.isPublished).at(-1);
-  const latestGrades=grades.flatMap(grade=>grade.scores.filter(score=>score.studentId===child.id).map(score=>({id:grade.id,title:`${grade.subject} (${grade.title})`,score:score.score}))).slice(0,5);
-
-  // Check if there is any attendance alert for the child today
-  const childNotifications = notifications;
-
-  // Announcements targeted to parents or all (pinned first)
-  const parentAnnouncements = announcements
-    .filter((a) => a.target === 'all' || a.target === 'parents')
-    .sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return 0;
-    });
-
-  const handleOpenChildDossier = (tab: 'profile' | 'finances' = 'profile') => {
-    if (openStudentDossier) {
-      openStudentDossier(child, tab);
-    } else if (onOpenStudentDossier) {
-      onOpenStudentDossier(child);
-    } else {
-      setSelectedStudentForDossier(child);
-    }
-  };
-
-  return (
-    <div className="space-y-4 sm:space-y-5" id="parent-dashboard-view">
-      {/* Top Banner & Child Summary */}
-      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg sm:text-xl font-black text-slate-900">
-              سلام جناب {currentUser.name}
-            </h1>
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-bold">
-              پنل اولیای گرامی
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">
-            فرزند شما: <strong>{child.name}</strong> • {child.grade} {child.fieldOfStudy} • {currentSchool?.name}
-          </p>
-        </div>
-
-        {/* Live Attendance Status Pill & Dossier Link */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <button
-            onClick={() => handleOpenChildDossier()}
-            className="min-h-11 px-4 py-2 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            <span>مشاهده پرونده تحصیلی و کارنامه</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Second Position Sponsor Ribbon */}
-      <SponsorBannerCard audienceFilter="parents" variant="compact" />
-
-      {/* Quick Status Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Attendance Today */}
-        <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-            <Clock className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[11px] text-slate-600 font-bold block">وضعیت ثبت‌شده امروز</span>
-            <span className="text-xs text-slate-950 font-bold">
-              {attendanceLabel(child.todayStatus)}
-            </span>
-          </div>
-        </div>
-
-        {/* Average Score */}
-        <div className="bg-indigo-50/80 border border-indigo-200 p-4 rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-            <Award className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[11px] text-indigo-800 font-bold block">معدل ترم گذشته</span>
-            <span className="text-sm font-mono font-black text-indigo-950">
-              {latestCard ? toPersianDigits(latestCard.gpa) : 'ثبت نشده'}
-            </span>
-          </div>
-        </div>
-
-        {/* Bale Delivery Channel */}
-        <div className="bg-teal-50/80 border border-teal-200 p-4 rounded-2xl flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-2xs">
-              <Smartphone className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[11px] text-teal-800 font-bold block">شناسه متصل در بله</span>
-              <span className="text-xs font-mono font-bold text-teal-950">
-                {child.parentBaleAccount || 'ثبت نشده'}
-              </span>
-            </div>
-          </div>
-          {onOpenProfileModal && (
-            <button
-              onClick={onOpenProfileModal}
-              className="p-1.5 text-teal-700 hover:text-teal-900"
-              title="تغییر مشخصات در پروفایل"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Student Financial & Tuition Status Card */}
-      {(() => {
-        const { summary: childSummary, error: financialError } = readFinancialSummary(child.financialSummary);
-        if (financialError) return <p role="alert" className="p-4 bg-amber-50 text-amber-900 rounded-2xl">پرونده مالی نیاز به بررسی مدرسه دارد: {financialError}</p>;
-        const isSettled = childSummary.remainingDebt <= 0;
-        const isOverdue = childSummary.status === 'overdue';
-
-        return (
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-3.5 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3.5 sm:gap-4 overflow-hidden" id="parent-tuition-summary-card">
-            <div className="flex items-start gap-3 sm:gap-3.5 min-w-0">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100 mt-0.5 sm:mt-0 shadow-2xs">
-                <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-xs sm:text-sm font-bold text-slate-800 break-words">
-                    وضعیت شهریه و خدمات {child.name}
-                  </h3>
-                  {isSettled ? (
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shrink-0">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      تسویه کامل
-                    </span>
-                  ) : isOverdue ? (
-                    <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shrink-0 animate-pulse">
-                      <AlertCircle className="w-3 h-3 text-rose-600" />
-                      دارای قسط معوقه
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shrink-0">
-                      <Clock className="w-3 h-3 text-amber-600" />
-                      مانده بدهی جاری
-                    </span>
-                  )}
-                </div>
-
-                {/* Mobile-optimized 3-box summary */}
-                <div className="grid grid-cols-3 gap-2 mt-2.5 sm:hidden">
-                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 text-center">
-                    <span className="text-[10px] text-slate-400 block">صورتحساب</span>
-                    <span className="text-[11px] font-bold font-mono text-slate-700 block mt-0.5 truncate">
-                      {formatPersianCurrency(childSummary.totalBilled)}
-                    </span>
-                  </div>
-                  <div className="bg-emerald-50/60 p-2 rounded-xl border border-emerald-100 text-center">
-                    <span className="text-[10px] text-emerald-700 block">پرداختی</span>
-                    <span className="text-[11px] font-bold font-mono text-emerald-800 block mt-0.5 truncate">
-                      {formatPersianCurrency(childSummary.totalPaid)}
-                    </span>
-                  </div>
-                  <div className={`p-2 rounded-xl border text-center ${isSettled ? 'bg-emerald-50/60 border-emerald-100' : 'bg-rose-50/70 border-rose-100'}`}>
-                    <span className={`text-[10px] block ${isSettled ? 'text-emerald-700' : 'text-rose-700'}`}>مانده بدهی</span>
-                    <span className={`text-[11px] font-bold font-mono block mt-0.5 truncate ${isSettled ? 'text-emerald-800' : 'text-rose-800'}`}>
-                      {formatPersianCurrency(childSummary.remainingDebt)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Desktop inline summary */}
-                <div className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
-                  <span>کل صورتحساب: <strong>{formatPersianCurrency(childSummary.totalBilled)}</strong></span>
-                  <span>•</span>
-                  <span>پرداختی: <strong className="text-emerald-700">{formatPersianCurrency(childSummary.totalPaid)}</strong></span>
-                  <span>•</span>
-                  <span>
-                    مانده بدهی: <strong className={isSettled ? 'text-emerald-700' : 'text-rose-700'}>
-                      {formatPersianCurrency(childSummary.remainingDebt)}
-                    </strong>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action buttons: mobile touch-friendly */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-              <button
-                type="button"
-                id="btn-parent-view-installments"
-                onClick={() => handleOpenChildDossier('finances')}
-                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 active:bg-teal-200 text-teal-800 border border-teal-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <FileText className="w-4 h-4" />
-                <span>ریز اقساط و سوابق</span>
-              </button>
-
-              {!isSettled && (
-                <button
-                  type="button"
-                  id="btn-parent-direct-pay"
-                  onClick={() => setIsPaymentModalOpen(true)}
-                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>پرداخت آنلاین شهریه</span>
-                </button>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Grid: 2 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
-        {/* Messages from School (7 cols) */}
-        <div className="lg:col-span-7 space-y-3">
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-teal-600" />
-                <h3 className="font-bold text-sm text-slate-900">
-                  پیام‌های خودکار دریافتی از مدرسه (بله و پیامک)
-                </h3>
-              </div>
-              <span className="text-[11px] font-mono text-slate-500 font-bold">
-                {toPersianDigits(childNotifications.length)} پیام
-              </span>
-            </div>
-
-            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-              {childNotifications.length === 0 ? (
-                <div className="text-center py-8 text-xs text-slate-400">
-                  هیچ پیام یا اخطار انضباطی برای فرزند شما ثبت نشده است.
-                </div>
-              ) : (
-                childNotifications.map((ntf) => (
-                  <div
-                    key={ntf.id}
-                    className="p-3 rounded-2xl border border-slate-200 bg-slate-50 space-y-1.5 text-xs hover:border-teal-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800">
-                        {ntf.type === 'attendance_absent' ? '🚨 اعلام غیبت در کلاس' : 'اطلاعیه مدرسه'}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 font-bold">
-                        {notificationStatusLabel(ntf.status)} • {ntf.platform}
-                      </span>
-                    </div>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      {ntf.message}
-                    </p>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60">
-                      <span>شناسه بله: {child.parentBaleAccount}</span>
-                      <span>{toPersianDigits(ntf.timestamp)}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column (5 cols): Academic Progress & Quick Contacts */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-amber-500" />
-                <h3 className="font-bold text-sm text-slate-900">آخرین نمرات ثبت‌شده</h3>
-              </div>
-              <span className="text-[11px] text-slate-500">{toPersianDigits(activeAcademicYear?.title||'')}</span>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              {latestGrades.length ? latestGrades.map(grade=><div key={grade.id} className="p-3 rounded-2xl bg-slate-50 flex justify-between items-center"><span className="text-slate-700">{grade.title}</span><span className="font-bold text-slate-900 font-mono text-sm">{toPersianDigits(grade.score)}</span></div>) : <p className="text-slate-500">نمره‌ای ثبت نشده است.</p>}
-              <div className="p-3 rounded-2xl bg-slate-50 flex justify-between items-center"><span>انضباط آخرین کارنامه</span><span>{latestCard ? toPersianDigits(latestCard.disciplineScore) : 'ثبت نشده'}</span></div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 space-y-2">
-              <span className="font-bold text-[11px] text-slate-700 block">ارتباط تلفنی با کادر مدرسه:</span>
-              <div className="flex items-center justify-between text-xs text-slate-600 bg-slate-50 p-2.5 rounded-2xl">
-                <span>تلفن دفتر آموزشگاه: {toPersianDigits(currentSchool?.phone || '')}</span>
-                <a
-                  href={`tel:${currentSchool?.phone}`}
-                  className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs flex items-center gap-1 transition-colors"
-                >
-                  <PhoneCall className="w-3.5 h-3.5" />
-                  <span>تماس</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Announcements for Parents */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-5 space-y-4 shadow-xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <Megaphone className="w-5 h-5 text-teal-600" />
-            <h3 className="font-bold text-sm text-slate-900">
-              اطلاعیه‌ها و بخشنامه‌های عمومی آموزشگاه برای اولیا
-            </h3>
-          </div>
-          <span className="text-xs text-slate-500 font-mono font-bold">
-            {toPersianDigits(parentAnnouncements.length)} اطلاعیه
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {parentAnnouncements.map((ann) => (
-            <div
-              key={ann.id}
-              className={`p-3.5 rounded-2xl border transition-colors space-y-2 text-xs ${
-                ann.isPinned
-                  ? 'border-amber-400 bg-amber-50/40 ring-1 ring-amber-400/30'
-                  : 'border-slate-200 bg-slate-50/70 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  {ann.isPinned && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                      <Pin className="w-2.5 h-2.5 fill-amber-600 text-amber-600" />
-                      <span>پین</span>
-                    </span>
-                  )}
-                  <span className="font-bold text-slate-900 text-sm">{ann.title}</span>
-                </div>
-                <span className="text-[10px] text-slate-400 font-mono">{toPersianDigits(ann.date)}</span>
-              </div>
-              <p className="text-slate-600 leading-relaxed text-[11px]">{ann.content}</p>
-              <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400 border-t border-slate-100">
-                <span>مرجع صادرکننده: {ann.senderName}</span>
-                {ann.priority === 'urgent' && (
-                  <span className="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-md">فوری</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Direct Parent Payment Modal */}
-      <ParentPaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        student={child}
-      />
-    </div>
-  );
-};
+ const latestCard=child.reportCards?.filter(card=>card.isPublished).slice().sort((a,b)=>(a.term==='term2'?1:0)-(b.term==='term2'?1:0)).at(-1);
+ const latestGrades=grades.flatMap(grade=>grade.scores.filter(score=>score.studentId===child.id).map(score=>({...grade,result:score}))).slice(0,5);
+ const finance=child.financialSummary?readFinancialSummary(child.financialSummary):{summary:createEmptyFinancialSummary(),error:'اطلاعات مالی پرونده دریافت نشده است. دوباره تلاش کنید.'};
+ const summary=finance.summary;
+ const noFees=!finance.error&&!summary.assignedFees.length&&!summary.transactions.length&&summary.totalBilled===0;
+ const canPay=!finance.error&&summary.remainingDebt>0&&!isViewingNonCurrentYear;
+ const phone=toEnglishDigits(currentSchool?.phone||'').replace(/[^\d+]/g,''),canCall=/^\+?\d{7,15}$/.test(phone);
+ const lessons=schedule.filter(slot=>slot.classGroupId===child.classGroupId&&slot.dayOfWeek===(view==='overview'?schoolClock.dayOfWeek:day)).slice().sort((a,b)=>a.period-b.period);
+ const posts=announcements.filter(post=>post.target==='all'||post.target==='parents').slice().sort((a,b)=>Number(!!b.isPinned)-Number(!!a.isPinned));
+ const link=(label:string,onClick:()=>void)=><button type="button" onClick={onClick} className="inline-flex min-h-11 items-center gap-1 text-[11px] font-bold text-[#8a9f75]">{label}<ChevronLeft className="size-3.5" aria-hidden="true"/></button>;
+ const tuition=<div id="parent-tuition-summary-card" className="space-y-4">{finance.error?<div role="alert" className="teaching-error">{finance.error}{link('تلاش مجدد',()=>void refresh())}</div>:<><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-[11px] text-[#9b9f89]">مانده حساب این سال</p><strong className="mt-2 block break-words text-lg font-bold leading-8 text-[#7b8d60]">{formatPersianCurrency(summary.remainingDebt)}</strong></div><span className={`rounded-xl px-3 py-2 text-[10px] font-bold ${summary.status==='overdue'?'bg-[#f9e9e2] text-[#bb8a77]':summary.status==='settled'?'bg-[#edf4e2] text-[#8aa468]':'bg-[#faf3e1] text-[#af9c68]'}`}>{noFees?'شهریه‌ای ثبت نشده':summary.status==='overdue'?'دارای قسط معوق':summary.status==='settled'?'تسویه‌شده':'دارای مانده حساب'}</span></div>{noFees&&<p className="text-[11px] leading-7 text-[#a0ad90]">مدرسه هنوز شهریه یا واریزی برای این سال در پرونده ثبت نکرده است.</p>}<div className="grid grid-cols-2 gap-2">{[{label:'صورتحساب',value:summary.totalBilled},{label:'وصول‌شده',value:summary.totalPaid}].map(item=><div key={item.label} className="min-w-0 rounded-2xl bg-[#f7f9f2] p-3"><span className="text-[10px] text-[#a0aa93]">{item.label}</span><span className="mt-2 block break-words text-[11px] font-bold leading-6 text-[#859673]">{formatPersianCurrency(item.value)}</span></div>)}</div></>}<div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button id="btn-parent-view-installments" type="button" onClick={()=>openDossier('finances')} className="teaching-secondary"><FileText className="size-4" aria-hidden="true"/>ریز اقساط و سوابق</button>{canPay&&<button id="btn-parent-direct-pay" type="button" onClick={()=>setPaymentOpen(true)} className="teaching-primary"><CreditCard className="size-4" aria-hidden="true"/>ثبت رسید واریزی</button>}</div><p className="text-[10px] leading-7 text-[#a5ad98]">رسیدهای در انتظار بررسی پس از تأیید مدرسه در وصولی محاسبه می‌شوند.</p></div>;
+ const gradesPanel=<Section id="parent-latest-grades" title="وضعیت آموزشی" icon={Award} action={link('کارنامه و همه نمرات',()=>openDossier('reportCards'))}>{feedback('grades')}{latestGrades.length?<div className="space-y-2">{latestGrades.map(grade=><button key={grade.id} type="button" onClick={()=>openDossier('reportCards')} className="flex min-h-16 w-full min-w-0 items-center gap-3 rounded-2xl border border-[#e7ebdf] bg-[#fcfdf9] p-3 text-right"><span className="min-w-0 flex-1"><span className="block break-words text-xs font-bold leading-7 text-[#73875f]">{grade.subject}</span><span className="block break-words text-[10px] leading-6 text-[#a0aa94]">{grade.title} · {toPersianDigits(grade.date)}</span></span><span className="shrink-0 text-sm font-bold text-[#8ba272]">{formatPersianScore(grade.result.score)}<span className="ms-1 text-[9px] font-normal text-[#a6af9b]">از {toPersianDigits(grade.maxScore)}</span></span></button>)}</div>:!page('grades').loading&&!page('grades').error&&<Empty>در فهرست فعلی نمره‌ای برای نمایش وجود ندارد.</Empty>}<p className="border-t border-[#edf0e6] pt-3 text-[11px] leading-7 text-[#a2a88f]">انضباط آخرین کارنامه منتشرشده: {latestCard?formatPersianScore(latestCard.disciplineScore):'ثبت نشده'}</p></Section>;
+ const schedulePanel=<Section id="parent-class-schedule" title={view==='overview'?'برنامه امروز فرزند':'برنامه هفتگی فرزند'} icon={CalendarDays} action={view==='overview'?link('برنامه و تکالیف',()=>choose('learning')):undefined}>{view==='learning'&&<label className="teaching-label">روز برنامه<select id="parent-schedule-day" className="teacher-text-input" value={day} onChange={event=>setDay(event.target.value)}>{['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'].map(value=><option key={value}>{value}</option>)}</select></label>}{feedback('schedule')}{lessons.length?<div className="space-y-2">{lessons.map(slot=><article key={slot.id} className="flex items-start gap-3 rounded-2xl border border-[#e2e9e9] bg-[#f5f9f9] p-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#e5eff0] text-xs font-bold text-[#8ca8a8]">{toPersianDigits(slot.period)}</span><div className="min-w-0 flex-1"><h3 className="break-words text-xs font-bold leading-7 text-[#7d9691]">{slot.subject}</h3><p className="text-[10px] leading-6 text-[#9cafaa]">{slot.teacherName}</p><p className="mt-1 text-[10px] text-[#9cafaa]" dir="ltr">{toPersianDigits(slot.startTime)} – {toPersianDigits(slot.endTime)}</p></div></article>)}</div>:!page('schedule').loading&&!page('schedule').error&&<Empty>در فهرست برنامه دریافتی، زنگی برای این روز دیده نمی‌شود.</Empty>}{view==='learning'&&<ResourcePager key={`${activeAcademicYearId}:schedule`} kind="schedule" appearance="sage" showSearch={false}/>}</Section>;
+ return <div id="parent-dashboard-view" className="parent-dashboard min-w-0 space-y-4 sm:space-y-5">
+  <section id="parent-child-context" className="rounded-3xl border border-[#dfe8d4] bg-linear-to-l from-[#edf4e3] via-[#f6f8ef] to-[#faf2e4] p-4 sm:p-5"><div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white bg-white/80 text-lg font-bold text-[#8aa56c]">{child.name.charAt(0)}</span><div className="min-w-0 flex-1"><p className="text-[10px] text-[#9caa8d]">همراه فرزندتان در مدرسه</p><h1 className="mt-1 break-words text-base font-bold leading-8 text-[#567546]">{child.name}</h1><p className="mt-1 break-words text-[11px] leading-7 text-[#99a78b]">{className} · {child.fieldOfStudy} · {currentSchool?.name}</p></div><span className="rounded-xl border border-white bg-white/70 px-2 py-2 text-[10px] text-[#99aa85]">{toPersianDigits(activeAcademicYear?.title||'—')}</span></div>{childSelector}</section>
+  <SponsorBannerCard audienceFilter="parents" variant="compact"/>
+  {isViewingNonCurrentYear&&<p role="status" className="rounded-xl bg-[#faf2df] p-3 text-[11px] leading-7 text-[#af9a63]">نمای سوابق سال انتخابی؛ ثبت رسید جدید در این نما غیرفعال است.</p>}
+  <div className="grid grid-cols-3 gap-2">{[{label:isViewingNonCurrentYear?'سابقه حضور':'حضور امروز',value:isViewingNonCurrentYear?'مشاهده سوابق':attendanceLabel(child.todayStatus),icon:CheckCheck,tone:child.todayStatus==='absent'?'bg-[#f8e6de] text-[#bd917d]':child.todayStatus==='present'?'bg-[#eaf2e0] text-[#91aa74]':child.todayStatus==='late'?'bg-[#fbf1db] text-[#baa269]':'bg-[#eef1ed] text-[#a0aa96]',click:()=>openDossier('attendance')},{label:'معدل منتشرشده',value:latestCard?formatPersianScore(latestCard.gpa):'ثبت نشده',icon:Award,tone:'bg-[#efe8f6] text-[#a18caf]',click:()=>openDossier('reportCards')},{label:'پرونده فرزند',value:'مشاهده جزئیات',icon:GraduationCap,tone:'bg-[#e8f0f6] text-[#8fa6b6]',click:()=>openDossier()}].map(({label,value,icon:Icon,tone,click})=><button key={label} type="button" onClick={click} className="min-w-0 rounded-2xl border border-[#e3e9dc] bg-white p-3 text-right sm:p-4"><span className={`mb-2 flex size-8 items-center justify-center rounded-xl ${tone}`}><Icon className="size-4" strokeWidth={1.6} aria-hidden="true"/></span><span className="block text-[9px] leading-6 text-[#a0ac91] sm:text-[10px]">{label}</span><strong className="mt-1 block break-words text-[11px] leading-7 text-[#71885e] sm:text-sm">{value}</strong></button>)}</div>
+  <nav aria-label="بخش‌های پنل اولیا" className="grid grid-cols-4 gap-1 rounded-2xl border border-[#e2e8d9] bg-white p-1">{([{id:'overview',label:'خانه',icon:Users},{id:'learning',label:'آموزش',icon:BookOpen},{id:'messages',label:'پیام‌ها',icon:MessageSquare},{id:'finances',label:'امور مالی',icon:CreditCard}] as const).map(({id,label,icon:Icon})=><button id={`parent-tab-${id}`} key={id} type="button" aria-pressed={view===id} aria-controls="parent-view-content" onClick={()=>choose(id)} className={`flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold sm:min-h-12 sm:flex-row sm:gap-2 ${view===id?'bg-[#edf3e4] text-[#799561]':'text-[#a5af99] hover:bg-[#fafcf7]'}`}><Icon className="size-4" strokeWidth={1.6} aria-hidden="true"/>{label}</button>)}</nav>
+  <div className="flex flex-wrap items-center justify-between gap-2 px-1"><p className="text-[10px] leading-7 text-[#a1ac93]">{toPersianDigits(schoolClock.dateLabel)}{!isViewingNonCurrentYear&&' · حضور بر اساس ثبت مدرسه نمایش داده می‌شود.'}</p><button id="parent-refresh" type="button" disabled={refreshing} onClick={()=>void refresh()} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-[10px] font-bold text-[#8ea479] disabled:opacity-50"><RefreshCw className={`size-3.5 ${refreshing?'animate-spin motion-reduce:animate-none':''}`} aria-hidden="true"/>{refreshing?'در حال دریافت…':'تازه‌سازی'}</button></div>
+  {refreshError&&<p role="alert" className="teaching-error">{refreshError}</p>}
+  <div id="parent-view-content" role="region" aria-labelledby={`parent-tab-${view}`} className="space-y-4">
+   {view==='overview'&&<><div className="grid items-start gap-4 lg:grid-cols-2">{schedulePanel}{gradesPanel}</div><Section id="parent-finance-preview" title="شهریه و حساب فرزند" icon={CreditCard} action={link('امور مالی',()=>choose('finances'))}>{tuition}</Section><Section id="parent-school-contact" title="ارتباط با مدرسه" icon={Phone}><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-[11px] leading-7 text-[#99a78b]">دفتر مدرسه: {toPersianDigits(currentSchool?.phone||'ثبت نشده')}</p>{canCall&&<a id="parent-call-school" href={`tel:${phone}`} className="teaching-secondary"><Phone className="size-4" aria-hidden="true"/>تماس با مدرسه</a>}</div><details className="rounded-xl border border-[#e6ecdd] px-3"><summary className="flex min-h-11 cursor-pointer items-center gap-2 text-[11px] font-bold text-[#95a681]"><Settings2 className="size-4" aria-hidden="true"/>اطلاعات ارتباطی و بله</summary><div className="space-y-3 pb-3"><p className="break-all text-[11px] leading-7 text-[#9aa68d]">شناسه ثبت‌شده ولی در بله: {toPersianDigits(child.parentBaleAccount||'ثبت نشده')}</p><p className="text-[10px] leading-7 text-[#a7b09a]">ثبت شناسه به‌تنهایی به معنی اتصال یا تحویل پیام نیست.</p><button id="parent-contact-settings" type="button" disabled={!onOpenProfileModal} onClick={onOpenProfileModal} className="teaching-secondary"><Settings2 className="size-4" aria-hidden="true"/>ویرایش اطلاعات ارتباطی</button></div></details></Section></>}
+   {view==='learning'&&<><div className="grid items-start gap-4 lg:grid-cols-2">{gradesPanel}{schedulePanel}</div><Section id="parent-homework" title="تکلیف‌های کلاس" icon={BookOpen}>{feedback('homework')}{feedback('homeworkSubmissions')}{homework.map(item=>{const response=homeworkSubmissions.find(row=>row.homeworkId===item.id&&row.studentId===child.id);return <article key={item.id} className="space-y-3 rounded-2xl border border-[#e3e8dc] bg-[#fcfdf9] p-4"><p className="text-[10px] leading-7 text-[#9fa991]">{item.subject} · تحویل تا {toPersianDigits(item.dueDate)}</p><h3 className="break-words text-xs font-bold leading-7 text-[#758c60]">{item.title}</h3><p className="whitespace-pre-wrap break-words text-xs leading-8 text-[#97a58a]">{item.description}</p><Files files={item.attachments}/><p className="rounded-xl bg-[#f2f6eb] p-3 text-[11px] leading-7 text-[#8c9f76]">{response?response.status==='graded'?`بررسی‌شده · نمره ${formatPersianScore(response.teacherScore)}`:'پاسخ فرزند ارسال شده؛ در انتظار بررسی دبیر':page('homeworkSubmissions').loading?'در حال دریافت وضعیت پاسخ…':page('homeworkSubmissions').error?'وضعیت پاسخ دریافت نشده است':page('homeworkSubmissions').total>homeworkSubmissions.length?'پاسخ در صفحه فعلی تحویل‌ها نیست؛ برای بررسی صفحه‌ها را مرور کنید.':'هنوز پاسخی ثبت نشده است.'}</p>{response?.teacherFeedback&&<p className="text-[11px] leading-7 text-[#99a98a]">بازخورد دبیر: {response.teacherFeedback}</p>}</article>;})}{!homework.length&&!page('homework').loading&&!page('homework').error&&<Empty>تکلیفی در فهرست فعلی دیده نمی‌شود.</Empty>}<ResourcePager key={`${activeAcademicYearId}:homework`} kind="homework" appearance="sage" searchPlaceholder="جستجوی تکلیف…"/><details className="rounded-xl border border-[#e6ebdf] px-3"><summary className="flex min-h-11 cursor-pointer items-center text-[11px] text-[#9eab90]">صفحه‌های تحویل تکلیف</summary><ResourcePager key={`${activeAcademicYearId}:submissions`} kind="homeworkSubmissions" appearance="sage" showSearch={false}/></details><p className="text-[10px] leading-7 text-[#acb49e]">ارسال پاسخ از حساب دانش‌آموز انجام می‌شود.</p></Section><Section id="parent-exams" title="آزمون‌های کلاس" icon={CalendarDays}>{feedback('exams')}{exams.map(exam=><article key={exam.id} className="rounded-2xl border border-[#ece3da] bg-[#fdfaf6] p-4"><p className="text-[10px] leading-7 text-[#b3a38b]">{exam.subject} · {exam.teacherName}</p><h3 className="mt-1 text-xs font-bold leading-7 text-[#a38b70]">{exam.title}</h3><p className="mt-2 text-[11px] leading-7 text-[#b2a18b]">{toPersianDigits(exam.examDate)} · ساعت {toPersianDigits(exam.startTime)} · {toPersianDigits(exam.durationMinutes)} دقیقه</p></article>)}{!exams.length&&!page('exams').loading&&!page('exams').error&&<Empty>آزمونی در فهرست فعلی دیده نمی‌شود.</Empty>}<ResourcePager key={`${activeAcademicYearId}:exams`} kind="exams" appearance="sage" showSearch={false}/></Section></>}
+   {view==='messages'&&<Section id="parent-school-messages" title="خبرها و پیام‌های مدرسه" icon={MessageSquare}><div className="grid grid-cols-2 gap-2">{([{id:'announcements',label:'اطلاعیه‌های مدرسه'},{id:'notifications',label:'پیام‌های فرزند'}] as const).map(item=><button key={item.id} id={`parent-message-tab-${item.id}`} type="button" aria-pressed={messageView===item.id} onClick={()=>setMessageView(item.id)} className={`teaching-choice ${messageView===item.id?'teaching-choice-active':''}`}>{item.label}</button>)}</div>{feedback(messageView)}{messageView==='announcements'?<>{posts.map(post=><article key={post.id} className="space-y-3 rounded-2xl border border-[#e6e1eb] bg-[#fcfafd] p-4"><div className="flex flex-wrap justify-between gap-2 text-[10px] text-[#b1a1ba]"><span className="inline-flex items-center gap-1">{post.isPinned&&<><Pin className="size-3" aria-hidden="true"/>سنجاق‌شده</>}</span><span>{toPersianDigits(post.date)}</span></div><h3 className="break-words text-xs font-bold leading-7 text-[#947da2]">{post.title}{post.priority==='urgent'&&<span className="ms-2 rounded-lg bg-rose-50 px-2 py-1 text-[9px] text-rose-700">فوری</span>}</h3><p className="whitespace-pre-wrap break-words text-xs leading-8 text-[#a999b2]">{post.content}</p>{post.eventDate&&<p className="text-[10px] leading-7 text-[#ae9ab9]">رویداد: {toPersianDigits(post.eventDate)}{post.eventLocation&&` · ${post.eventLocation}`}</p>}<Files files={post.attachments}/><p className="border-t border-[#eee7f1] pt-2 text-[10px] text-[#baaac4]">{post.senderName||post.senderRole}</p></article>)}{!posts.length&&!page('announcements').loading&&!page('announcements').error&&<Empty>اطلاعیه‌ای در نتیجه‌های فعلی وجود ندارد.</Empty>}</>:<>{notifications.map(item=><article key={item.id} className="space-y-3 rounded-2xl border border-[#e2e9db] bg-[#fafcf7] p-4"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-xs font-bold text-[#83996b]">{item.type==='attendance_absent'?'اعلام غیبت':'پیام مدرسه'}</h3><span className="rounded-lg bg-[#eef3e5] px-2 py-1 text-[9px] leading-6 text-[#98a983]">{notificationStatusLabel(item.status)} · {String(item.platform)==='bale'?'بله':String(item.platform)==='sms'?'پیامک':item.platform}</span></div><p className="whitespace-pre-wrap break-words text-xs leading-8 text-[#98a78b]">{item.message}</p><p className="text-[10px] leading-7 text-[#adba9d]">{toPersianDigits(item.timestamp)}</p></article>)}{!notifications.length&&!page('notifications').loading&&!page('notifications').error&&<Empty>پیامی در فهرست فعلی برای فرزند انتخاب‌شده وجود ندارد.</Empty>}</>}<ResourcePager key={`${activeAcademicYearId}:${messageView}`} kind={messageView} appearance="sage" searchPlaceholder="جستجو در پیام‌ها…"/></Section>}
+   {view==='finances'&&<><Section id="parent-financial-account" title="حساب مالی و شهریه" icon={CreditCard}>{tuition}</Section><Section id="parent-receipt-history" title="وضعیت رسیدها و واریزی‌ها" icon={ShieldCheck}>{!finance.error&&summary.transactions.slice(0,5).map(transaction=><article key={transaction.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e7eadf] bg-[#fcfdf9] p-3"><div className="min-w-0"><h3 className="text-xs font-bold leading-7 text-[#8a9d72]">{formatPersianCurrency(transaction.amount)}</h3><p className="break-all text-[10px] leading-7 text-[#a2ae92]">پیگیری: {toPersianDigits(transaction.trackingCode)}</p></div><span className={`rounded-xl px-2 py-2 text-[10px] ${transaction.status==='rejected'?'bg-rose-50 text-rose-600':'bg-[#f0f4e8] text-[#94a47c]'}`}>{transaction.status==='confirmed'?'تأییدشده':transaction.status==='rejected'?'ردشده':'در انتظار بررسی'}</span></article>)}{finance.error?<Empty>برای نمایش سوابق، ابتدا اطلاعات مالی را دوباره دریافت کنید.</Empty>:!summary.transactions.length&&<Empty>هنوز رسید یا واریزی‌ای ثبت نشده است.</Empty>}{link('همه اسناد و اقساط',()=>openDossier('finances'))}</Section></>}
+  </div>
+  {paymentOpen&&<ParentPaymentModal key={`${child.id}:${activeAcademicYearId}`} isOpen onClose={()=>setPaymentOpen(false)} student={child}/>}
+ </div>;
+}

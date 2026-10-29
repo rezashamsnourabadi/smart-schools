@@ -227,3 +227,15 @@ body.question-bank-open, body.dana-profile-open { overflow: hidden; }
 .management-dialog .management-form :where(input, select, textarea) { font-size: 13px; }
 
 @media (min-width: 768px) { .management-dialog .management-mobile-days { display: none; } }
+
+/* Parent workspace follows the shared sage palette with warm learning/message accents. */
+.parent-dashboard :where(button, a, input, select, summary):focus-visible { outline: 2px solid #96ae7f; outline-offset: 3px; }
+.parent-dashboard :where(button, a, select, summary) { min-height: 44px; }
+.parent-dashboard :where(input, select, textarea) { min-width: 0; max-width: 100%; }
+.parent-dashboard summary::-webkit-details-marker { display: none; }
+.parent-dashboard #parent-latest-grades { background: linear-gradient(145deg, #faf7ef, white 60%); border-color: #e9e4d6; }
+.parent-dashboard #parent-latest-grades header > h2 > span { background: #f6edda; color: #b39b68; }
+.parent-dashboard #parent-class-schedule { background: linear-gradient(145deg, #f0f7f8, white 60%); border-color: #dce9e9; }
+.parent-dashboard #parent-class-schedule header > h2 > span { background: #e4f0f1; color: #88a9aa; }
+.parent-dashboard #parent-school-messages header > h2 > span { background: #f0e9f6; color: #a58db6; }
+.parent-dashboard #parent-child-context :where(p, h1) { overflow-wrap: anywhere; }
