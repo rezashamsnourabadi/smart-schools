@@ -27,7 +27,8 @@
     "test:load": "node --import tsx scripts/load-test.ts",
     "backup:create": "node --import tsx infra/backup.ts create",
     "backup:verify": "node --import tsx infra/backup.ts verify",
-    "db:seed:teacher-preview": "node --import tsx server/seed-teacher-preview.ts"
+    "db:seed:teacher-preview": "node --import tsx server/seed-teacher-preview.ts",
+    "db:seed:full-demo": "node --import tsx server/seed-full-demo-school.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1157.0",

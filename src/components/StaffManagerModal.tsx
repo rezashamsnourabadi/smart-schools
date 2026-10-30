@@ -1,3 +1,4 @@
+import {vicePrincipalPermissionItems as permissionItems} from '../content/vicePrincipalPermissions';
 import { ManagementDialog } from './ManagementDialog';
 import { ResourcePager } from './ResourcePager';
 import React, { useState } from 'react';
@@ -58,6 +59,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
     convertVicePrincipalToTeacher
   } = useApp();
 
+  const [permissionSaving,setPermissionSaving]=useState(false),[permissionError,setPermissionError]=useState('');
   const [activeTab, setActiveTab] = useState<'vice_principals' | 'teachers'>('vice_principals');
   const [expandedVPId, setExpandedVPId] = useState<string | null>(activeVicePrincipalId || 'vp-1');
 
@@ -81,7 +83,9 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
     canManageStudentsAndClasses: true,
     canViewFullDossier: true,
     canLogDisciplinary: true,
-    canManageFinances: false
+    canManageFinances: false,
+    canManageFeedback: false,
+    canManageSurveys: false
   });
 
   // Form States for Teacher
@@ -101,46 +105,18 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
   const schoolVPs = vicePrincipals.filter((vp) => vp.schoolId === currentSchoolId || !vp.schoolId);
   const schoolTeachers = teachers.filter((t) => t.schoolId === currentSchoolId || !t.schoolId);
 
-  const permissionItems: { key: keyof VicePrincipalPermissions; title: string; desc: string }[] = [
-    {
-      key: 'canManageAnnouncements',
-      title: 'انتشار و مدیریت اطلاعیه‌ها و اخبار',
-      desc: 'ثبت اخبار آموزشگاه و ارسال اعلانات به اولیا و دانش‌آموزان'
-    },
-    {
-      key: 'canManageSchedule',
-      title: 'چیدمان و تغییر برنامه هفتگی دروس',
-      desc: 'جابجایی ساعات، تخصیص دبیران و ویرایش برنامه کلاسی'
-    },
-    {
-      key: 'canManageStudentsAndClasses',
-      title: 'کلاس‌بندی، ثبت‌نام و مدیریت دانش‌آموزان',
-      desc: 'افزودن دانش‌آموز، تغییر کلاس، فارغ‌التحصیلی و سوابق انتقالی'
-    },
-    {
-      key: 'canViewFullDossier',
-      title: 'مشاهده پرونده جامع و سوابق تحصیلی',
-      desc: 'دسترسی کامل به نمرات، شناسنامه سلامت و سوابق سال‌های گذشته'
-    },
-    {
-      key: 'canLogDisciplinary',
-      title: 'ثبت موارد انضباطی و تشویقی‌ها',
-      desc: 'درج تشویقی، تذکر و اطلاع‌رسانی خودکار به اولیا از طریق بله و پیامک'
-    },
-    {
-      key: 'canManageFinances',
-      title: 'مدیریت امور مالی و شهریه',
-      desc: 'تعرفه‌ها، اسناد پرداخت، تخفیف و یادآوری بدهی'
-    }
-  ];
 
   const handleToggleVPPermission = async (vpId: string, key: keyof VicePrincipalPermissions) => {
+    if(permissionSaving)return;
     const targetVP = vicePrincipals.find((vp) => vp.id === vpId);
     if (!targetVP) return;
-    const currentVal = targetVP.permissions[key];
-    const saved0 = await updateVicePrincipalProfilePermissions(vpId, {
-      [key]: !currentVal
-    }); if (!saved0.ok) return;
+    setPermissionSaving(true);setPermissionError('');
+    try {
+      const result=await updateVicePrincipalProfilePermissions(vpId,{[key]:!targetVP.permissions[key]});
+      if(!result.ok)setPermissionError(result.error||'تغییر دسترسی ثبت نشد؛ دوباره تلاش کنید.');
+    } catch {setPermissionError('تغییر دسترسی ثبت نشد؛ دوباره تلاش کنید.');}
+    finally {setPermissionSaving(false);}
+
   };
 
   // VP Add/Edit Handlers
@@ -155,7 +131,9 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
       canManageStudentsAndClasses: true,
       canViewFullDossier: true,
       canLogDisciplinary: true,
-      canManageFinances: false
+      canManageFinances: false,
+    canManageFeedback: false,
+    canManageSurveys: false
     });
     setShowAddVPModal(true);
   };
@@ -356,7 +334,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
               <div className="grid grid-cols-1 gap-3">
                 {schoolVPs.map((vp) => {
                   const isExpanded = expandedVPId === vp.id;
-                  const grantedCount = Object.values(vp.permissions).filter(Boolean).length;
+                  const grantedCount = permissionItems.filter(item=>vp.permissions[item.key]===true).length;
 
                   return (
                     <div
@@ -382,7 +360,7 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                               <span>{toPersianDigits(vp.phone)}</span>
                               <span className="text-slate-300">•</span>
                               <span className="font-sans text-[11px] text-[#658152]">
-                                {toPersianDigits(grantedCount)} دسترسی از {toPersianDigits(5)} دسترسی فعال
+                                {toPersianDigits(grantedCount)} دسترسی از {toPersianDigits(permissionItems.length)} دسترسی فعال
                               </span>
                             </div>
                           </div>
@@ -447,11 +425,13 @@ export const StaffManagerModal: React.FC<StaffManagerModalProps> = ({ onClose })
                             <Lock className="w-3.5 h-3.5 text-teal-600" />
                             <span>دسترسی‌های اختصاصی این معاون:</span>
                           </p>
+                          {permissionError&&<p role="alert" className="teaching-error">{permissionError}</p>}
+                          {permissionSaving&&<p role="status" className="text-xs leading-7 text-slate-500">در حال ثبت تغییر دسترسی…</p>}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {permissionItems.map((perm) => {
-                              const isGranted = vp.permissions[perm.key];
+                              const isGranted = vp.permissions[perm.key]===true;
                               return (
-                                <button type="button" role="checkbox" aria-checked={isGranted}
+                                <button id={`vp-permission-${vp.id}-${perm.key}`} disabled={permissionSaving} type="button" role="checkbox" aria-checked={isGranted}
                                   key={perm.key}
                                   onClick={() => handleToggleVPPermission(vp.id, perm.key)}
                                   className={`p-2.5 rounded-xl border text-right transition-all cursor-pointer select-none flex items-start justify-between gap-2.5 ${

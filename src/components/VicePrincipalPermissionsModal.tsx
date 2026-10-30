@@ -1,3 +1,4 @@
+import {vicePrincipalPermissionItems as permissionItems} from '../content/vicePrincipalPermissions';
 import React, { useState } from 'react';
 import {
   X,
@@ -42,40 +43,6 @@ export const VicePrincipalPermissionsModal: React.FC<VicePrincipalPermissionsMod
     }); if (!saved0.ok) return;
   };
 
-  const permissionItems: { key: keyof VicePrincipalPermissions; title: string; desc: string }[] = [
-    {key:'canManageFeedback',title:'رسیدگی به انتقادات و پیشنهادات',desc:'مشاهده و پاسخ به پیام‌ها؛ هویت پیام ناشناس قابل مشاهده نیست.'},
-    {key:'canManageSurveys',title:'مدیریت نظرسنجی و نتایج',desc:'ساخت و انتشار نظرسنجی و ارزشیابی تمام دبیران کلاس‌ها، پایان دوره و گزارش فردی و تجمیعی'},
-    {
-      key: 'canManageAnnouncements',
-      title: 'انتشار و مدیریت اطلاعیه‌ها، اخبار و رویدادها',
-      desc: 'امکان ثبت اخبار مدرسه، گزارش تصویری رویدادها و ارسال اعلانات عمومی به اولیا و دانش‌آموزان'
-    },
-    {
-      key: 'canManageSchedule',
-      title: 'چیدمان و تغییر برنامه هفتگی',
-      desc: 'امکان جابجایی ساعات کلاسی، تخصیص دروس، دبیران و ویرایش برنامه آموزشی پایه‌ها'
-    },
-    {
-      key: 'canManageStudentsAndClasses',
-      title: 'کلاس‌بندی، ثبت نام و مدیریت دانش‌آموزان',
-      desc: 'امکان اضافه کردن دانش‌آموز (با اتصال خودکار پرونده)، انتقال بین کلاس‌ها، فارغ‌التحصیلی و انتقالی'
-    },
-    {
-      key: 'canViewFullDossier',
-      title: 'مشاهده پرونده جامع، سوابق تحصیلی و کارنامه‌ها',
-      desc: 'دسترسی به شناسنامه سلامت، کارنامه‌های تحصیلی، معدل‌ها و سوابق سال‌های گذشته دانش‌آموزان'
-    },
-    {
-      key: 'canLogDisciplinary',
-      title: 'ثبت موارد انضباطی، تشویقی و غیبت‌ها',
-      desc: 'امکان درج تشویقی‌های علمی، مسابقات و تذکرات انضباطی؛ فقط سابقه اعلان آزمایشی ساخته می‌شود.'
-    },
-    {
-      key: 'canManageFinances',
-      title: 'امور مالی، شهریه و حسابداری آموزشگاه',
-      desc: 'امکان مشاهده وضعیت بدهکاران، ثبت محلی فیش و واریزی، اعمال تخفیف و ساخت سابقه یادآوری آزمایشی'
-    }
-  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto w-full max-w-full">
