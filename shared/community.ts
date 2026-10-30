@@ -1,0 +1,5 @@
+export interface SurveyQuestion {id:string;title:string;type:'text'|'choice'|'rating';options:string[];required:boolean}
+export interface SchoolSurvey {id:string;school_id:string;title:string;description:string;questions:SurveyQuestion[];audience:string[];class_ids:string[];status:'draft'|'published'|'closed';version:number;answered?:boolean;created_at:string;kind:'standard'|'evaluation'|'evaluation_item';parent_id:string|null;teacher_id:string|null;class_id:string|null;teacher_name:string|null;class_name:string|null}
+export interface EvaluationTargets {items:SchoolSurvey[];total:number;answeredTotal:number}
+export interface SchoolFeedback {id:string;school_id:string;title:string;body:string;anonymous:boolean;authorName:string|null;status:'new'|'reviewed';reply:string;version:number;created_at:string}
+export interface SurveyResults {total:number;questions:{id:string;title:string;type:string;count:number;average:number|null;options:{label:string;count:number;percent:number}[]}[];items:{name:string;role:string;childName:string|null;answers:Record<string,string|number>;created_at:string;teacherName:string|null;className:string|null}[];responseTotal:number}

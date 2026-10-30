@@ -43,6 +43,8 @@ export const VicePrincipalPermissionsModal: React.FC<VicePrincipalPermissionsMod
   };
 
   const permissionItems: { key: keyof VicePrincipalPermissions; title: string; desc: string }[] = [
+    {key:'canManageFeedback',title:'رسیدگی به انتقادات و پیشنهادات',desc:'مشاهده و پاسخ به پیام‌ها؛ هویت پیام ناشناس قابل مشاهده نیست.'},
+    {key:'canManageSurveys',title:'مدیریت نظرسنجی و نتایج',desc:'ساخت و انتشار نظرسنجی و ارزشیابی تمام دبیران کلاس‌ها، پایان دوره و گزارش فردی و تجمیعی'},
     {
       key: 'canManageAnnouncements',
       title: 'انتشار و مدیریت اطلاعیه‌ها، اخبار و رویدادها',

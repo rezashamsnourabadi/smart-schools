@@ -5,8 +5,8 @@ import {X,type LucideIcon} from 'lucide-react';
 
 let openDialogs=0;
 const dialogStack: HTMLElement[] = [];
-interface Props {id:string;title:ReactNode;description:string;icon:LucideIcon;onClose:()=>void;busy?:boolean;children:ReactNode;footer?:ReactNode;notice?:ReactNode;className?:string;overlayClassName?:string}
-export function TeachingDialog({id,title,description,icon:Icon,onClose,busy=false,children,footer,notice,className='',overlayClassName=''}:Props){
+interface Props {id:string;title:ReactNode;description:string;icon:LucideIcon;onClose:()=>void;busy?:boolean;children:ReactNode;footer?:ReactNode;notice?:ReactNode;className?:string;overlayClassName?:string;dismissOnBackdrop?:boolean}
+export function TeachingDialog({id,title,description,icon:Icon,onClose,busy=false,children,footer,notice,className='',overlayClassName='',dismissOnBackdrop=false}:Props){
   const reduced=useReducedMotion(),dialog=useRef<HTMLElement>(null),close=useRef<HTMLButtonElement>(null);
   useEffect(()=>{
     const previous=document.activeElement;
@@ -15,7 +15,7 @@ export function TeachingDialog({id,title,description,icon:Icon,onClose,busy=fals
     openDialogs++;document.body.classList.add('teaching-dialog-open');close.current?.focus();
     return()=>{if(element){const index=dialogStack.indexOf(element);if(index>=0)dialogStack.splice(index,1);}if(--openDialogs===0)document.body.classList.remove('teaching-dialog-open');if(previous instanceof HTMLElement&&previous.isConnected)previous.focus();};
   },[]);
-  return createPortal(<motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:reduced?0:0.15}} className={`fixed inset-0 z-[105] flex items-end justify-center bg-[#1f392e]/45 sm:items-center sm:p-5 ${overlayClassName}`}>
+  return createPortal(<motion.div onPointerDown={event=>{if(dismissOnBackdrop&&!busy&&event.target===event.currentTarget&&dialogStack.at(-1)===dialog.current)onClose();}} initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:reduced?0:0.15}} className={`fixed inset-0 z-[105] flex items-end justify-center bg-[#1f392e]/45 sm:items-center sm:p-5 ${overlayClassName}`}>
     <motion.section ref={dialog} id={id} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} initial={{y:reduced?0:16}} animate={{y:0}} transition={{duration:reduced?0:0.18}} className={`teaching-dialog dana-dialog flex w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-[#e0e7d9] bg-[#fafbf7] shadow-2xl sm:rounded-3xl ${className}`} onKeyDown={event=>{
       if(dialogStack.at(-1)!==dialog.current)return;
       if(event.key==='Escape'){event.stopPropagation();if(!busy)onClose();}

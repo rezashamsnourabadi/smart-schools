@@ -133,7 +133,7 @@ body.teaching-dialog-open { overflow: hidden; }
 .teaching-dialog { height: 100vh; height: 100dvh; }
 .teaching-label { display: block; min-width: 0; font-size: 11px; font-weight: 700; line-height: 1.9; color: #81916f; }
 .teaching-label > :where(input, select, textarea) { margin-top: 8px; }
-.teaching-dialog :where(input:not([type="file"]), select, textarea) {
+.teaching-dialog :where(input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), select, textarea) {
   width: 100%; min-height: 46px; border: 1px solid #dfe6d4; border-radius: 12px;
   background: #fcfdf9; padding: 10px 12px; color: #58684b; font-size: 12px; font-weight: 400;
 }
@@ -277,3 +277,53 @@ body.question-bank-open, body.dana-profile-open { overflow: hidden; }
   .system-guide-dialog :where(p, h2, h3, span, li) { color: #263b2c !important; }
   .system-guide-dialog article, .system-guide-dialog details { break-inside: avoid; }
 }
+
+/* Compact shared app bar and touch-friendly header sheets. */
+.dana-header { padding-top: env(safe-area-inset-top, 0px); }
+.teaching-dialog.dana-header-sheet {
+  height: auto;
+  max-width: 28rem;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+}
+.dana-header-sheet > div:last-child {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 639px) {
+  .dana-header-sheet::before {
+    content: '';
+    width: 36px;
+    height: 4px;
+    flex-shrink: 0;
+    margin: 10px auto 0;
+    border-radius: 999px;
+    background: #d4ddcb;
+  }
+  .dana-header-sheet > header { padding-top: 12px; }
+}
+
+/* Choice glyphs stay compact; their labels provide the full touch target. */
+input:is([type="checkbox"], [type="radio"]):not(.sr-only) {
+  appearance: auto;
+  box-sizing: border-box;
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  max-height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: #658653;
+  cursor: pointer;
+}
+label:has(> input:is([type="checkbox"], [type="radio"]):not(.sr-only)) {
+  min-height: 44px;
+  cursor: pointer;
+}
+input:is([type="checkbox"], [type="radio"]):focus-visible {
+  outline: 2px solid #97af7d;
+  outline-offset: 3px;
+}
+input:is([type="checkbox"], [type="radio"]):disabled { cursor: default; opacity: 0.5; }

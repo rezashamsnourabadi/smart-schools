@@ -6,7 +6,7 @@ const name = text.min(1).max(200);
 const id = z.uuid();
 const money = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const date = z.string().max(30);
-export const permissions = z.object({ canManageAnnouncements: z.boolean(), canManageSchedule: z.boolean(), canManageStudentsAndClasses: z.boolean(), canViewFullDossier: z.boolean(), canLogDisciplinary: z.boolean(), canManageFinances: z.boolean().optional() }).strict();
+export const permissions = z.object({ canManageAnnouncements: z.boolean(), canManageSchedule: z.boolean(), canManageStudentsAndClasses: z.boolean(), canViewFullDossier: z.boolean(), canLogDisciplinary: z.boolean(), canManageFinances: z.boolean().optional(), canManageFeedback: z.boolean().optional(), canManageSurveys: z.boolean().optional() }).strict();
 const attachment = z.object({name, type: text, size: text.optional(), url: z.string().regex(/^\/api\/v1\/files\/[a-f0-9-]+$/).optional()}).strict();
 export const resourceSchemas = {
   schools: z.object({name, code: name, type: name, principalName: text, address: text, phone: text, studentCount: money.default(0), teacherCount: money.default(0), classesCount: money.default(0), accentColor: text.default('teal')}).strict(),

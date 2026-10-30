@@ -22,7 +22,7 @@ async function teacherRecipients(tx:Tx,request:FastifyRequest,member:Membership,
 }
 interface Target extends MessageRecipient {phone:string;phoneVerified:boolean;baleChatId:string|null}
 const targetSelect=`SELECT m.id AS "membershipId",m.user_id AS "userId",u.name,u.username,m.role,m.school_id AS "schoolId",s.data->>'name' AS "schoolName",m.student_id AS "studentId",child.name AS "studentName",u.phone,u.phone_verified AS "phoneVerified",bl.chat_id AS "baleChatId" FROM memberships m JOIN users u ON u.id=m.user_id LEFT JOIN schools s ON s.id=m.school_id LEFT JOIN bale_links bl ON bl.user_id=u.id LEFT JOIN LATERAL (SELECT r.data->>'name' AS name FROM records r JOIN academic_years y ON y.id=r.year_id AND y.school_id=r.school_id WHERE r.school_id=m.school_id AND r.kind='students' AND (r.id=m.student_id OR r.identity_id=m.student_id) AND y.data->>'isCurrent'='true' LIMIT 1) child ON true`;
-export async function addInboxMessage(tx:Tx,actor:{userId:string;memberId:string;schoolId:string|null},targets:Target[],input:{title:string;body:string;sms?:boolean;bale?:boolean;kind?:'direct'|'support';referenceId?:string}){
+export async function addInboxMessage(tx:Tx,actor:{userId:string;memberId:string;schoolId:string|null},targets:Target[],input:{title:string;body:string;sms?:boolean;bale?:boolean;kind?:'direct'|'support'|'feedback';referenceId?:string}){
  await inboxContext(tx,actor.userId,actor.memberId);const id=randomUUID(),smsUsers=new Set<string>(),baleUsers=new Set<string>();
  await tx.query('INSERT INTO inbox_messages(id,sender_id,sender_membership_id,school_id,title,body,kind,reference_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',[id,actor.userId,actor.memberId,actor.schoolId,input.title,input.body,input.kind||'direct',input.referenceId||null]);
  for(const target of targets){
@@ -33,6 +33,11 @@ export async function addInboxMessage(tx:Tx,actor:{userId:string;memberId:string
   if(sms==='queued'&&!smsUsers.has(target.userId)){smsUsers.add(target.userId);await tx.query('INSERT INTO outbox(school_id,payload) VALUES($1,$2)',[target.schoolId,{channel:'sms',phone:target.phone,message:`${input.title}\n${input.body}`,inboxMessageId:id,inboxMembershipIds:targets.filter(t=>t.userId===target.userId).map(t=>t.membershipId),platformMessage:actor.schoolId===null}]);}
  }
  await audit(tx,actor.userId,actor.schoolId,'message-created',id);return {id,recipients:targets.length,smsQueued:smsUsers.size,baleQueued:baleUsers.size};
+}
+export async function notifyFeedbackReply(tx:Tx,actor:{userId:string;memberId:string},feedback:{id:string;school_id:string;membership_id:string;title:string}){
+ const target=(await tx.query<Target>(`${targetSelect} WHERE m.id=$1 AND m.school_id=$2 AND m.active AND u.active`,[feedback.membership_id,feedback.school_id])).rows[0];
+ // The message intentionally contains no anonymous author identity or reply text.
+ if(target)await addInboxMessage(tx,{...actor,schoolId:feedback.school_id},[target],{title:'پاسخ به پیام شما',body:`برای پیام «${feedback.title}» پاسخی ثبت شد. از دکمه پیگیری، پاسخ را ببینید.`,kind:'feedback',referenceId:feedback.id});
 }
 export async function notifyTicketReply(tx:Tx,actor:{userId:string;memberId:string},ticket:{id:string;membership_id:string;title:string},body:string){
  const target=(await tx.query<Target>(`${targetSelect} WHERE m.id=$1 AND m.active AND u.active`,[ticket.membership_id])).rows[0];

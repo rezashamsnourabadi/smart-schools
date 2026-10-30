@@ -37,6 +37,8 @@ export interface VicePrincipalPermissions {
   canViewFullDossier: boolean;
   canLogDisciplinary: boolean;
   canManageFinances?: boolean;
+  canManageFeedback?: boolean;
+  canManageSurveys?: boolean;
 }
 
 export interface VicePrincipalProfile {

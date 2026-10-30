@@ -2,7 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {request} from '../api/client';
 import {useAuth} from '../auth/AuthContext';
 import {useQueryClient} from '@tanstack/react-query';
-import {Activity,AlertTriangle,BookOpen,Building2,CalendarDays,CalendarRange,CheckCheck,ChevronLeft,ChevronDown,Clock3,CreditCard,Eye,GraduationCap,Megaphone,Phone,Pin,RefreshCw,Shield,Users,type LucideIcon} from 'lucide-react';
+import {Activity,AlertTriangle,BookOpen,Building2,CalendarDays,CalendarRange,CheckCheck,ChevronLeft,ChevronDown,Clock3,CreditCard,Eye,GraduationCap,MessageSquare,ClipboardList,Megaphone,Phone,Pin,RefreshCw,Shield,Users,type LucideIcon} from 'lucide-react';
 import {useApp,useResource} from '../context/AppContext';
 import {toEnglishDigits,toPersianDigits} from '../utils/persianUtils';
 import type {Student} from '../types';
@@ -41,7 +41,10 @@ export const SchoolOperationsDashboard:React.FC<Props>=props=>{
   {id:'btn-manage-schedule',title:'برنامه هفتگی',description:'کلاس، درس و زنگ دبیران',icon:CalendarDays,tone:'bg-[#eee8f6] text-[#967eae]',onClick:(!isVice||permissions.canManageSchedule)?props.onOpenScheduleModal:undefined},
   {id:'btn-manage-finances',title:'امور مالی',description:'شهریه، رسید و حساب دانش‌آموز',icon:CreditCard,tone:'bg-[#faf0d9] text-[#b0985e]',onClick:(!isVice||permissions.canManageFinances)?props.onOpenFinanceModal:undefined},
  ];
+ const openCommunity=(mode:'feedback'|'surveys')=>{setToolsOpen(false);window.dispatchEvent(new CustomEvent('open-school-community',{detail:{mode}}));};
  const otherTools:Tool[]=[
+  {id:'btn-manage-feedback',title:'انتقادات و پیشنهادات',description:'رسیدگی و پاسخ به پیام‌های مدرسه',icon:MessageSquare,tone:'bg-[#e7f0f5] text-[#7195a6]',onClick:!isVice||permissions.canManageFeedback?()=>openCommunity('feedback'):undefined},
+  {id:'btn-manage-surveys',title:'نظرسنجی و ارزشیابی دبیران',description:'ساخت دوره، انتشار و گزارش نتایج',icon:ClipboardList,tone:'bg-[#eee8f6] text-[#967eae]',onClick:!isVice||permissions.canManageSurveys?()=>openCommunity('surveys'):undefined},
   ...(isVice?[{id:'vp-btn-manage-discipline',title:'تشویق و تذکر',description:'ثبت مورد در پرونده دانش‌آموز',icon:Shield,tone:'bg-[#eee8f6] text-[#967eae]',onClick:permissions.canLogDisciplinary&&!isViewingNonCurrentYear?()=>changeView('discipline'):undefined}]:[]),
   ...(!isVice?[{id:'btn-manage-staff',title:'کادر و دسترسی‌ها',description:'دبیران، معاونان و اختیارات',icon:Shield,tone:'bg-[#eaf0e0] text-[#899e6c]',onClick:props.onOpenVpPermsModal}]:[]),
   {id:'btn-manage-posts',title:'اطلاعیه و رویداد',description:'انتشار خبر، پوستر و پیوست',icon:Megaphone,tone:'bg-[#f7e9df] text-[#b29478]',onClick:(!isVice||permissions.canManageAnnouncements)?props.onOpenPostModal:undefined},

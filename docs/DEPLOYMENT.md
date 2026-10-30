@@ -32,7 +32,7 @@ docker compose --env-file .env.production -f compose.production.yaml up -d postg
 docker compose --env-file .env.production -f compose.production.yaml --profile tools run --rm migrate
 ```
 
-همه مهاجرت‌های موجود تا 013 باید قبل از API و worker جدید اعمال شوند؛ readiness وجود بخشی از جدول‌های لازم و حساب غیر bypass را کنترل می‌کند. migration روی داده واقعی فقط پس از پشتیبان و بررسی محیط مقصد انجام شود.
+همه مهاجرت‌های موجود تا 016 باید قبل از API و worker جدید اعمال شوند؛ readiness وجود بخشی از جدول‌های لازم و حساب غیر bypass را کنترل می‌کند. migration روی داده واقعی فقط پس از پشتیبان و بررسی محیط مقصد انجام شود.
 
 bucket خصوصی و حساب سرویس MinIO را آماده کنید. نخستین مدیر از ابزار cli با BOOTSTRAP_USERNAME/NAME/PHONE/PASSWORD امن ساخته می‌شود؛ رمز پیش‌فرض نیست. پس از bootstrap، متغیرهای موقت را حذف کنید. ورود رمزی به سرویس پیامک وابسته نیست؛ فعال‌سازی/بازیابی و روش پیامکی وابسته‌اند.
 
