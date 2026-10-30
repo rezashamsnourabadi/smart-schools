@@ -1,8 +1,10 @@
+import {useAnalytics} from '../analytics/AnalyticsProvider';
 import {BookOpen, ChevronDown, GraduationCap, Sparkles, Sprout} from 'lucide-react';
 
 export function DanaPlusSection() {
+  const track=useAnalytics();
   return <section id="student-dana-plus" aria-labelledby="dana-plus-title" className="rounded-3xl border border-[#e5e0d8] bg-[#faf8f4] px-4 sm:px-6">
-    <details className="group">
+    <details className="group" onToggle={event=>{if(event.currentTarget.open)track('dana_plus_open');}}>
       <summary className="flex min-h-24 cursor-pointer list-none items-center gap-3 py-4">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#ece8f4] text-[#88729d]"><Sparkles className="size-5" strokeWidth={1.5} aria-hidden="true"/></span>
         <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span id="dana-plus-title" className="text-sm font-bold text-[#594b65]">دانا پلاس</span><span className="rounded-full bg-white px-2 py-1 text-[9px] text-[#8c7f97]">به‌زودی</span></span><span className="mt-1.5 block text-[11px] leading-6 text-[#8b8291]">برای علاقه‌های تو، فراتر از مدرسه</span></span>

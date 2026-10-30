@@ -70,7 +70,7 @@ function ClassWorkspace({context,slots,onOpenGradeEntryModal,onOpenHomeworkExamM
  const statuses=Object.fromEntries(roster.map(student=>[student.id,drafts[key]?.[student.id]||activeSession?.records.find(row=>row.studentId===student.id)?.status||'present'])) as Record<string,AttendanceStatus>;
  const signature=JSON.stringify(roster.map(student=>[student.id,statuses[student.id]]));
  const dirty=confirmed[key]!==signature&&(!activeSession||roster.some(student=>statuses[student.id]!==activeSession.records.find(row=>row.studentId===student.id)?.status));
- const active=!!app.activeAcademicYear?.isCurrent&&app.activeAcademicYear.status==='active';
+ const active=!app.schoolReadOnly&&!!app.activeAcademicYear?.isCurrent&&app.activeAcademicYear.status==='active';
  const loading=classroom.isPending||(!historical&&!!slot&&current.isPending);
  const dataError=classroom.error||(!historical?current.error:null);
  const begun=!!slot&&(schoolTimeMinutes(slot.startTime)??Infinity)<=app.schoolClock.minuteOfDay;

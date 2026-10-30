@@ -1,3 +1,10 @@
+import {baleRoutes} from './bale-link';
+import {supportFileRoutes} from './support-files';
+import {installSchoolAccessGuard,assertSchoolAccess} from './school-access';
+import {analyticsRoutes} from './analytics';
+import {inspectionRoutes} from './inspection';
+import {inboxRoutes} from './inbox';
+import {operationRoutes} from './operations';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
@@ -29,6 +36,7 @@ export async function createApp() {
   redis.on('error',()=>{});
   await app.register(cookie);await app.register(helmet,{contentSecurityPolicy:{directives:{defaultSrc:["'self'"],imgSrc:["'self'",'data:','https://images.unsplash.com'],fontSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'"],scriptSrc:["'self'"]}}});
   installAssetLinks(app);
+  installSchoolAccessGuard(app);
   await app.register(compress);
   await app.register(rateLimit,{max:600,timeWindow:'1 minute',redis,skipOnError:false,hook:'preHandler',keyGenerator:request=>request.identity?`user:${request.identity.id}`:`ip:${request.ip}`});
   installContracts(app);
@@ -44,6 +52,7 @@ export async function createApp() {
     let status=error instanceof ApiError?error.statusCode:((error as {statusCode?:number}).statusCode||500);
     let code=error instanceof ApiError?error.code:'INTERNAL';let message=error instanceof ApiError?error.message:'خطای داخلی سرور.';
     if((error as {validation?:unknown}).validation){status=422;code='VALIDATION';message='اطلاعات ورودی معتبر نیست.';}
+    else if(status===413){code='FILE_TOO_LARGE';message='سقف فایل دو مگابایت است.';}
     else if(status===400){code='BAD_REQUEST';message='قالب درخواست معتبر نیست.';}
     if(error instanceof FinancialError||error instanceof AttendanceError){status=422;code='VALIDATION';message=error.message;}
     const pgCode=(error as {code?:string}).code;
@@ -54,17 +63,19 @@ export async function createApp() {
   });
   // All resource/command changes and their idempotency response commit together.
   app.addHook('onRoute',options=>{
+    if(options.url==='/api/v1/support/tickets/:id/files')return;
     const methods=Array.isArray(options.method)?options.method:[options.method];
     const mutation=methods.some(m=>['POST','PATCH','DELETE'].includes(m));
-    const protectedRead=methods.includes('GET')&&/^\/api\/v1\/(resources|workspace|students|dashboard|attendance|teacher)/.test(options.url);
-    if(!protectedRead&&(!mutation||!/^\/api\/v1\/(resources|commands|accounts|teacher)/.test(options.url)))return;
+    const protectedRead=methods.includes('GET')&&!options.url.endsWith('/files/:fileId')&&/^\/api\/v1\/(resources|workspace|students|dashboard|attendance|teacher|support|platform|school-access|messages|inbox)/.test(options.url);
+    if(!protectedRead&&(!mutation||!/^\/api\/v1\/(resources|commands|accounts|teacher|support|platform|messages|inbox)/.test(options.url)))return;
     const original=options.handler;
     options.handler=async function(request,reply){
       const actor=requireAuth(request);const m=await membership(request);
-      if(!mutation)return transaction(async()=>original.call(this,request,reply),m.school_id||'');
+      if(!mutation)return transaction(async()=>original.call(this,request,reply),m.school_id||'',m.role==='platform_admin');
       const key=z.string().min(16).max(100).parse(request.headers['idempotency-key']);
       const hash=createHash('sha256').update(JSON.stringify({method:request.method,url:request.url,body:request.body,membership:m.id,year:request.headers['x-academic-year-id']})).digest('hex');
       return transaction(async tx=>{
+        await assertSchoolAccess(request,tx);
         await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[`${actor.id}:${key}`]);
         const previous=await tx.query('SELECT * FROM idempotency WHERE user_id=$1 AND key=$2',[actor.id,key]);
         if(previous.rowCount){requireValue(previous.rows[0].request_hash===hash,'شناسه عملیات برای درخواست متفاوت استفاده شده است.',409);return previous.rows[0].response;}
@@ -75,11 +86,11 @@ export async function createApp() {
           if(year){const counts=(await tx.query("SELECT count(*) FILTER(WHERE kind='students' AND COALESCE(data->>'status','active')='active')::int AS \"studentCount\",count(*) FILTER(WHERE kind='teachers')::int AS \"teacherCount\",count(*) FILTER(WHERE kind='classes')::int AS \"classesCount\" FROM records WHERE school_id=$1 AND year_id=$2 AND kind IN ('students','classes','teachers')",[m.school_id,year])).rows[0];await tx.query('UPDATE schools SET data=data||$1::jsonb WHERE id=$2',[JSON.stringify(counts),m.school_id]);}
         }
         await tx.query('INSERT INTO idempotency(user_id,key,request_hash,response) VALUES($1,$2,$3,$4)',[actor.id,key,hash,result]);return result;
-      },m.school_id||'');
+      },m.school_id||'',m.role==='platform_admin');
     };
   });
   // Register directly, sharing authentication hooks with all protected routes.
-  await authRoutes(app);await resourceRoutes(app);await commandRoutes(app);await teacherRoutes(app);await adminRoutes(app);await fileRoutes(app);
+  await authRoutes(app);await resourceRoutes(app);await commandRoutes(app);await teacherRoutes(app);await adminRoutes(app);await operationRoutes(app);await inboxRoutes(app);await inspectionRoutes(app);await analyticsRoutes(app);await fileRoutes(app);await supportFileRoutes(app);await baleRoutes(app);
   app.get('/api/v1/health',async()=>({ok:true}));
   app.get('/api/v1/ready',async()=>{await readiness();await redis.ping();return {ok:true};});
   app.get('/api/v1/openapi.json',async request=>{requireAuth(request);return app.swagger();});

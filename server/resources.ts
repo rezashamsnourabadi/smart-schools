@@ -1,3 +1,4 @@
+import {enqueueAnnouncement} from './background-operations';
 import {gradeViews,gradeCategories} from '../shared/academic';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -195,13 +196,13 @@ export async function resourceRoutes(app:FastifyInstance) {
     if(kind==='schools') {
       const args:unknown[]=[page.limit,page.offset,member.role==='platform_admin'?`%${page.search}%`:school];
       const filter=member.role==='platform_admin'?"data->>'name' ILIKE $3":"id=$3::uuid";
-      const result=await query(`SELECT *,count(*) OVER() AS total FROM schools WHERE ${filter} ORDER BY id LIMIT $1 OFFSET $2`,args);
-      return {items:result.rows.map(r=>({...r.data,...r.data.todayAttendanceDate!==getSchoolDate()?{todayAttendanceSubmitted:false,attendanceRateToday:0,attendanceRecordedCount:0}:{},id:r.id,version:r.version})),total:Number(result.rows[0]?.total||0),...page};
+      const result=await query(`SELECT s.*,(SELECT jsonb_build_object('mode',p.mode,'expiresAt',p.expires_at) FROM school_access_policies p WHERE p.school_id=s.id) AS access_policy,count(*) OVER() AS total FROM schools s WHERE ${filter} ORDER BY id LIMIT $1 OFFSET $2`,args);
+      return {items:result.rows.map(r=>({...r.data,...r.data.todayAttendanceDate!==getSchoolDate()?{todayAttendanceSubmitted:false,attendanceRateToday:0,attendanceRecordedCount:0}:{},accessMode:r.access_policy&&(!r.access_policy.expiresAt||new Date(r.access_policy.expiresAt).getTime()>Date.now())?r.access_policy.mode:'active',id:r.id,version:r.version})),total:Number(result.rows[0]?.total||0),...page};
     }
     if(kind==='academicYears') return {items:(await transaction(async tx=>(await tx.query('SELECT * FROM academic_years WHERE school_id=$1',[school])).rows.map(r=>({...r.data,id:r.id,schoolId:school,version:r.version})),school)),total:0,...page};
     if(kind==='banners'||member.role==='platform_admin') {
       requireValue(['banners','announcements','questionBank'].includes(kind),'این بخش در دسترس مدیر منطقه نیست.',403);
-      const rows=await query("SELECT *,count(*) OVER() total FROM regional_content WHERE kind=$1 AND COALESCE(data->>'title','') ILIKE $4 ORDER BY id LIMIT $2 OFFSET $3",[kind,page.limit,page.offset,`%${page.search}%`]);
+      const rows=await query("SELECT *,count(*) OVER() total FROM regional_content WHERE kind=$1 AND COALESCE(data->>'title','') ILIKE $4 AND ($1<>'announcements' OR COALESCE(data->>'isArchived','false')=$5) ORDER BY CASE WHEN $1='announcements' AND data->>'isPinned'='true' AND COALESCE((data->>'pinExpiresAt')::timestamptz,'infinity')>now() THEN 1 ELSE 0 END DESC,COALESCE(data->>'createdAt',data->>'date','') DESC,id DESC LIMIT $2 OFFSET $3",[kind,page.limit,page.offset,`%${page.search}%`,page.archive==='archived'?'true':'false']);
       return {items:rows.rows.map(r=>({...r.data,id:r.id,schoolId:'all',version:r.version})),total:Number(rows.rows[0]?.total||0),...page};
     }
     if(!year)return {items:[],total:0,...page};
@@ -212,8 +213,8 @@ export async function resourceRoutes(app:FastifyInstance) {
       if(['questionBank','announcements'].includes(kind)){
         const audience=member.role==='teacher'?'teachers':member.role==='parent'?'parents':'students';args.push(audience,['principal','vice_principal'].includes(member.role));
         const audienceParam=`$${args.length-1}`,managerParam=`$${args.length}`;
-        const rows=await tx.query(`WITH items AS (SELECT id,school_id::text AS school_id,year_id,kind,data,version FROM records WHERE school_id=$1 AND year_id=$2 AND kind=$3 AND (${filter}) AND NOT EXISTS(SELECT 1 FROM regional_content rc WHERE rc.id=records.id AND rc.kind=$3) UNION ALL SELECT id,COALESCE(data->>'schoolId','all'),NULL::uuid,kind,data,version FROM regional_content WHERE kind=$3 AND ($3='questionBank' OR ${managerParam}::boolean OR data->>'target' IN ('all',${audienceParam}))) SELECT *,count(*) OVER() total FROM items WHERE COALESCE(data->>'title','') ILIKE $6 ORDER BY COALESCE(data->>'createdAt',data->>'date','') DESC,id DESC LIMIT $4 OFFSET $5`,args);
-        return {items:rows.rows.map(entity),total:Number(rows.rows[0]?.total||0),...page};
+        const rows=await tx.query(`WITH items AS (SELECT id,school_id::text AS school_id,year_id,kind,data,version,0 AS regional FROM records WHERE school_id=$1 AND year_id=$2 AND kind=$3 AND (${filter}) AND NOT EXISTS(SELECT 1 FROM regional_content rc WHERE rc.id=records.id AND rc.kind=$3) UNION ALL SELECT id,COALESCE(data->>'schoolId','all'),NULL::uuid,kind,data,version,1 AS regional FROM regional_content WHERE kind=$3 AND ($3='questionBank' OR ${managerParam}::boolean OR data->>'target' IN ('all',${audienceParam}))) SELECT *,count(*) OVER() total FROM items WHERE COALESCE(data->>'title','') ILIKE $6 AND ($3<>'announcements' OR COALESCE(data->>'isArchived','false')<>'true') ORDER BY CASE WHEN $3='announcements' AND data->>'isPinned'='true' AND COALESCE((data->>'pinExpiresAt')::timestamptz,'infinity')>now() THEN regional+1 ELSE 0 END DESC,CASE data->>'priority' WHEN 'urgent' THEN 2 WHEN 'important' THEN 1 ELSE 0 END DESC,COALESCE(data->>'createdAt',data->>'date','') DESC,id DESC LIMIT $4 OFFSET $5`,args);
+        return {items:rows.rows.map(row=>{const item=entity(row);if(kind==='announcements'&&item.pinExpiresAt&&new Date(String(item.pinExpiresAt)).getTime()<=Date.now())item.isPinned=false;return item;}),total:Number(rows.rows[0]?.total||0),...page};
       }
       const classFilter=page.classId?(args.push(page.classId),`AND class_id=$${args.length}`):'';
       let dateFilter='';if(page.date){requireValue(kind==='attendanceSessions','فیلتر روز فقط برای جلسات حضور مجاز است.');args.push(civilDate(page.date));dateFilter=`AND civil_day=$${args.length}::date`;}
@@ -249,7 +250,7 @@ export async function resourceRoutes(app:FastifyInstance) {
   app.get('/api/v1/dashboard',async request=>{
     const {member,school,year}=await scope(request);
     if(member.role==='platform_admin'){
-      const result=(await query("SELECT count(*)::int AS schools,COALESCE(sum((data->>'studentCount')::int),0)::int AS students,COALESCE(sum((data->>'teacherCount')::int),0)::int AS teachers, count(*) FILTER(WHERE data->>'todayAttendanceDate'=$1)::int AS submittedSchools FROM schools",[getSchoolDate()])).rows[0];return result;
+      const result=(await query("SELECT count(*)::int AS schools,COALESCE(sum((data->>'studentCount')::int),0)::int AS students,COALESCE(sum((data->>'teacherCount')::int),0)::int AS teachers, count(*) FILTER(WHERE data->>'todayAttendanceDate'=$1)::int AS submittedSchools,count(*) FILTER(WHERE p.mode='read_only' AND (p.expires_at IS NULL OR p.expires_at>now()))::int AS \"readOnlySchools\",count(*) FILTER(WHERE p.mode='suspended' AND (p.expires_at IS NULL OR p.expires_at>now()))::int AS \"suspendedSchools\" FROM schools LEFT JOIN school_access_policies p ON p.school_id=schools.id",[getSchoolDate()])).rows[0];return result;
     }
     return transaction(async tx=>{
       const args:unknown[]=[school,year];const filter=await visibleFilter(tx,member,school,year,'students',args);
@@ -282,6 +283,7 @@ export async function resourceRoutes(app:FastifyInstance) {
     for(const field of ['phone','parentPhone','studentPhone','emergencyPhone'])if(typeof raw[field]==='string')raw[field]=toEnglishDigits(raw[field]).replace(/[\s-]/g,'');
     const schema=resourceSchemas[kind as keyof typeof resourceSchemas];
     const data=schema.parse(raw) as Record<string,unknown>;
+    const notifyInbox=kind==='announcements'&&data.notifyInbox===true;delete data.notifyInbox;
     validateCivilDates(data);
     if(kind==='schools')Object.assign(data,{studentCount:0,teacherCount:0,classesCount:0,todayAttendanceSubmitted:false,attendanceRateToday:0});
     if(kind==='announcements')Object.assign(data,{senderName:user.name,senderRole:member.role});
@@ -315,6 +317,7 @@ export async function resourceRoutes(app:FastifyInstance) {
         result=await saveRecord(tx,school,year,kind,data);
         if(kind==='questionBank'&&data.isSharedRegional)await tx.query('INSERT INTO regional_content(id,kind,data) VALUES($1,$2,$3)',[result.id,kind,{...data,schoolId:school}]);
       }
+      if(notifyInbox)await enqueueAnnouncement(tx,{userId:user.id,membershipId:member.id,schoolId:school||null,yearId:year||null,announcementId:result.id,target:String(data.target),title:String(data.title),body:String(data.content)});
       await audit(tx,user.id,school||null,`create:${kind}`,result.id);return result;
     },school);
   });
@@ -326,6 +329,13 @@ export async function resourceRoutes(app:FastifyInstance) {
     const input=z.object({version:z.number().int().positive(),changes:z.record(z.string(),z.unknown())}).strict().parse(request.body);
     requireValue(kind in resourceSchemas && kind!=='schools','از مسیر عملیات اختصاصی استفاده کنید.');
     return transaction(async tx=>{
+      if(kind==='announcements'&&member.role==='platform_admin') {
+        const row=(await tx.query("SELECT * FROM regional_content WHERE id=$1 AND kind='announcements' FOR UPDATE",[id])).rows[0];
+        requireValue(row,'بخشنامه پیدا نشد.',404);requireValue(row.version===input.version,'بخشنامه تغییر کرده؛ دوباره بارگذاری کنید.',409);
+        const changes=resourceSchemas.announcements.omit({senderName:true,senderRole:true,notifyInbox:true}).partial().strict().parse(input.changes);
+        const updated=(await tx.query('UPDATE regional_content SET data=data||$1::jsonb,version=version+1 WHERE id=$2 RETURNING *',[changes,id])).rows[0];
+        await audit(tx,user.id,null,'update:regional-announcement',id);return {...updated.data,id,schoolId:'all',version:updated.version};
+      }
       if(kind==='banners') {
         const row=(await tx.query("SELECT * FROM regional_content WHERE id=$1 AND kind='banners' FOR UPDATE",[id])).rows[0];
         requireValue(row,'بنر پیدا نشد.',404);requireValue(row.version===input.version,'بنر تغییر کرده؛ دوباره بارگذاری کنید.',409);

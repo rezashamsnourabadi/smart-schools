@@ -1,3 +1,4 @@
+import {assertSchoolAccess} from './school-access';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { z } from 'zod';
@@ -47,6 +48,7 @@ export async function fileRoutes(app:FastifyInstance) {
     let mime=detectMime(data);requireValue(mime&&mime===file.mimetype,'فقط PDF، تصویر معتبر و DOCX بدون ماکرو پذیرفته می‌شوند.');
     if(mime.startsWith('image/')){try{data=await sharp(data,{limitInputPixels:8_000_000,animated:false}).rotate().resize({width:1280,height:1280,fit:'inside',withoutEnlargement:true}).webp({quality:78}).toBuffer();mime='image/webp';}catch{requireValue(false,'تصویر معتبر نیست یا ابعاد آن بیش از حد مجاز است.');}}
     return transaction(async tx=>{
+      await assertSchoolAccess(request,tx);
       let classId=query.classId||null,studentId=query.studentId||null;
       const child=await linkedRecord(tx,member,school,year);
       if(query.purpose==='submission'){requireValue(member.role==='student'&&child,'دسترسی مجاز نیست.',403);classId=String(child.classGroupId);studentId=child.id;}

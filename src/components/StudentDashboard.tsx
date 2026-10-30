@@ -98,7 +98,7 @@ export const StudentDashboard: React.FC<Props> = ({onOpenQuestionBank, onOpenStu
       setDrafts(previous=>{const next={...previous};delete next[id];return next;});setActiveHomework(null);
     }catch(error){setSendError(error instanceof Error?error.message:'ارسال ممکن نشد؛ دوباره تلاش کنید.');}finally{setSending(false);}
   };
-  const studentAnnouncements=announcements.filter(item=>item.target==='all'||item.target==='students').slice().sort((a,b)=>Number(!!b.isPinned)-Number(!!a.isPinned));
+  const studentAnnouncements=announcements.filter(item=>item.target==='all'||item.target==='students');
   const todayLessons=schedule.filter(slot=>slot.dayOfWeek===schoolClock.dayOfWeek).slice().sort((a,b)=>a.period-b.period);
   const selectedLessons=schedule.filter(slot=>slot.dayOfWeek===scheduleDay).slice().sort((a,b)=>a.period-b.period);
   const studentClass=classes.find(item=>item.id===currentStudent.classGroupId);

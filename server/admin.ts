@@ -61,13 +61,13 @@ export async function adminRoutes(app:FastifyInstance) {
     const page=z.object({limit:z.coerce.number().int().min(1).max(100).default(25),offset:z.coerce.number().int().nonnegative().default(0)}).parse(request.query);
     const result=await query(`SELECT DISTINCT u.id,u.username,u.name,u.active,u.phone_verified FROM users u JOIN memberships m ON m.user_id=u.id WHERE ${m.role==='platform_admin'?"m.role='principal'":'m.school_id=$3'} ORDER BY u.username LIMIT $1 OFFSET $2`,m.role==='platform_admin'?[page.limit,page.offset]:[page.limit,page.offset,m.school_id]);return {items:result.rows};
   });
-  app.post('/api/v1/accounts/:id/disable',async request=>{
+  for(const action of ['disable','enable'] as const)app.post(`/api/v1/accounts/:id/${action}`,async request=>{
     const caller=await membership(request);const actor=requireAuth(request);const target=z.uuid().parse((request.params as {id:string}).id);
-    requireValue(actor.id!==target,'حساب خود را از این مسیر غیرفعال نکنید.');
+    requireValue(actor.id!==target,'وضعیت حساب خود را از این مسیر تغییر ندهید.');
     const roles=(await query('SELECT * FROM memberships WHERE user_id=$1 AND active',[target])).rows;
     requireValue(roles.length,'حساب پیدا نشد.',404);
     if(caller.role==='principal')requireValue(roles.every(m=>m.school_id===caller.school_id&&m.role!=='principal'),'این حساب دسترسی خارج از اختیار شما دارد.',403);
     else requireValue(caller.role==='platform_admin'&&roles.every(m=>m.role==='principal'),'دسترسی مجاز نیست.',403);
-    await transaction(async tx=>{await tx.query('UPDATE users SET active=false WHERE id=$1',[target]);await tx.query('DELETE FROM sessions WHERE user_id=$1',[target]);await audit(tx,actor.id,caller.school_id,'account-disabled',target);},caller.school_id||'');return {ok:true};
+    await transaction(async tx=>{await tx.query('UPDATE users SET active=$2 WHERE id=$1',[target,action==='enable']);await tx.query('DELETE FROM sessions WHERE user_id=$1',[target]);await audit(tx,actor.id,caller.school_id,action==='enable'?'account-enabled':'account-disabled',target);},caller.school_id||'');return {ok:true};
   });
 }

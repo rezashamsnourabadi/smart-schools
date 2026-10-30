@@ -1,10 +1,12 @@
+import {useAnalytics} from '../analytics/AnalyticsProvider';
+import {useBannerImpression} from '../analytics/useBannerImpression';
 import React, {useId} from 'react';
 import { useApp } from '../context/AppContext';
 import { Sparkles, ExternalLink, BookmarkCheck } from 'lucide-react';
 import {safeExternalUrl} from '../utils/externalLinks';
 
-function BannerLink({id,className,url,label,onClick,children}:{id:string;className:string;url?:string;label:string;onClick:()=>void;children:React.ReactNode}) {
-  return url?<a id={id} href={url} target="_blank" rel="noopener noreferrer sponsored" aria-label={label} onClick={onClick} className={`${className} block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-700`}>{children}</a>:<div id={id} className={className}>{children}</div>;
+function BannerLink({id,className,url,label,onClick,children,elementRef}:{elementRef:(node:HTMLElement|null)=>void;id:string;className:string;url?:string;label:string;onClick:()=>void;children:React.ReactNode}) {
+  return url?<a ref={elementRef} id={id} href={url} target="_blank" rel="noopener noreferrer sponsored" aria-label={label} onClick={onClick} className={`${className} block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-700`}>{children}</a>:<div ref={elementRef} id={id} className={className}>{children}</div>;
 }
 
 interface Props {
@@ -16,25 +18,24 @@ export const SponsorBannerCard: React.FC<Props> = ({
   audienceFilter = 'all',
   variant = 'compact'
 }) => {
-  const { banners, clickBanner } = useApp();
+  const { banners } = useApp(),track=useAnalytics();
   const instanceId=useId();
 
   const activeBanners = banners.filter(
     (b) => b.isActive && (b.targetAudience.includes('all') || b.targetAudience.includes(audienceFilter))
   );
 
-  if (activeBanners.length === 0) return null;
-
-  const currentBanner = activeBanners[0]; // Display the top targeted banner
+  const currentBanner = activeBanners[0],impression=useBannerImpression(currentBanner?.id,variant);
+  if(!currentBanner)return null;
   const linkUrl=safeExternalUrl(currentBanner.linkUrl);
-  const recordClick=()=>{void clickBanner(currentBanner.id);};
+  const recordClick=()=>{track('banner_click',currentBanner.id);};
   const linkLabel=`${currentBanner.title}، ${currentBanner.linkText} (در تب جدید)`;
 
   if (variant === 'compact') {
     return (
       <BannerLink
         id={`sponsor-banner-compact-${currentBanner.id}-${instanceId}`}
-        url={linkUrl} label={linkLabel} onClick={recordClick}
+        elementRef={node=>{impression.current=node;}} url={linkUrl} label={linkLabel} onClick={recordClick}
         className="rounded-2xl bg-gradient-to-r from-amber-500/10 via-teal-500/10 to-indigo-500/10 border border-teal-200/80 p-3 sm:p-3.5 shadow-2xs hover:border-teal-300 transition-all"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
@@ -72,7 +73,7 @@ export const SponsorBannerCard: React.FC<Props> = ({
   return (
     <BannerLink
       id={`sponsor-banner-${currentBanner.id}-${instanceId}`}
-      url={linkUrl} label={linkLabel} onClick={recordClick}
+      elementRef={node=>{impression.current=node;}} url={linkUrl} label={linkLabel} onClick={recordClick}
       className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 via-teal-50/30 to-indigo-50/30 p-4 sm:p-5 relative overflow-hidden transition-all shadow-xs hover:border-teal-300"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">

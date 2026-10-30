@@ -1,3 +1,4 @@
+import {recordAnalytics} from './analytics';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
@@ -179,7 +180,7 @@ export async function commandRoutes(app:FastifyInstance) {
       } else if(action==='banner-status'||action==='banner-click') {
         const input=z.object({id}).strict().parse(body);if(action==='banner-status')requireValue(member.role==='platform_admin','دسترسی مجاز نیست.',403);
         const row=(await tx.query("SELECT * FROM regional_content WHERE id=$1 AND kind='banners' FOR UPDATE",[input.id])).rows[0];requireValue(row,'بنر پیدا نشد.',404);
-        const data=action==='banner-status'?{...row.data,isActive:!row.data.isActive}:{...row.data,clicksCount:(row.data.clicksCount||0)+1};await tx.query('UPDATE regional_content SET data=$1,version=version+1 WHERE id=$2',[data,input.id]);
+        if(action==='banner-status')await tx.query('UPDATE regional_content SET data=$1,version=version+1 WHERE id=$2',[{...row.data,isActive:!row.data.isActive},input.id]);else await recordAnalytics(tx,member,user.id,[{id:randomUUID(),kind:'banner_click',bannerId:input.id}]);
       } else if(action==='convert-staff') {
         requireValue(member.role==='principal','دسترسی مجاز نیست.',403);
         const input=z.object({id,to:z.enum(['teacher','vice_principal']),roleTitle:text.optional(),permissions:permissions.partial().optional(),teachingSubjects:z.array(text).optional(),assignedClassIds:z.array(id).optional()}).strict().parse(body);

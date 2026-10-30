@@ -13,7 +13,7 @@ const categories={continuous:'نمره مستمر کلاسی',term1:'امتحا�
 export const TeacherGradeEntryModal:React.FC<Props>=({onClose,initialContext,initialGrade})=>{
   const write=useTeacherWrite();
   useResource('grades',!initialContext);useResource('classes',!initialContext);
-  const {classes,currentSchoolId,addGradeItem,currentUser,activeAcademicYear}=useApp();
+  const {classes,currentSchoolId,addGradeItem,currentUser,activeAcademicYear,schoolReadOnly}=useApp();
   const [selectedClass,setSelectedClass]=useState(initialContext?.classId||'');
   const classId=selectedClass||classes[0]?.id||'';
   const [subject,setSubject]=useState(initialContext?.subject||currentUser.teachingSubjects?.[0]||'');
@@ -32,7 +32,7 @@ export const TeacherGradeEntryModal:React.FC<Props>=({onClose,initialContext,ini
   const fill=(value:number)=>{update({scores:Object.fromEntries(students.map(student=>[student.id,String(value)]))});setError('');};
   const filtered=students.filter(student=>student.name.includes(search.trim())||toEnglishDigits(student.studentNumber).includes(toEnglishDigits(search).trim())||toEnglishDigits(student.nationalCode).includes(toEnglishDigits(search).trim()));
   const gradedCount=students.filter(student=>parseGradeScore(draft.scores[student.id]||'',maxScore).ok).length;
-  const enabled=!!activeAcademicYear?.isCurrent&&activeAcademicYear.status==='active';
+  const enabled=!schoolReadOnly&&!!activeAcademicYear?.isCurrent&&activeAcademicYear.status==='active';
   const save=async(event:React.FormEvent)=>{
     event.preventDefault();if(saving||roster.isPending||roster.error)return;
     if(!students.length){setError('دانش‌آموز فعالی برای این کلاس وجود ندارد.');return;}

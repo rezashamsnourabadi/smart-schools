@@ -1,3 +1,5 @@
+import type {DossierInspection} from '../../shared/inspection';
+import {InspectionReceiptDownloads} from './InspectionReceiptDownloads';
 import {GradeViewPicker} from './GradeViewPicker';
 import type {GradeView} from '../../shared/academic';
 import React, { useEffect, useRef, useState } from 'react';
@@ -33,6 +35,7 @@ import { attendanceLabel } from '../utils/attendance';
 
 interface StudentDossierModalProps {
   student: Student;
+  inspection?: DossierInspection;
   onClose: () => void;
   canEditContact?: boolean;
   canManageDiscipline?: boolean;
@@ -41,12 +44,13 @@ interface StudentDossierModalProps {
 
 export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   student,
+  inspection,
   onClose,
   canEditContact = false,
   canManageDiscipline = true,
   initialTab = 'profile'
 }) => {
-  const { classes, updateParentContact, addDisciplinaryRecord, currentUser, currentRole, canManageSchool, schoolClock } = useApp();
+  const { classes, updateParentContact, addDisciplinaryRecord, currentUser, currentRole, canManageSchool, schoolClock, schoolReadOnly } = useApp();
   const [gradeOffset,setGradeOffset]=useState(0),[attendanceOffset,setAttendanceOffset]=useState(0);
   const [cardEditorOpen,setCardEditorOpen]=useState(false);
   const [gradeView,setGradeView]=useState<GradeView>('all');
@@ -60,11 +64,11 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
     return()=>{document.body.classList.remove('student-dossier-open');if(previousFocus instanceof HTMLElement&&previousFocus.isConnected)previousFocus.focus();};
   },[]);
 
-  const gradeQuery=useStudentRecords<GradeItem>(student.id,'grades',gradeOffset,gradeView);
-  const attendanceQuery=useStudentRecords<AttendanceSession>(student.id,'attendanceSessions',attendanceOffset);
-  const grades=gradeQuery.data?.items||[],attendanceSessions=attendanceQuery.data?.items||[];
-  const canViewFinances = currentRole === 'parent' || currentRole === 'student' || canManageSchool('canManageFinances');
+  const canViewFinances = !!inspection || currentRole === 'parent' || currentRole === 'student' || canManageSchool('canManageFinances');
   const [activeTab, setActiveTab] = useState<'profile' | 'reportCards' | 'attendance' | 'discipline' | 'pastYears' | 'finances'>(initialTab === 'finances' && !canViewFinances ? 'profile' : initialTab);
+  const gradeQuery=useStudentRecords<GradeItem>(student.id,'grades',gradeOffset,gradeView,inspection,!inspection||activeTab==='reportCards');
+  const attendanceQuery=useStudentRecords<AttendanceSession>(student.id,'attendanceSessions',attendanceOffset,'all',inspection,!inspection||activeTab==='attendance');
+  const grades=gradeQuery.data?.items||[],attendanceSessions=attendanceQuery.data?.items||[];
   
   // Edit contact state
   const [isEditingContact, setIsEditingContact] = useState(false);
@@ -79,7 +83,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   const [newDiscTitle, setNewDiscTitle] = useState('');
   const [newDiscNote, setNewDiscNote] = useState('');
 
-  const studentClass = classes.find((c) => c.id === student.classGroupId);
+  const studentClass = (inspection?.classes||classes).find((c) => c.id === student.classGroupId);
 
   const handleSaveContact = async () => {
     const saved0 = await updateParentContact(student.id, {
@@ -114,7 +118,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   const activeTerm1Card = student.reportCards?.find((r) => r.term === 'term1');
   const activeTerm2Card = student.reportCards?.find((r) => r.term === 'term2');
   const studentGradebookItems = grades
-    .filter((item) => item.classGroupId === student.classGroupId && item.scores.some((score) => score.studentId === student.id))
+    .filter((item) => (!!inspection || item.classGroupId === student.classGroupId) && item.scores.some((score) => score.studentId === student.id))
     .slice()
     .sort((a, b) => (normalizeSchoolDate(b.date) || '').localeCompare(normalizeSchoolDate(a.date) || ''));
 
@@ -128,11 +132,18 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
   ] as const;
   const activeTitle=dossierTabs.find(tab=>tab.id===activeTab)?.label;
   return (
-    <motion.div id="student-dossier-overlay" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:reducedMotion?0:0.16}} className="fixed inset-0 z-[80] flex items-center justify-center bg-[#19382e]/50 sm:p-4">
+    <motion.div id="student-dossier-overlay" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:reducedMotion?0:0.16}} className="fixed inset-0 z-[80] flex items-center justify-center bg-[#19382e]/50 sm:p-4" onKeyDown={event=>{
+      if(!inspection)return;
+      if(event.key==='Escape'){event.stopPropagation();onClose();}
+      if(event.key==='Tab'){
+        const nodes=Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')).filter(node=>node.getClientRects().length);
+        const first=nodes[0],last=nodes[nodes.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+      }
+    }}>
       <motion.section id="student-dossier-modal" role="dialog" aria-modal="true" aria-labelledby="student-dossier-title" aria-describedby="student-dossier-subtitle" initial={{y:reducedMotion?0:16}} animate={{y:0}} exit={{y:reducedMotion?0:16}} className="student-dossier flex min-h-0 w-full min-w-0 max-w-4xl flex-col overflow-hidden bg-white shadow-2xl sm:rounded-[28px] sm:border sm:border-[#dce5d3]">
         <header className="shrink-0 border-b border-[#e5ebde] bg-[#f4f7ef] px-4 pt-4 pb-3 sm:px-6 sm:pt-5">
-          <div className="mb-3 flex items-center justify-between gap-3"><p className="text-[10px] font-bold tracking-wide text-[#8a9c7c]">پرونده دانش‌آموز</p><button id="student-dossier-close" ref={closeRef} onClick={onClose} aria-label="بستن پرونده" className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-[#e1e8d9] bg-white text-[#73866a] hover:bg-[#eaf0e2]"><X className="size-5" aria-hidden="true"/></button></div>
-          <div className="flex items-center gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-[#d9e5ce] bg-[#e5eddc] text-xl font-bold text-[#65834f] sm:size-14">{student.name.charAt(0)}</span><div className="min-w-0 flex-1"><h2 id="student-dossier-title" className="break-words text-lg font-bold leading-8 text-[#2e4c38] sm:text-xl">{student.name}</h2><p id="student-dossier-subtitle" className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] leading-6 text-[#8a9680]"><span>{studentClass?.name||student.grade}</span><span>·</span><span>شماره دانش‌آموزی: {toPersianDigits(student.studentNumber)}</span></p></div></div>
+          <div className="mb-3 flex items-center justify-between gap-3"><p className="text-[10px] font-bold tracking-wide text-[#8a9c7c]">{inspection?'پرونده نظارتی · فقط مشاهده':'پرونده دانش‌آموز'}</p><button id="student-dossier-close" ref={closeRef} onClick={onClose} aria-label="بستن پرونده" className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-[#e1e8d9] bg-white text-[#73866a] hover:bg-[#eaf0e2]"><X className="size-5" aria-hidden="true"/></button></div>
+          <div className="flex items-center gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-[#d9e5ce] bg-[#e5eddc] text-xl font-bold text-[#65834f] sm:size-14">{student.name.charAt(0)}</span><div className="min-w-0 flex-1"><h2 id="student-dossier-title" className="break-words text-lg font-bold leading-8 text-[#2e4c38] sm:text-xl">{student.name}</h2><p id="student-dossier-subtitle" className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] leading-6 text-[#8a9680]">{inspection&&<span>سال {toPersianDigits(inspection.yearTitle)} ·</span>}<span>{studentClass?.name||student.grade}</span><span>·</span><span>شماره دانش‌آموزی: {toPersianDigits(student.studentNumber)}</span></p></div></div>
         </header>
         <nav aria-label="بخش‌های پرونده دانش‌آموز" className="grid shrink-0 grid-cols-3 gap-1.5 border-b border-[#e7ecdf] bg-white p-3 sm:grid-cols-6 sm:px-5">
           {dossierTabs.filter(tab=>tab.id!=='finances'||canViewFinances).map(({id,label,icon:Icon})=><button id={`student-dossier-tab-${id}`} key={id} type="button" aria-pressed={activeTab===id} aria-controls="student-dossier-panel" onClick={()=>{setActiveTab(id);contentRef.current?.scrollTo(0,0);}} className={`flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border px-1 py-2 text-[10px] font-bold leading-5 transition-colors sm:min-h-16 sm:text-[11px] ${activeTab===id?'border-[#d4e1c8] bg-[#eef4e6] text-[#547541]':'border-transparent bg-[#f9faf7] text-[#8b9783] hover:bg-[#f0f4e9] hover:text-[#587544]'}`}><Icon className="size-4 shrink-0" strokeWidth={1.7} aria-hidden="true"/><span className="break-words text-center">{label}</span></button>)}
@@ -140,7 +151,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
         {/* Modal Body */}
         <div id="student-dossier-panel" ref={contentRef} role="region" aria-label={activeTitle} className="student-dossier-content min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-[#f8faf5] p-4 sm:p-6">
           {cardEditorOpen&&<ReportCardEditor student={student} initialTerm={reportTerm==='all'?undefined:reportTerm} onClose={()=>setCardEditorOpen(false)}/>}
-          {activeTab==='reportCards'&&currentRole==='principal'&&<button id="edit-official-report-card" className="min-h-11 mb-3 px-4 rounded-xl bg-teal-700 text-white font-bold text-sm" onClick={()=>setCardEditorOpen(true)}>ثبت یا انتشار کارنامه مدرسه</button>}
+          {activeTab==='reportCards'&&!schoolReadOnly&&currentRole==='principal'&&<button id="edit-official-report-card" className="min-h-11 mb-3 px-4 rounded-xl bg-teal-700 text-white font-bold text-sm" onClick={()=>setCardEditorOpen(true)}>ثبت یا انتشار کارنامه مدرسه</button>}
           {['reportCards','attendance'].includes(activeTab)&&(()=>{const query=activeTab==='reportCards'?gradeQuery:attendanceQuery,offset=activeTab==='reportCards'?gradeOffset:attendanceOffset,setOffset=activeTab==='reportCards'?setGradeOffset:setAttendanceOffset;return <div className="flex flex-wrap items-center gap-3 mb-4 text-xs">{query.error?<span role="alert" className="text-rose-800">{query.error.message}</span>:<span role="status">{query.isFetching?'در حال دریافت…':`${toPersianDigits(query.data?.total||0)} مورد`}</span>}<button disabled={query.isFetching||offset===0} onClick={()=>setOffset(Math.max(0,offset-25))} className="min-h-11 px-3 bg-white rounded-xl border border-slate-200">قبلی</button><button disabled={query.isFetching||offset+25>=(query.data?.total||0)} onClick={()=>setOffset(offset+25)} className="min-h-11 px-3 bg-white rounded-xl border border-slate-200">بعدی</button></div>;})()}
           {/* TAB 1: Profile & Contacts */}
           {activeTab === 'profile' && (
@@ -214,7 +225,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
                     <Phone className="w-4 h-4 text-teal-600" />
                     اطلاعات اولیا، تماس و سکونت
                   </h3>
-                  {canEditContact && !isEditingContact && (
+                  {canEditContact && !inspection && !isEditingContact && (
                     <button
                       onClick={() => setIsEditingContact(true)}
                       className="text-xs text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-3 py-1 rounded-lg flex items-center gap-1 font-medium transition-colors"
@@ -476,7 +487,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-slate-800 text-sm sm:text-base">سوابق انضباطی، تشویقی‌ها و تقدیرنامه‌ها</h4>
-                {canManageDiscipline && (
+                {canManageDiscipline && !inspection && (
                   <button
                     onClick={() => setShowAddDiscipline(!showAddDiscipline)}
                     className="text-xs bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 font-medium transition-colors"
@@ -617,7 +628,7 @@ export const StudentDossierModal: React.FC<StudentDossierModalProps> = ({
 
           {/* TAB 6: Financial and Tuition */}
           {activeTab === 'finances' && canViewFinances && (
-            <StudentFinancialTab student={student} />
+            <><StudentFinancialTab student={student} />{inspection&&<InspectionReceiptDownloads inspection={inspection} studentId={student.id}/>}</>
           )}
         </div>
 

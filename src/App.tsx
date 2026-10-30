@@ -1,3 +1,5 @@
+import {AnalyticsProvider} from './analytics/AnalyticsProvider';
+import {SchoolAccessGate} from './components/SchoolAccessGate';
 import React, { useState, lazy, Suspense } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { AppProvider, useApp } from './context/AppContext';
@@ -37,7 +39,8 @@ const AppContent: React.FC = () => {
     setSelectedStudentForDossier,
     dossierInitialTab,
     openStudentDossier,
-    canManageSchool
+    canManageSchool,
+    schoolReadOnly
   } = useApp();
 
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
@@ -124,7 +127,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className={`${currentRole==='principal'?'principal-workspace':''} min-h-screen w-full max-w-full overflow-x-clip flex flex-col text-slate-800 antialiased selection:bg-teal-200 ${(currentRole==='student'||currentRole==='teacher'||currentRole==='principal'||currentRole==='vice_principal'||currentRole==='parent')?'bg-[#f7f8f4]':'bg-slate-100/70'}`} dir="rtl">
+    <div className={`${currentRole==='principal'?'principal-workspace':''} min-h-screen w-full max-w-full overflow-x-clip flex flex-col text-slate-800 antialiased selection:bg-teal-200 ${(currentRole==='student'||currentRole==='teacher'||currentRole==='principal'||currentRole==='vice_principal'||currentRole==='parent'||currentRole==='platform_admin')?'bg-[#f7f8f4]':'bg-slate-100/70'}`} dir="rtl">
       {/* Top Header with Profile Modal trigger and Brand Switcher */}
       <Header
         onOpenProfileModal={() => setIsProfileModalOpen(true)}
@@ -163,8 +166,8 @@ const AppContent: React.FC = () => {
           key={selectedStudentForDossier.id}
           student={selectedStudentForDossier}
           onClose={() => setSelectedStudentForDossier(null)}
-          canEditContact={currentRole === 'parent' || canManageSchool('canManageStudentsAndClasses')}
-          canManageDiscipline={canManageSchool('canLogDisciplinary')}
+          canEditContact={!schoolReadOnly && (currentRole === 'parent' || canManageSchool('canManageStudentsAndClasses'))}
+          canManageDiscipline={!schoolReadOnly && canManageSchool('canLogDisciplinary')}
           initialTab={dossierInitialTab}
         />
       )}</AnimatePresence>
@@ -274,10 +277,10 @@ const AppContent: React.FC = () => {
             <button
               id="footer-open-docs-btn"
               onClick={() => setIsDocsModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-800 border border-slate-200 hover:border-teal-300 transition-colors font-bold text-xs cursor-pointer"
+              className="flex min-h-11 items-center gap-2 rounded-xl border border-[#dfe7d4] bg-[#f4f7ed] px-3 py-2 text-xs font-bold text-[#738e5f] transition-colors hover:bg-[#eaf1df]"
             >
               <BookOpen className="w-3.5 h-3.5 text-teal-600" />
-              <span>مستندات و کاتالوگ جامع امکانات</span>
+              <span>راهنما و امکانات دانا</span>
             </button>
             <span className="text-slate-300">•</span>
             <span>سامانه مدیریت مدارس — اطلاعات متصل به سرور</span>
@@ -295,8 +298,8 @@ const AppWorkspace = () => {
 
 export default function App() {
   return (
-    <AppProvider>
+    <AnalyticsProvider><SchoolAccessGate><AppProvider>
       <Suspense fallback={<p role="status" className="p-6 text-center text-slate-600">در حال بارگذاری بخش موردنظر…</p>}><AppWorkspace /></Suspense>
-    </AppProvider>
+    </AppProvider></SchoolAccessGate></AnalyticsProvider>
   );
 }

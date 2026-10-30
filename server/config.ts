@@ -17,6 +17,8 @@ const env = z.object({
   SMS_WEBHOOK_URL: z.preprocess(value=>value===''?undefined:value,z.string().url().optional()),
   SMS_WEBHOOK_TOKEN: z.string().optional(),
   BALE_BOT_TOKEN: z.string().optional(),
+  BALE_BOT_USERNAME:z.preprocess(value=>value===''?undefined:value,z.string().regex(/^[A-Za-z0-9_]{1,64}$/).optional()),
+  BALE_WEBHOOK_SECRET:z.preprocess(value=>value===''?undefined:value,z.string().regex(/^[A-Za-z0-9_-]{32,128}$/).optional()),
   METRICS_TOKEN: z.preprocess(value=>value===''?undefined:value,z.string().min(32).optional()),
   TRUSTED_PROXY_CIDRS: z.string().default('127.0.0.1/32,::1/128'),
 });

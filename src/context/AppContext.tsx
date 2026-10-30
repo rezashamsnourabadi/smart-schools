@@ -1,3 +1,4 @@
+import {useSchoolAccess} from './SchoolAccessContext';
 import React,{createContext,useContext,useState,useEffect,useCallback,useMemo} from 'react';
 import {useQueries,useQuery,useQueryClient} from '@tanstack/react-query';
 import type {AppContextType} from './contracts';
@@ -16,7 +17,7 @@ type AsyncActions={[K in ActionName]:AppContextType[K] extends (...args:infer A)
 interface Page {items:Record<string,unknown>[];total:number;limit:number;offset:number}
 interface Workspace {user:UserProfile;years:AcademicYear[];profile:Record<string,unknown>|null;currentStudentId:string|null}
 interface PageState {offset:number;search:string;classId?:string;date?:string}
-type RemoteApp=Omit<AppContextType,ActionName>&AsyncActions&{loadResource:(kind:string)=>void;page:(kind:string)=>PageState&{total:number;loading:boolean;error?:string};setPage:(kind:string,change:Partial<PageState>)=>void;busy:boolean;dashboard:Record<string,number>;dashboardLoading:boolean;dashboardError?:string;dailyAbsences:{student:Student;session:AttendanceSession;note?:string}[]};
+type RemoteApp=Omit<AppContextType,ActionName>&AsyncActions&{loadResource:(kind:string)=>void;page:(kind:string)=>PageState&{total:number;loading:boolean;error?:string};setPage:(kind:string,change:Partial<PageState>)=>void;busy:boolean;schoolReadOnly:boolean;dashboard:Record<string,number>;dashboardLoading:boolean;dashboardError?:string;dailyAbsences:{student:Student;session:AttendanceSession;note?:string}[]};
 const Context=createContext<RemoteApp|null>(null);
 const denied:VicePrincipalPermissions={canManageAnnouncements:false,canManageSchedule:false,canManageStudentsAndClasses:false,canViewFullDossier:false,canLogDisciplinary:false,canManageFinances:false};
 const baseResources=['schools','classes','students','schedule','announcements','banners','notifications'];
@@ -29,6 +30,7 @@ const independentCommandRefresh:Partial<Record<string,readonly string[]>>={
   'banner-status':['banners'],'pin-announcement':['announcements']
 };
 export const AppProvider=({children}:{children:React.ReactNode})=>{
+  const schoolAccess=useSchoolAccess();
   const auth=useAuth(),client=useQueryClient();const [yearId,setYear]=useState('');
   const [modules,setModules]=useState<string[]>([]),[pages,setPages]=useState<Record<string,PageState>>({});
   const [selectedId,setSelectedId]=useState<string|null>(null),[dossierInitialTab,setDossierInitialTab]=useState<AppContextType['dossierInitialTab']>('profile');
@@ -63,6 +65,7 @@ export const AppProvider=({children}:{children:React.ReactNode})=>{
   const canManageSchool=(permission:keyof VicePrincipalPermissions)=>auth.member.role==='principal'||(auth.member.role==='vice_principal'&&activePermissions[permission]);
   const retryKeys=React.useRef(new Map<string,string>());
   const execute=async(path:string,body:unknown,method='POST',headers?:Record<string,string>)=>{
+    if(schoolAccess?.mode==='read_only'){const error='مدرسه در حالت فقط مشاهده است؛ ثبت و تغییر اطلاعات مجاز نیست.';setToast({title:'فقط مشاهده',message:error,type:'warning'});return {ok:false,error};}
     const fingerprint=JSON.stringify([scope.membershipId,activeYear?.id,path,body,method]);
     const key=retryKeys.current.get(fingerprint)||crypto.randomUUID();retryKeys.current.set(fingerprint,key);setBusy(true);
     try{
@@ -121,7 +124,7 @@ export const AppProvider=({children}:{children:React.ReactNode})=>{
   if(metadata.error)return <Status text={metadata.error.message} onRetry={()=>void metadata.refetch()}/>;
   if(!entered.current){if(queries.some(query=>query.isPending)||(linked&&dossier.isPending))return <Status text="در حال دریافت اطلاعات…"/>;entered.current=true;}
   const errors=queries.filter(q=>q.error).map(q=>q.error!.message);
-  const value={...collections,...actions,currentRole:auth.member.role,setCurrentRole,currentSchoolId:auth.member.school_id||'',setCurrentSchoolId:(id:string)=>{const m=auth.memberships.find(m=>m.school_id===id);if(m)auth.select(m.id);},currentSchool:school?{...school,studentCount:summary.data?.students??school.studentCount,teacherCount:summary.data?.teachers??school.teacherCount,classesCount:summary.data?.classes??school.classesCount,attendanceRateToday:summary.data?.attendanceRate??0,attendanceRecordedCount:summary.data?.recorded??0}:undefined,currentUser:metadata.data!.user,currentStudent,schoolClock:clock,
+  const value={...collections,...actions,schoolReadOnly:schoolAccess?.mode==='read_only',currentRole:auth.member.role,setCurrentRole,currentSchoolId:auth.member.school_id||'',setCurrentSchoolId:(id:string)=>{const m=auth.memberships.find(m=>m.school_id===id);if(m)auth.select(m.id);},currentSchool:school?{...school,studentCount:summary.data?.students??school.studentCount,teacherCount:summary.data?.teachers??school.teacherCount,classesCount:summary.data?.classes??school.classesCount,attendanceRateToday:summary.data?.attendanceRate??0,attendanceRecordedCount:summary.data?.recorded??0}:undefined,currentUser:metadata.data!.user,currentStudent,schoolClock:clock,
     academicYears:metadata.data!.years,activeAcademicYearId:activeYear?.id||'',activeAcademicYear:activeYear,activeTerm:activeYear?.terms.find(t=>t.id===activeYear.currentTermId),isViewingArchivedYear:activeYear?.status==='archived',isViewingNonCurrentYear:!!activeYear&&!activeYear.isCurrent,setActiveAcademicYearId,returnToCurrentAcademicYear:()=>{if(currentYear)setActiveAcademicYearId(currentYear.id);},
     vicePrincipalPermissions:activePermissions,activeVicePrincipalPermissions:activePermissions,activeVicePrincipalId:metadata.data?.profile?.id||'',setActiveVicePrincipalId:()=>{},canManageSchool,
     selectedStudentForDossier:selectedStudent,setSelectedStudentForDossier:(s:Student|null)=>{if(s)openStudentDossier(s,dossierInitialTab);else setSelectedId(null);},openStudentDossier,dossierInitialTab,setDossierInitialTab,activeMobileTab,setActiveMobileTab,activeToast,clearToast:()=>setToast(null),resetAllData:()=>{},findStudentForEnrollment:(nationalCode:string)=>studentList.find(s=>s.nationalCode===nationalCode),

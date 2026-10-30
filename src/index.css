@@ -239,3 +239,41 @@ body.question-bank-open, body.dana-profile-open { overflow: hidden; }
 .parent-dashboard #parent-class-schedule header > h2 > span { background: #e4f0f1; color: #88a9aa; }
 .parent-dashboard #parent-school-messages header > h2 > span { background: #f0e9f6; color: #a58db6; }
 .parent-dashboard #parent-child-context :where(p, h1) { overflow-wrap: anywhere; }
+
+/* Platform administration uses the same mobile surfaces as the school workspaces. */
+.platform-dashboard :where(button, a, input, select, summary):focus-visible { outline: 2px solid #96ad7e; outline-offset: 3px; }
+.platform-dashboard :where(button, a, summary) { min-height: 44px; }
+.platform-dashboard :where(input, select, textarea) { min-width: 0; max-width: 100%; }
+.platform-dashboard :where(p, h1, h2, h3) { overflow-wrap: anywhere; }
+.platform-dashboard summary::-webkit-details-marker { display: none; }
+.platform-dashboard #admin-schools-section > div > article { box-shadow: 0 8px 28px -25px #6e864d50; }
+
+/* The in-app guide prints its current section without the dashboard behind it. */
+@media print {
+  body.system-guide-open { overflow: visible !important; }
+  body.system-guide-open > *:not(.system-guide-overlay) { display: none !important; }
+  body.system-guide-open > .system-guide-overlay {
+    display: block !important;
+    position: static !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+  .system-guide-overlay .system-guide-dialog {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  .system-guide-dialog > div { overflow: visible !important; height: auto !important; }
+  .system-guide-dialog [data-guide-no-print],
+  .system-guide-dialog button,
+  .system-guide-dialog input,
+  .system-guide-dialog select { display: none !important; }
+  .system-guide-dialog :where(p, h2, h3, span, li) { color: #263b2c !important; }
+  .system-guide-dialog article, .system-guide-dialog details { break-inside: avoid; }
+}

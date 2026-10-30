@@ -13,6 +13,7 @@ export type SchoolType =
   | 'دبستان هوشمند';
 
 export interface School {
+  accessMode?: 'active' | 'read_only' | 'suspended';
   id: string;
   name: string;
   code: string;
@@ -351,6 +352,8 @@ export interface PostAttachment {
 }
 
 export interface Announcement {
+  notifyInbox?: boolean;
+  version?: number;
   id: string;
   schoolId: string | 'all'; // 'all' means platform-wide
   type?: PostType; // 'announcement' | 'news' | 'event' | 'event_report'
@@ -367,6 +370,8 @@ export interface Announcement {
   attachments?: PostAttachment[];
   priority: 'normal' | 'important' | 'urgent';
   isPinned?: boolean;
+  pinExpiresAt?: string | null;
+  isArchived?: boolean;
 }
 
 export interface NotificationLog {

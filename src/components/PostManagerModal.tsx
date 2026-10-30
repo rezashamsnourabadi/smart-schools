@@ -32,6 +32,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
   const [editingPost, setEditingPost] = useState<Announcement | null>(null);
 
   // Form states
+  const [notifyInbox,setNotifyInbox]=useState(false);
   const [postType, setPostType] = useState<PostType>('announcement');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -50,13 +51,8 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredPosts = announcements
-    .filter((a) => (activeFilter === 'all' ? true : a.type === activeFilter))
-    .sort((a, b) => {
-      // Pinned posts always appear at the top
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return 0;
-    });
+    .filter((a) => (activeFilter === 'all' ? true : a.type === activeFilter)); // Preserve server order.
+
 
   const handleStartEdit = (post: Announcement) => {
     setEditingPost(post);
@@ -139,7 +135,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
           : {})
       }); if (!saved0.ok) return;
     } else {
-      const saved1 = await addAnnouncement({
+      const saved1 = await addAnnouncement({notifyInbox,
         schoolId: currentSchoolId,
         type: postType,
         title: title.trim(),
@@ -373,7 +369,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                 >
                   انصراف
                 </button>
-                <button
+                {!editingPost&&<label className="flex min-h-11 items-center gap-3 text-xs text-[#8ba077]"><input type="checkbox" checked={notifyInbox} onChange={event=>setNotifyInbox(event.target.checked)}/>ثبت در زنگوله مخاطبان نیز انجام شود (پس‌زمینه)</label>}<button
                   type="submit"
                   className="px-5 py-2 text-xs bg-[#527348] hover:bg-[#426039] text-white rounded-xl font-bold flex items-center gap-1.5 shadow-xs transition-colors"
                 >
@@ -440,7 +436,7 @@ export const PostManagerModal: React.FC<PostManagerModalProps> = ({
                     </span>
                   </div>
 
-                  {canPublish && (
+                  {canPublish && post.schoolId === currentSchoolId && (
                     <div className="flex items-center gap-1">
                       <button
                         onClick={async () => await togglePinAnnouncement(post.id)}
